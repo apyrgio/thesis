@@ -15,7 +15,7 @@ Provided you have installed LaTeX as well as the `latexmk` tool, you can do:
 make
 ```
 
-and a `thesis.pdf` files will be created.
+and a `thesis.pdf` file will be created.
 
 If you want to remove the helper files, you can do
 
