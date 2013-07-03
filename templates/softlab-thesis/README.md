@@ -1,7 +1,7 @@
 softlab-thesis
 ==============
-[about](#about)
-[How-to](#how-to)
+* [about](#about)
+* [How-to](#how-to)
 
 # About #
 This is an unofficial template for softlab theses. All rights go to the
