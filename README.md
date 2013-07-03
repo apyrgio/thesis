@@ -45,7 +45,7 @@ make
 
 and a `thesis.pdf` file will be created.
 
-If you want to remove the helper files, you can do
+If you want to remove the helper files, you can do:
 
 ```
 make clean
