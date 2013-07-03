@@ -1,6 +1,6 @@
 softlab-thesis
 ==============
-* [about](#about)
+* [About](#about)
 * [How-to](#how-to)
 
 # About #
