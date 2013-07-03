@@ -1,0 +1,230 @@
+% DOCUMENT FORMAT ======================= -*- mode: LaTeX; coding: utf-8 -*- ===
+
+\documentclass[diploma]{softlab-thesis}
+
+
+% PACKAGE SETTINGS =============================================================
+
+\usepackage[cm-default]{fontspec}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{mdwlist}
+\usepackage{subfig}
+\usepackage{floatrow}
+%\usepackage{float}
+\usepackage{verbatim}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{xunicode}
+\usepackage{xltxtra}
+\usepackage{url}
+%\usepackage{dsfont}
+%\usepackage{microtype}
+\usepackage[htt]{hyphenat}
+\usepackage{multicol}
+\usepackage{wrapfig}
+
+% FONT SETTINGS ===============================================================
+
+%\setromanfont[Mapping=tex-text]{CMU Serif}
+%%\setromanfont[Mapping=tex-text]{CMU Sans Serif} % temporary change until printing
+%%\setsansfont[Mapping=tex-text]{CMU Sans Serif}
+%%\setmonofont[Mapping=tex-text]{CMU Typewriter Text}
+%\setmainfont[Mapping=tex-text]{CMU Serif}
+%%\setmainfont[Mapping=tex-text]{CMU Sans Serif}  % temporary change until printing
+
+%\setromanfont[Mapping=tex-text,ExternalLocation=fonts/]{cmunrm.otf}
+%\setsansfont[Mapping=tex-text,ExternalLocation=fonts/]{cmunss.otf}
+%\setmonofont[Mapping=tex-text,ExternalLocation=fonts/]{cmuntt.otf}
+%\setmainfont[Mapping=tex-text, ExternalLocation=fonts/]{cmunss.otf}
+
+% CUSTOM COMMANDS ==============================================================
+
+% Layout macros
+\newcommand\spa[1]{\; #1 \;}
+
+% Font macros
+\newcommand\resfont[1]{\ensuremath{\mathtt{#1}}}
+
+% Mathematical macros
+\newcommand\setmap[3]{#1\{#2 \mapsto #3\}}
+\newcommand\getmap[3]{(#2 \mapsto #3) \in #1}
+\newcommand\tuple[2]{\ensuremath{\langle#1, #2\rangle}}
+\newcommand\mfrac[2]{\ensuremath{\dfrac{#1}{#2}}}
+\newcommand\nequiv[2]{\ensuremath{#1 \not\equiv #2}}
+
+% Core Ruby Operational Semantics letter bindings
+\newcommand\mem{\mu}
+
+% Core Ruby Operational Semantics low level macros
+\newcommand\state[2]{(#1, #2)}
+\newcommand\transition[1]{\ensuremath{\overset{#1, c*}{\rightarrow}}}
+\newcommand\range[2]{#1, ..., #2}
+\newcommand\midrange[5]{\range{#1}{#2}, #3, \range{#4}{#5}}
+
+% Core Ruby Operational Semantics high level macros
+\newcommand\operation[5]{\ensuremath{\state{#1}{#2} \transition{#3} \state{#4}{#5}}}
+\newcommand\propagation[2]{\operation{#1}{\mem}{#2}{#1'}{\mem'}}
+
+% Core Ruby specific Operational Semantics macros
+\newcommand\semicolon[2]{#1; \; #2}
+\newcommand\assign[2]{#1 = #2}
+\newcommand\mcall[3]{#1.\texttt{#2}(#3)}
+\newcommand\ifte[3]{\resfont{if} \; #1 \; \resfont{then} \; #2 \; \resfont{else} \; #3}
+\newcommand\newclass[2]{#1.\resfont{new}(#2)}
+\newcommand\methoddef[3]{\resfont{def} \; #1(#2) = #3}
+\newcommand\classdef[2]{\resfont{class} \; #1 = #2}
+\newcommand\with[3]{with \; \tuple{#1}{#2} \; do \; #3}
+
+% Success Typing macros
+\newcommand\ssub{\sqsubseteq_S}
+
+% Core Ruby Success Typing letter bindings
+\newcommand\classlist{\Delta}
+\newcommand\envir{\Gamma}
+\newcommand\fields{\Phi}
+\newcommand\currclass{l}
+
+% Core Ruby Success Typing inferencing macros
+\newcommand\stinfer[5]{\classlist; \; #1; \; \fields \; \underset{\currclass}{\vdash} \; #2: #3 \; \& \; #4; \; #5}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% HASKELL STUFF %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\newcommand\typerep[1]{\ensuremath{#1}}
+\newcommand\typerep[1]{\lstinline[basicstyle=\normalsize\ttfamily,keywords={}]|#1|}
+\newcommand\typefootrep[1]{\textbf{\lstinline[basicstyle=\footnotesize\ttfamily,keywords={}]|#1|}}
+% \newcommand\ttyperep[1]{\typerep{#1}}
+% \newcommand\mtyperep[1]{\mbox{\typerep{#1}}}
+
+% Arrow types
+\newcommand\typeto[2]{\typerep{#1} \typerep{->} \typerep{#2}}
+\newcommand\typetotwo[3]{\ensuremath{\typerep{#1} \typerep{->}
+                                     \typerep{#2} \typerep{->}
+                                     \typerep{#3}}}
+
+\newcommand\tyconapone[2]{\ensuremath{\mbox{\typerep{#1}} \:\: \mbox{#2}}}
+\newcommand\tyconaponeC[2]{\ensuremath{\mbox{\typerep{#1}} \:\: \mbox{\typerep{#2}}}}
+% \newcommand\tyconapone[2]{\typerep{#1} $\:$ \typerep{#2}}
+
+\newcommand\tyconaptwo[3]{\ensuremath{\mbox{\typerep{#1}} \:\: \mbox{#2} \:\: \mbox{#3}}}
+
+
+% FLOAT SETUP ==================================================================
+
+% SPELLING =====================================================================
+
+% CODE HIGHLIGHTING ============================================================
+
+\usepackage{listings}
+
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
+
+\lstset{
+	language=Haskell,
+	basicstyle=\footnotesize\ttfamily,
+	numbers=left,
+	numberstyle=\tiny\color{gray},
+	stepnumber=1,
+	numbersep=5pt,
+	backgroundcolor=\color{white},
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	frame=single,
+	rulecolor=\color{black},
+	tabsize=2,
+	captionpos=b,
+	breaklines=true,
+	breakatwhitespace=false,
+	title=\lstname,
+        xleftmargin=17pt,
+        xrightmargin=5pt,
+        aboveskip=\baselineskip
+}
+
+\newcommand\haskellcode[2]{\lstinputlisting[language=Haskell,caption={#1},label=#1]{src/#2}}
+\newcommand\rubycode[2]{\lstinputlisting[language=Ruby,caption={#1},label=#1]{src/#2}}
+\newcommand\erlangcode[1]{\lstinputlisting[language=erlang,captionpos=]{src/#1}}
+\newcommand\plaintext[1]{\lstinputlisting[language=,captionpos=,stepnumber=0]{src/#1}}
+
+% CHANGE MATH FONT ============================================================
+
+% HYPERREF MUST BE LAST =======================================================
+
+\usepackage[xetex,colorlinks=true,linkcolor=blue,citecolor=darkgreen]{hyperref}
+
+% DOCUMENT INFORMATION =========================================================
+
+\title{Thesis subject} % ===============> FIXME
+\author{Όνομα Φοιτητή}
+\authoren{Student name}
+\datedefense{9}{9}{9999}      % ===============> FIXME
+\TRnumber{CSD-SW-TR-*-*} % ok ==================> FIXME
+\supervisor{Υπέυθυνος Διπλωματικής}
+\supervisorpos{Τίτλος Υπευθύνου}
+\committeeone{Πρώτο μέλος επιτροπής}
+\committeeonepos{Τίτλος μέλους}
+\committeetwo{Δεύτερο μέλος επιτροπής}
+\committeetwopos{Τίτλος μέλους}
+\committeethree{Τρίτο μέλος επιτροπής}
+\committeethreepos{Τίτλος μέλους}
+
+\hypersetup{
+	pdftitle={Thesis subject}, % ===> FIXME
+	pdfauthor={Όνομα Φοιτητή},
+	pdfsubject={},
+	pdfkeywords={}
+}
+
+
+% MAIN DOCUMENT ================================================================
+
+\begin{document}
+
+\frontmatter
+\maketitle
+
+\def\templen{\parindent}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1.5ex plus 0.5ex minus 0.2ex}
+\include{abstract}
+
+\selectlanguage{english}   % Everything from here on is in english
+\setlanguage{english}
+\nogreekalph
+
+\setlength{\parindent}{\templen}
+\setlength{\parskip}{0pt}
+\tableofcontents
+\listoffigures
+%\listoftables
+\renewcommand{\lstlistlistingname}{List of Listings}
+%\lstlistoflistings % changed the title above
+
+\mainmatter
+% moved these two commands here so that they don't influence the toc
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1.5ex plus 0.5ex minus 0.2ex}
+
+\renewcommand\floatpagefraction{.7}
+
+\include{ch1}
+\include{ch2}
+\include{ch3}
+\include{ch4}
+\include{ch5}
+
+\backmatter
+\cleardoublepage % start at the next odd page
+\phantomsection % correct hyperlinking
+\bibliography{references}
+\bibliographystyle{softlab-thesis}
+% \include{glossary}
+% \chapter{Appendix}
+% \printindex
+
+\end{document}
