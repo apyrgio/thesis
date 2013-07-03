@@ -1,0 +1,34 @@
+\chapter{Introduction}\label{ch:intro}
+
+\section{Introduction/Motivation}
+
+Bla-bla...
+
+\section{Thesis structure}
+
+% TODO: Make `Chapter x` click-able and anchored to the respective chapter
+\begin{description}
+\item[Chapter~\ref{ch:ch2}:]
+We define what "cloud" means and mention some of the most notable examples.
+Then, we give a brief overview of the synnefo implementation, its key
+characteristics and why it can have a place in the current cloud world.
+\item[Chapter~\ref{ch:ch3}:]
+We present the architecture of Archipelago and provide the necessary theoretical
+background (mmap, IPC) the reader needs to understand its basic concepts. Then,
+we thoroughly explain how Archipelago handles I/O requests. Finally, we mention
+what are the current storage mechanisms for Archipelago and evaluate their
+performance.
+\item[Chapter~\ref{ch:ch4}:]
+We explain why tiering is important and what is the state of tiered storage at
+the moment (bcache, flashcache, memcached, ramcloud, couchbase).  Then, we
+provide the related theoretical background for cached (hash-tables, LRUs).
+Finally, we defend why we chose to roll out our own implementation.
+\item[Chapter~\ref{ch:cached-design}:]
+We explain the design of cached, the building blocks that is consisted of
+(xcache, xworkq, xwaitq). Then, we provide extensive benchmark results and
+compare them to the ones of Chapter 3.
+\item[Chapter~\ref{ch:ch6}:]
+TODO
+\item[Chapter~\ref{ch:ch7}:]
+We draw some concluding remarks and propose some future work.
+\end{description}

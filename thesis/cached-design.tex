@@ -1,0 +1,89 @@
+\chapter{Design of cached}\label{ch:cached-design}
+
+\section{General}
+
+Currently, Archipelago doesn't have an xseg peer that can act as a cache for
+block requests. Having a cache however is essential for a tiered storage and
+cached peer is implemented for this reason.
+
+\section{Implementation details}
+
+cached is based on xseg and also on the following xtypes:
+
+\begin{itemize}
+	\item \textbf{xcache} (for cache support)
+	* xwork (for job support)
+	* xworkq (for atomicity in execution of jobs)
+	* xwaitq (for conditional execution of jobs)
+\end{itemize}
+
+More specifically, cached consists of the cache provided by xcache and a
+pre-allocated number of objects. An object is divided in buckets and its size,
+as well as bucket size, are defined by the user.
+
+The fact that objects are pre-allocated means two things:
+
+1) We don't need to care about memory fragmentation and system call overhead
+2) We cannot index single buckets. <FILLME>
+
+\section{The xcache xtype}
+
+
+
+\section{The xworkq xtype}
+
+Every object has a workq. Whenever a new request is accepted/received for an
+object, it is enqueued in the workq and we are sure that only one thread at a
+time can have access to the objects data and metadata.
+
+For more information, see the xworkq.
+
+\section{The xwaitq xtype}
+
+When a thread tries to insert an object in cache but fails, due to the fact
+that cache is full, the request is enqueued in the xcache waitq, which is
+signaled every time an object is freed.
+
+For more information, see the xwaitq.
+
+\section{Cached internals}
+
+\subsection{Object states}
+
+Every object has a state, which is set atomically by threads. The state list is
+the following:
+
+* READY: the object is ready to be used
+* FLUSHING: the object is flushing its dirty buckets
+* DELETING: there is a delete request that has been sent to the blocker for
+  this object
+* INVALIDATED: the object has been deleted
+* FAILED: something went very wrong with this object
+
+Also, object buckets have their own states too:
+
+* INVALID: the same as empty
+* LOADING: there is a pending read to blocker for this bucket
+* VALID: the bucket is clean and can be read
+* DIRTY: the bucket can be read but its contents have not been written to the
+  underlying storage
+* WRITING: there is a pending write to blocker for this bucket
+
+Finally, for every object there are bucket state counters, which are increased/
+decreased when a bucket state is changed. These counters give us an O(1)
+glimpse to the bucket states of an object.
+
+\subsection{Per-object peer requests}
+
+Reads and writes to objects are practically read/write request from other
+peers, for which a peer request has been allocated. There are cases though
+when an object has to allocate its own peer request e.g. due to a flushing of
+its dirty buckets. Since this must be fast, there are pre-allocated requests
+hard-coded in the struct of each object which can be used in such cases.
+
+\subsection{Write policy}
+
+The user must define beforehand what is the write policy of cache. There are
+two options: writethrough and writeback. On a side note, as far as reads and
+cache misses are concerned, cached operates under a write-allocate policy.
+
