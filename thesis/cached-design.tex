@@ -1,23 +1,45 @@
 \chapter{Design of cached}\label{ch:cached-design}
 
+In the previous chapters, we have addressed the need for tiering in terms of
+scalability as well as performance. % Which are these chapters? Link them.
+
+We have also evaluated current caching solutions and described why they couldn't 
+be used as a cache tier in Archipelago. % Provide link to a table of comparisons
+
+With the results of chapter ? in mind, we can provide some more strict 
+requirements that our solution must have:
+
+% List the requirements for our solution
+\begin{enumerate}
+	\item Requirement 1
+	\item Requirement 2
+	\item Requirement 3
+	\item Requirement 4
+\end{enumerate}
+The following two chapters are the main bulk of this thesis and they present our 
+own implementation that aims to fill the above requirements.
+
+% Foretell what the following sections will contain
+More specifically, this chapter provides an in-depth description of the design 
+of cached.  Section ?  provides a general overview of cached. Sections ? - ?  
+present the building blocks of cached and their design. Section ? presents the 
+interaction of cached and its building blocks. Finally, in Section ? we 
+illustrate the flow of requests for cached.
+
 \section{General}
 
-Currently, Archipelago doesn't have an xseg peer that can act as a cache for
-block requests. Having a cache however is essential for a tiered storage and
-cached peer is implemented for this reason.
+In order to provide a caching tier for Archipelago that would blabla our 
+requirements, we had to create our own implementation. Its name is simply cached 
+(\textbf{cache d}aemon) and is another XSEG peer with similar structure to those 
+seen in chapter ? %link to chapter
 
-\section{Implementation details}
+For the creation of this peer, we have created some xtypes
+% Link to where we define xtypes
+that act as the building blocks for this peer. These xtypes are the following:
 
-cached is based on xseg and also on the following xtypes:
-
-\begin{itemize}
-	\item \textbf{xcache} (for cache support)
-	* xwork (for job support)
-	* xworkq (for atomicity in execution of jobs)
-	* xwaitq (for conditional execution of jobs)
-\end{itemize}
-
-More specifically, cached consists of the cache provided by xcache and a
+\begin{comment}
+More specifically, cached consists of the cache provided by xcache aasfs as safa
+asfasfnd a
 pre-allocated number of objects. An object is divided in buckets and its size,
 as well as bucket size, are defined by the user.
 
@@ -25,9 +47,99 @@ The fact that objects are pre-allocated means two things:
 
 1) We don't need to care about memory fragmentation and system call overhead
 2) We cannot index single buckets. <FILLME>
+\end{comment}
+
+\begin{itemize}
+	\item \textbf{xcache} (for cache support)
+	\item xwork (for job support)
+	\item xworkq (for atomicity in execution of jobs)
+	\item xwaitq (for conditional execution of jobs)
+\end{itemize}
+
+and their design will be discussed in-depth in the following sections.
 
 \section{The xcache xtype}
 
+xcache is based on xseg and also on the following xtypes:
+
+* xq (for xseg queue support)
+* xhash (for hash table support)
+* xlock (for locking critical sections)
+* xbinheap (for LRU implementation)
+
+More specifically, xcache consists of two hash tables. One hash table is
+responsible for indexing objects (or more generally speaking "cache entries")
+that are active in cache. The other hash table is responsible for indexing
+evicted cache entries that have pending jobs. Again, more generally speaking,
+evicted cache entries whose refcount has not dropped to zero yet.
+
+Eviction
+--------
+
+Cache entry eviction is done almost transparently from the user. xcache has two
+LRU algorithms, a linear LRU array or a binary heap (more at xbinheap) that can
+be chosen at runtime and are responsible for deciding which is the least
+recently used entry. Users do not explicitly interact with the LRU array.
+Eviction occurs automagically during the insertion of a new cache entry and the
+user is informed via a specific hook that is triggered upon eviction.
+
+Hooks
+-----
+
+The hooks that xcache provides to users are:
+
+\begin{itemize}
+\item on init: called on cache entry initialization.
+\item on\_put: called when the last reference to the cache entry is put
+* on\_evict: called when a cache entry is evicted.
+* on\_node\_init: called on initial node preparation.
+* post\_evict: called after an eviction has occurred, with cache lock held.
+* on\_free: called when a cache entry is freed.
+* on\_finalize: called to hint the user that the cache entry's ref has dropped
+  to zero.
+* on\_reinsert: called when a cache entry has been in cache
+\end{itemize}
+
+Refcounts and locks
+-------------------
+
+The refcount model in xcache should be familiar to most people:
+
+* When an entry is inserted in cache, the cache holds a reference for it (ref =
+  1).
+* Whenever a new lookup for this cache entry succeeds, the reference is
+  increased by 1 (ref++)
+* When the request that has issued the lookup has finished with an entry, the
+  reference is decreased by 1 (ref--)
+* When a cache entry is evicted by cache, the its ref is decreased by 1.
+  (ref--)
+
+Some common refcount cases are:
+
+* active entry with pending jobs (ref > 1)
+* active entry with no pending jobs (ref = 1)
+* evicted entry with pending jobs (ref > 0)
+* evicted entry with no pending jobs (ref = 0)
+
+and, as always, the entry is freed only when its ref = 0.
+
+Finally, xcache uses one lock for each hash table but when a cache entry shifts
+from one hash table to the other, both locks are acquired.
+
+Re-insertion
+------------
+
+In xcache, there is a concept called "re-insertion". In order for an entry to
+be re-inserted to the primary hash table (which will be called "entries" from
+now on) it must first reside in the hash table that indexes the evicted cache
+entries (which will be called "rm\_entries" from now on). As mentioned above,
+an entry that is in rm\_entries has probably pending jobs that delay its
+removal.
+
+So, what happens if a lookup arrives for that entry while on this stage? In
+this case, we re-insert it to entries and increase its refcount by 2, since
+there is one reference by the hash table and one reference by the one who
+requested the lookup.
 
 
 \section{The xworkq xtype}
