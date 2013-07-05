@@ -16,6 +16,7 @@ requirements that our solution must have:
 	\item Requirement 3
 	\item Requirement 4
 \end{enumerate}
+
 The following two chapters are the main bulk of this thesis and they present our 
 own implementation that aims to fill the above requirements.
 
@@ -60,12 +61,11 @@ and their design will be discussed in-depth in the following sections.
 
 \section{The xcache xtype}
 
-xcache is based on xseg and also on the following xtypes:
+xcache is the main component of cached. It handles the indexing, reference 
+counting, coherency and eviction jobs all by itself. A basic overview of xcache 
+can be seen below
 
-* xq (for xseg queue support)
-* xhash (for hash table support)
-* xlock (for locking critical sections)
-* xbinheap (for LRU implementation)
+% Add figure for xcache with both hash tables, xq etc.
 
 More specifically, xcache consists of two hash tables. One hash table is
 responsible for indexing objects (or more generally speaking "cache entries")
@@ -73,8 +73,25 @@ that are active in cache. The other hash table is responsible for indexing
 evicted cache entries that have pending jobs. Again, more generally speaking,
 evicted cache entries whose refcount has not dropped to zero yet.
 
-Eviction
---------
+\subsection{Indexing}
+
+In order to index the cached objects, xcache relies on another xtype, xhash, 
+which is a hash table. What's more, it's actually the C implementation of the 
+dictionary used in Python.
+
+xhash is one of the main reasons our implementation is guaranteed to be O(1).
+% TODO: Explain why
+
+Finally, the xhash xtype gives provides us with the basic hash table functions, 
+namely:
+
+\begin{itemize}
+	\item Insertion
+	\item Look-up
+	\item Deletion
+\end{itemize}
+
+\subsection{Eviction}
 
 Cache entry eviction is done almost transparently from the user. xcache has two
 LRU algorithms, a linear LRU array or a binary heap (more at xbinheap) that can
@@ -83,51 +100,53 @@ recently used entry. Users do not explicitly interact with the LRU array.
 Eviction occurs automagically during the insertion of a new cache entry and the
 user is informed via a specific hook that is triggered upon eviction.
 
-Hooks
------
+\subsection{Hooks}
 
 The hooks that xcache provides to users are:
 
 \begin{itemize}
-\item on init: called on cache entry initialization.
-\item on\_put: called when the last reference to the cache entry is put
-* on\_evict: called when a cache entry is evicted.
-* on\_node\_init: called on initial node preparation.
-* post\_evict: called after an eviction has occurred, with cache lock held.
-* on\_free: called when a cache entry is freed.
-* on\_finalize: called to hint the user that the cache entry's ref has dropped
-  to zero.
-* on\_reinsert: called when a cache entry has been in cache
+	\item on init: called on cache entry initialization.
+	\item on\_put: called when the last reference to the cache entry is put
+	\item on\_evict: called when a cache entry is evicted.
+	\item on\_node\_init: called on initial node preparation.
+	\item post\_evict: called after an eviction has occurred, with cache  
+		lock held.
+	\item on\_free: called when a cache entry is freed.
+	\item on\_finalize: called to hint the user that the cache entry's ref 
+		has dropped to zero.
+	\item on\_reinsert: called when a cache entry has been in cache
 \end{itemize}
 
-Refcounts and locks
--------------------
+\subsection{Refcounts and locks}
 
 The refcount model in xcache should be familiar to most people:
 
-* When an entry is inserted in cache, the cache holds a reference for it (ref =
-  1).
-* Whenever a new lookup for this cache entry succeeds, the reference is
-  increased by 1 (ref++)
-* When the request that has issued the lookup has finished with an entry, the
-  reference is decreased by 1 (ref--)
-* When a cache entry is evicted by cache, the its ref is decreased by 1.
-  (ref--)
+\begin{itemize}
+	\item When an entry is inserted in cache, the cache holds a reference 
+		for it (ref = 1).
+	\item Whenever a new lookup for this cache entry succeeds, the reference 
+		is increased by 1 (ref++)
+	\item When the request that has issued the lookup has finished with an 
+		entry, the reference is decreased by 1. (ref--)
+	\item When a cache entry is evicted by cache, the its ref is decreased 
+		by 1. (ref--)
+\end{itemize}
 
 Some common refcount cases are:
 
-* active entry with pending jobs (ref > 1)
-* active entry with no pending jobs (ref = 1)
-* evicted entry with pending jobs (ref > 0)
-* evicted entry with no pending jobs (ref = 0)
+\begin{itemize}
+	\item active entry with pending jobs (ref > 1)
+	\item active entry with no pending jobs (ref = 1)
+	\item evicted entry with pending jobs (ref > 0)
+	\item evicted entry with no pending jobs (ref = 0)
+\end{itemize}
 
 and, as always, the entry is freed only when its ref = 0.
 
 Finally, xcache uses one lock for each hash table but when a cache entry shifts
 from one hash table to the other, both locks are acquired.
 
-Re-insertion
-------------
+\subsection{Re-insertion}
 
 In xcache, there is a concept called "re-insertion". In order for an entry to
 be re-inserted to the primary hash table (which will be called "entries" from
@@ -165,21 +184,25 @@ For more information, see the xwaitq.
 Every object has a state, which is set atomically by threads. The state list is
 the following:
 
-* READY: the object is ready to be used
-* FLUSHING: the object is flushing its dirty buckets
-* DELETING: there is a delete request that has been sent to the blocker for
-  this object
-* INVALIDATED: the object has been deleted
-* FAILED: something went very wrong with this object
+\begin{itemize}
+	\item READY: the object is ready to be used
+	\item FLUSHING: the object is flushing its dirty buckets
+	\item DELETING: there is a delete request that has been sent to the 
+		blocker for this object
+	\item INVALIDATED: the object has been deleted
+	\item FAILED: something went very wrong with this object
+\end{itemize}
 
 Also, object buckets have their own states too:
 
-* INVALID: the same as empty
-* LOADING: there is a pending read to blocker for this bucket
-* VALID: the bucket is clean and can be read
-* DIRTY: the bucket can be read but its contents have not been written to the
-  underlying storage
-* WRITING: there is a pending write to blocker for this bucket
+\begin{itemize}
+	\item INVALID: the same as empty
+	\item LOADING: there is a pending read to blocker for this bucket
+	\item VALID: the bucket is clean and can be read
+	\item DIRTY: the bucket can be read but its contents have not been
+		written to the underlying storage
+	\item WRITING: there is a pending write to blocker for this bucket
+\end{itemize}
 
 Finally, for every object there are bucket state counters, which are increased/
 decreased when a bucket state is changed. These counters give us an O(1)
