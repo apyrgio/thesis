@@ -50,6 +50,7 @@ The fact that objects are pre-allocated means two things:
 2) We cannot index single buckets. <FILLME>
 \end{comment}
 
+% TODO: Link List to the definitions
 \begin{itemize}
 	\item \textbf{xcache} (for cache support)
 	\item xwork (for job support)
@@ -61,26 +62,37 @@ and their design will be discussed in-depth in the following sections.
 
 \section{The xcache xtype}
 
-xcache is the main component of cached. It handles the indexing, reference 
-counting, coherency and eviction jobs all by itself. A basic overview of xcache 
-can be seen below
+xcache is the main component of cached. It is responsible for several key 
+aspects of caching such as:
+
+\begin{itemize}
+	\item object indexing
+	\item coherency (?) and
+	\item eviction handling
+	\item reference counting
+\end{itemize}
+
+Below we can see a design overview of xcache:
 
 % Add figure for xcache with both hash tables, xq etc.
 
-More specifically, xcache consists of two hash tables. One hash table is
-responsible for indexing objects (or more generally speaking "cache entries")
-that are active in cache. The other hash table is responsible for indexing
-evicted cache entries that have pending jobs. Again, more generally speaking,
-evicted cache entries whose refcount has not dropped to zero yet.
+% While explaining, point to the diagram objects, a, b, c etc.
+More specifically, xcache utilizes two hash tables. One hash table is 
+responsible for indexing objects (or more generally speaking "cache entries") 
+that are active in cache.  The other hash table is responsible for indexing 
+evicted cache entries that have pending jobs.  Again, more generally speaking, 
+evicted cache entries are entries whose refcount has not dropped to zero yet.
 
 \subsection{Indexing}
 
 In order to index the cached objects, xcache relies on another xtype, xhash, 
 which is a hash table. What's more, it's actually the C implementation of the 
 dictionary used in Python.
+% explain that for sparce Python dictionaries, accesses are O(1)
 
-xhash is one of the main reasons our implementation is guaranteed to be O(1).
-% TODO: Explain why
+We have chosen to use a hash table as our index because:
+
+% List of pros and cons of hash tables and why cons are ok in our book
 
 Finally, the xhash xtype gives provides us with the basic hash table functions, 
 namely:
@@ -93,7 +105,61 @@ namely:
 
 \subsection{Eviction}
 
-Cache entry eviction is done almost transparently from the user. xcache has two
+When xcache has reached its maximum capacity and is requested to index a new 
+entry, we have to resort to the eviction of a cached entry. But, which cache 
+entry we must evict? This is a well documented problem that was first faced 
+when creating hardware caches (the L1, L2 CPU caches we are familiar with). In 
+1966, Lazlo Belady % Link to the paper?
+proved that the best strategy is to evict the entry that is going to be used 
+more later on in the future. Although our implementation is promised to be 
+fast, we can't say the same for its clairvoyance properties that are needed for 
+this eviction strategy. So, our implementation (as well as all other 
+implementation that index and evict entries) must choose between the following, 
+more down-to-the-earth eviction strategies:
+
+% Mention ehcache approach: 
+% http://ehcache.org/documentation/apis/cache-eviction-algorithms
+%
+% Also look at the following papers
+%L. Belady, “A Study of Replacement Algorithms for a
+%Virtual-Storage Computer,” IBM Systems Journal, vol.5,
+%no.2, pp.78-101, 1966.
+%Also, check out this paper:
+%http://dent.cecs.uci.edu/~papers/esweek06/cases/p234.pdf
+\begin{itemize}
+	\item \textbf{Random:} Simply, a randomly chosen entry is evicted. This 
+		strategy, although it seems simplistic at first, is sometimes chosen 
+		due to the ease and speed of each. It is preferred in random workloads 
+		where getting free space for an object is more important than the 
+		object that will be evicted.
+	\item \textbf{FIFO (First-In-First-Out):} The entry that was first inserted 
+		will also be the first to evict. This is also a very simplistic 
+		approach as well as easy and fast. Interestingly, although it would 
+		seem to produce better results than Random eviction, it is rarely used 
+		though, since it assumes that cache entries are used only once, which 
+		is not common in real-life situations.
+	\item \textbf{LRU (Least-Recently-Used)}
+	\item \textbf{LFU (Least-Frequently-Used)}
+\end{itemize}
+
+We have chosen the LRU strategy. What's more, our hash table approach allows us 
+to create an O(1) LRU algorithm that you can see in the following figure:
+
+% Insert figure for O(1) LRU and hash table
+
+Our LRU implementation uses a doubly linked list blablabla.
+This design allows us to do all of the following action in constant time:
+
+\begin{itemize}
+	\item Insert a new entry to the LRU list
+	\item Evict the LRU entry
+	\item Update an entry's access time (i.e. mark it as MRU)
+	\item Remove an arbitrary entry
+\end{itemize}
+
+Another neat feature of xcache is that Cache entry eviction is done almost 
+transparently from the user.  xcache has l
+two
 LRU algorithms, a linear LRU array or a binary heap (more at xbinheap) that can
 be chosen at runtime and are responsible for deciding which is the least
 recently used entry. Users do not explicitly interact with the LRU array.
@@ -105,7 +171,7 @@ user is informed via a specific hook that is triggered upon eviction.
 The hooks that xcache provides to users are:
 
 \begin{itemize}
-	\item on init: called on cache entry initialization.
+	\item on\_ init: called on cache entry initialization.
 	\item on\_put: called when the last reference to the cache entry is put
 	\item on\_evict: called when a cache entry is evicted.
 	\item on\_node\_init: called on initial node preparation.
