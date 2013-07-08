@@ -105,17 +105,14 @@ namely:
 
 \subsection{Eviction}
 
-When xcache has reached its maximum capacity and is requested to index a new 
-entry, we have to resort to the eviction of a cached entry. But, which cache 
-entry we must evict? This is a well documented problem that was first faced 
-when creating hardware caches (the L1, L2 CPU caches we are familiar with). In 
-1966, Lazlo Belady % Link to the paper?
-proved that the best strategy is to evict the entry that is going to be used 
-more later on in the future. Although our implementation is promised to be 
-fast, we can't say the same for its clairvoyance properties that are needed for 
-this eviction strategy. So, our implementation (as well as all other 
-implementation that index and evict entries) must choose between the following, 
-more down-to-the-earth eviction strategies:
+When xcache reaches its maximum capacity and is requested to index a new entry, 
+we have to resort to the eviction of an older cached entry. But, which cache 
+entry must we evict? This is a well documented problem that was first faced when 
+creating hardware caches (the L1, L2 CPU caches we are familiar with). In 1966, 
+Lazlo Belady proved that the best strategy is to evict the entry that is going 
+to be used more later on in the future\cite{Belady}. However, the clairvoyance 
+needed for this strategy was a little difficult to implement, so we had to 
+resort to one of the following, well-known strategies:
 
 % Mention ehcache approach: 
 % http://ehcache.org/documentation/apis/cache-eviction-algorithms
@@ -124,15 +121,11 @@ more down-to-the-earth eviction strategies:
 %L. Belady, “A Study of Replacement Algorithms for a
 %Virtual-Storage Computer,” IBM Systems Journal, vol.5,
 %no.2, pp.78-101, 1966.
-%Also, check out this paper:
-%An optimality proof of the LRU-K page replacement algorithm
-%that proves that no algorithm that keeps track of the K most recent references 
-%for a page can be more optimal than LRU.
 \begin{itemize}
 	\item \textbf{Random:} Simply, a randomly chosen entry is evicted. This 
 		strategy, although it seems simplistic at first, is sometimes chosen 
 		due to the ease and speed of each. It is preferred in random workloads 
-		where getting free space for an object is more important than the 
+		where getting fast free space for an object is more important than the 
 		object that will be evicted.
 	\item \textbf{FIFO (First-In-First-Out):} The entry that was first inserted 
 		will also be the first to evict. This is also a very simplistic 
@@ -144,12 +137,22 @@ more down-to-the-earth eviction strategies:
 	\item \textbf{LFU (Least-Frequently-Used)}
 \end{itemize}
 
-We have chosen the LRU strategy. What's more, our hash table approach allows us 
-to create an O(1) LRU algorithm that you can see in the following figure:
+Choosing the LRU strategy is usually a no-brainer. Not only does it 
+\textit{seem} more optimal than the other algorithms, but it has also been 
+proven, using a Bayesian statistic model, that no other algorithm that tracks 
+the last K references to an object can be more optimal.
+%Also, check out this paper:
+%An optimality proof of the LRU-K page replacement algorithm
+%that proves that no algorithm that keeps track of the K most recent references 
+%for a page can be more optimal than LRU.
+
+Also, an added bonus is that we won't need to sacrifice speed over optimality, 
+since that, our hash table approach allows us to create an O(1) LRU algorithm 
+which you can see in the following figure:
 
 % Insert figure for O(1) LRU and hash table
 
-Our LRU implementation uses a doubly linked list blablabla.
+In a nutshell, our LRU implementation uses a doubly linked list blablabla.
 This design allows us to do all of the following action in constant time:
 
 \begin{itemize}
@@ -159,14 +162,15 @@ This design allows us to do all of the following action in constant time:
 	\item Remove an arbitrary entry
 \end{itemize}
 
-Another neat feature of xcache is that Cache entry eviction is done almost 
-transparently from the user.  xcache has l
-two
-LRU algorithms, a linear LRU array or a binary heap (more at xbinheap) that can
-be chosen at runtime and are responsible for deciding which is the least
-recently used entry. Users do not explicitly interact with the LRU array.
-Eviction occurs automagically during the insertion of a new cache entry and the
-user is informed via a specific hook that is triggered upon eviction.
+Another interesting feature of xcache is that evictions occur implicitly and not 
+explicitly. The user doesn't need to interact with the LRU queue.
+
+For example, when a user tries to insert a new entry to an already full cache, 
+the insertion will succeed and the user will not be prompted to evict an entry 
+manually. Also, the user will be notified via specific event hook that is 
+triggered upon eviction that an entry has been evicted.
+
+More about hooks can be seen in the following subsection.
 
 \subsection{Hooks}
 
