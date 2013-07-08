@@ -66,10 +66,9 @@ xcache is the main component of cached. It is responsible for several key
 aspects of caching such as:
 
 \begin{itemize}
-	\item object indexing
-	\item coherency (?) and
-	\item eviction handling
-	\item reference counting
+	\item object indexing,
+	\item eviction handling and
+	\item coherency
 \end{itemize}
 
 Below we can see a design overview of xcache:
@@ -172,7 +171,9 @@ triggered upon eviction that an entry has been evicted.
 
 More about hooks can be seen in the following subsection.
 
+\begin{comment}
 \subsection{Hooks}
+
 
 The hooks that xcache provides to users are:
 
@@ -189,8 +190,24 @@ The hooks that xcache provides to users are:
 	\item on\_reinsert: called when a cache entry has been in cache
 \end{itemize}
 
-\subsection{Refcounts and locks}
+\end{comment}
 
+\subsection{Concurrency control}
+
+The concept of thread-safety has been discussed in chapter ?. The goal of xcache 
+is to provide the necessary guarantees so that the code can be accessed from 
+different threads at the same time.
+
+The most important guarantee is provided by the lock in hash table. When a 
+thread wants to do a xhash operation (insert, lookup, remove), it must acquire a 
+specific lock. This applies to both hash tables, "entries" and "rm_entries".  
+Also, there are cases where data have to migrate from one table to the other. In 
+this case, the locks are acquired in an order that prevents deadlocks.
+
+Another important guarantee is the reference counting of objects. xcache uses 
+atomic gets and puts to update the reference count of an object.
+
+\begin{comment}
 The refcount model in xcache should be familiar to most people:
 
 \begin{itemize}
@@ -217,6 +234,8 @@ and, as always, the entry is freed only when its ref = 0.
 
 Finally, xcache uses one lock for each hash table but when a cache entry shifts
 from one hash table to the other, both locks are acquired.
+
+\end{comment}
 
 \subsection{Re-insertion}
 
