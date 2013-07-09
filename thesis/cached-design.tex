@@ -27,15 +27,52 @@ present the building blocks of cached and their design. Section ? presents the
 interaction of cached and its building blocks. Finally, in Section ? we 
 illustrate the flow of requests for cached.
 
-\section{General}
+\section{Design overview}
 
+\begin{comment}
 In order to provide a caching tier for Archipelago that would blabla our 
 requirements, we had to create our own implementation. Its name is simply cached 
 (\textbf{cache d}aemon) and is another XSEG peer with similar structure to those 
 seen in chapter ? %link to chapter
+\end{comment}
 
-For the creation of this peer, we have created some xtypes
+The cached peer is comprised from a number of building blocks. Per Archipelago 
+policy, these building blocks have been written in the xtypes fashion. The 
+reasons behind this decision have been discussed in chapter ?
 % Link to where we define xtypes
+but for completeness' sake, we will mention once more the merits of xtypes:
+
+\begin{itemize}
+	\item Abstraction(?) layers: Creating inner abstractions layers for 
+		software is not a new concept but it's very easy to miss, 
+		especially when you start small and end up big.
+		
+		In a nutshell, when writing code for a new software (in our case 
+		a peer for Archipelago but this can apply to most software that 
+		surpass the 1000 LOC\footnote[1]
+		{Lines Of Code}
+		mark) it is wrong practice to create from scratch a monolithic 
+		implementation with indistinguishable parts. There is a main 
+		reason for this:
+		
+		Monolithic implementations usually derive from lack of code 
+		architecture and planning. Although it is feasible for a 
+		programmer to create fully-functional code that meets the 
+		necessary requirements, albeit with a lot more effort and 
+		concentration, this approach will backfire when the programmer 
+		needs to add new features. Since there is no explicit code 
+		architecture and the fragile inner correlations are between 
+		lines of code and not separate entities, stored precariously in 
+		the developer's mind, the result will eventually be constant 
+		code refactorization.
+		
+		One might think that new features happen once in a while in the 
+		development cycle but that would be wrong.  This happens more 
+		often than you might think and is actually the common case in 
+		iteration and test-driven development.
+	\item Re-usability: When code has been written for a specific task
+\end{itemize}	
+
 that act as the building blocks for this peer. These xtypes are the following:
 
 \begin{comment}
@@ -305,7 +342,7 @@ allocations and refcount handling. On object level, there is a different set of
 operations that must be synchronized across threads. Namely, we have bucket 
 claiming, read/write operations and object flushes.
 
-Τhe above distinction makes it easy to see that provided that operations on 
+The above distinction makes it easy to see that provided that operations on 
 object level need not worry about interactions with other objects. Each object 
 is "sandboxed", so to speak.
 
