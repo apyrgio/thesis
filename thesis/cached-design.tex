@@ -198,11 +198,40 @@ The concept of thread-safety has been discussed in chapter ?. The goal of xcache
 is to provide the necessary guarantees so that the code can be accessed from 
 different threads at the same time.
 
-The most important guarantee is provided by the lock in hash table. When a 
-thread wants to do a xhash operation (insert, lookup, remove), it must acquire a 
-specific lock. This applies to both hash tables, "entries" and "rm_entries".  
-Also, there are cases where data have to migrate from one table to the other. In 
-this case, the locks are acquired in an order that prevents deadlocks.
+In order to do so, we must first identify which are the critical sections of 
+xcache, that is the sections where a thread can modify a shared structure. These 
+sections are the following
+
+\begin{itemize}
+	\item All xhash operations: Two of the three xhash operations (inserts and 
+		removals) can modify the hash table (e.g. they can resize it and 
+		reallocate space for it). This means that the third one (lookups) must 
+		not run concurrently with the other.
+	\item Cache node claiming: Before an entry is inserted, it must	acquire one 
+		of the pre-allocated nodes and we must ensure that this can happen from 
+		all threads.
+	\item Entry migration: An entry can migrate from one hash table to the other 
+		e.g. on cache eviction. This migration involves a series of xhash 
+		operations; removal from one hash table and subsequent insertion to the 
+		other. This a scenario that must be handled properly.
+	\item Reference counting: Every entry must have a reference counter.  
+		Reference counters provide a simple way to determine when an entry can 
+		be safely removed. You can see more about reference counting in chapter 
+		?
+	\item LRU updates: Most actions that involve cache entries must subsequently 
+		update the LRU queue. Being a doubly linked list, if two threads update 
+		the LRU simultaneously, we can lead to segfaults.
+\end{itemize}
+
+Let's see what guarantees we provide for each of the above scenarios:
+
+xhash operations: We provide a lock for each hash table
+Cache node claiming: The free node queue is protected by a fast lock
+Entry migration: We always take fist the lock for entries and then for 
+rm\_entries
+LRU updates: Since all LRU operations take place for entries in "entries" hash 
+table and LRU updates are blazing fast we can secure our LRU with the 
+cache->lock.
 
 Another important guarantee is the reference counting of objects. xcache uses 
 atomic gets and puts to update the reference count of an object.
@@ -251,8 +280,41 @@ this case, we re-insert it to entries and increase its refcount by 2, since
 there is one reference by the hash table and one reference by the one who
 requested the lookup.
 
+\subsection{xcache flow}
+
+Below we will see three important scenarios
+
+\textbf{Insertion}
+
+Figure
+
+\textbf{Lookup}
+
+Figure
+
+\textbf{Put}
+
+Figure
 
 \section{The xworkq xtype}
+
+The xworkq xtype is a useful (what?) for concurrency control on object level. It 
+is important to distinguish between cache level operations and object level 
+operations. Cache level operations include insertions, lookups, removals, 
+allocations and refcount handling. On object level, there is a different set of 
+operations that must be synchronized across threads. Namely, we have bucket 
+claiming, read/write operations and object flushes.
+
+Τhe above distinction makes it easy to see that provided that operations on 
+object level need not worry about interactions with other objects. Each object 
+is "sandboxed", so to speak.
+
+Let's see the design of the xworkq xtype. It consist of a queue where jobs (e.g.  
+read from block, write to block) are enqueued. The thread that enqueues a job 
+can attempt to execute it to, by acquiring a lock for the workq. If the lock is 
+free, the thread will be able to execute the enqueued job. Also, other threads 
+can enqueue their jobs, so the thread that has the lock can do those too. There 
+is an xworkq for every object.
 
 Every object has a workq. Whenever a new request is accepted/received for an
 object, it is enqueued in the workq and we are sure that only one thread at a
