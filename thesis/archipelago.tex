@@ -1,0 +1,65 @@
+\chapter{Chapter 3}\label{ch:archipelago}
+
+\section{Archipelago}
+
+Archipelago consists of the following:
+
+1. XSEG
+2.
+3.
+
+\section{XSEG}
+
+XSEG is the segment on which the IPC...
+
+There are some XSEG stuff such as:
+
+1. Drivers
+2. Libraries
+3. Xtypes
+4. Peers
+
+\subsection{Drivers}
+
+\subsection{Libraries}
+
+\subsection{Xtypes}
+
+The rationale behind xtypes is:
+
+\begin{itemize}
+	\item Abstraction(?) layers: Creating inner abstractions layers for 
+		software is not a new concept but it's very easy to miss, 
+		especially when you start small and end up big.
+		
+		In a nutshell, when writing code for a new software (in our case 
+		a peer for Archipelago but this can apply to most software that 
+		surpass the 1000 LOC\footnote[1]
+		{Lines Of Code}
+		mark) it is wrong practice to create from scratch a monolithic 
+		implementation with indistinguishable parts. There is a main 
+		reason for this:
+		
+		Monolithic implementations usually derive from lack of code 
+		architecture and planning. Although it is feasible for a 
+		programmer to create fully-functional code that meets the 
+		necessary requirements, albeit with a lot more effort and 
+		concentration, this approach will backfire when the programmer 
+		needs to add new features. Since there is no explicit code 
+		architecture and the fragile inner correlations are between 
+		lines of code and not separate entities, stored precariously in 
+		the developer's mind, the result will eventually be constant 
+		code refactorization.
+		
+		One might think that new features happen once in a while in the 
+		development cycle but that would be wrong.  This happens more 
+		often than you might think and is actually the common case in 
+		iteration and test-driven development.
+
+		The right practice instead is to...
+	\item Re-usability:...
+	\item User-space / Kernel-space agnosticity: (I doubt that such a word 
+		even exists...)
+\end{itemize}	
+
+\subsection{Peers}

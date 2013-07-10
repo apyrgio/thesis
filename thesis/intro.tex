@@ -4,12 +4,14 @@
 
 Bla-bla...
 
+\begin{comment}
 Also, excuse me in advance for the extensive use of the second person form in 
 the following chapters, as well as breaking the fourth wall between the writer 
 and the reader. Although I tried to, I find it difficult to communicate the more 
 \textit{humane} aspect of this thesis such as code decisions, pitfalls and 
 shortcomings.  After all, there is "you" who reads this thesis and "I" who 
 writes it and no amount of third person form can cover that.
+\end{comment}
 
 \section{Thesis structure}
 
@@ -19,13 +21,13 @@ writes it and no amount of third person form can cover that.
 We define what "cloud" means and mention some of the most notable examples.
 Then, we give a brief overview of the synnefo implementation, its key
 characteristics and why it can have a place in the current cloud world.
-\item[Chapter~\ref{ch:ch3}:]
+\item[Chapter~\ref{ch:archipelago}:]
 We present the architecture of Archipelago and provide the necessary theoretical
 background (mmap, IPC) the reader needs to understand its basic concepts. Then,
 we thoroughly explain how Archipelago handles I/O requests. Finally, we mention
 what are the current storage mechanisms for Archipelago and evaluate their
 performance.
-\item[Chapter~\ref{ch:ch4}:]
+\item[Chapter~\ref{ch:tiering}:]
 We explain why tiering is important and what is the state of tiered storage at
 the moment (bcache, flashcache, memcached, ramcloud, couchbase).  Then, we
 provide the related theoretical background for cached (hash-tables, LRUs).

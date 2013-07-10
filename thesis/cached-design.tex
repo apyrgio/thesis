@@ -22,7 +22,7 @@ own implementation that aims to fill the above requirements.
 
 % Foretell what the following sections will contain
 More specifically, this chapter provides an in-depth description of the design 
-of cached.  Section ?  provides a general overview of cached. Sections ? - ?  
+of cached.  Section ? provides a general overview of cached. Sections ? - ?  
 present the building blocks of cached and their design. Section ? presents the 
 interaction of cached and its building blocks. Finally, in Section ? we 
 illustrate the flow of requests for cached.
@@ -36,44 +36,28 @@ requirements, we had to create our own implementation. Its name is simply cached
 seen in chapter ? %link to chapter
 \end{comment}
 
-The cached peer is comprised from a number of building blocks. Per Archipelago 
-policy, these building blocks have been written in the xtypes fashion. The 
-reasons behind this decision have been discussed in chapter ?
+Cached is a peer that can operate in two modes: writethrough and writeback.
+
+In writeback mode, the data are written directly to cache...
+In writethrough mode, the data are written to the backing storage and then to 
+cache...
+
+Since Archipelago divides internally the volumes to objects (usually 4MB), the 
+cached peer operates on object level. Also, in order to know which parts of the 
+cached object are actually written, or are in the process of being read etc.  
+cached further divides objects to the next logical entity, buckets (typically 
+4KB). Each bucket consists of each data and metadata and cannot be half-empty, 
+or half-allocated. Thus, a bucket can be considered as the quantum of cached 
+objects.
+
+The cached peer consists of a number of building blocks. Per Archipelago policy, 
+these building blocks have been written in the xtypes fashion. The reasons 
+behind this decision have been discussed in chapter ?
 % Link to where we define xtypes
 but for completeness' sake, we will mention once more the merits of xtypes:
 
-\begin{itemize}
-	\item Abstraction(?) layers: Creating inner abstractions layers for 
-		software is not a new concept but it's very easy to miss, 
-		especially when you start small and end up big.
-		
-		In a nutshell, when writing code for a new software (in our case 
-		a peer for Archipelago but this can apply to most software that 
-		surpass the 1000 LOC\footnote[1]
-		{Lines Of Code}
-		mark) it is wrong practice to create from scratch a monolithic 
-		implementation with indistinguishable parts. There is a main 
-		reason for this:
-		
-		Monolithic implementations usually derive from lack of code 
-		architecture and planning. Although it is feasible for a 
-		programmer to create fully-functional code that meets the 
-		necessary requirements, albeit with a lot more effort and 
-		concentration, this approach will backfire when the programmer 
-		needs to add new features. Since there is no explicit code 
-		architecture and the fragile inner correlations are between 
-		lines of code and not separate entities, stored precariously in 
-		the developer's mind, the result will eventually be constant 
-		code refactorization.
-		
-		One might think that new features happen once in a while in the 
-		development cycle but that would be wrong.  This happens more 
-		often than you might think and is actually the common case in 
-		iteration and test-driven development.
-	\item Re-usability: When code has been written for a specific task
-\end{itemize}	
+% Mention merits briefly
 
-that act as the building blocks for this peer. These xtypes are the following:
 
 \begin{comment}
 More specifically, cached consists of the cache provided by xcache aasfs as safa
@@ -87,12 +71,16 @@ The fact that objects are pre-allocated means two things:
 2) We cannot index single buckets. <FILLME>
 \end{comment}
 
+The main parts that cached consists of are the following:
+
 % TODO: Link List to the definitions
 \begin{itemize}
-	\item \textbf{xcache} (for cache support)
-	\item xwork (for job support)
-	\item xworkq (for atomicity in execution of jobs)
-	\item xwaitq (for conditional execution of jobs)
+	\item xcache, an xtype that mainly provides indexing support
+	\item xworkq, an xtype that guarantees atomicity for execution of jobs 
+		on the same target
+	\item xwaitq, an xtype that allows condition execution of jobs
+	\item bucket pool, a pre-allocated memory pool for buckets and their 
+		metadata
 \end{itemize}
 
 and their design will be discussed in-depth in the following sections.
