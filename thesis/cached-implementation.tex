@@ -1,0 +1,41 @@
+\chapter{Implementation of cached}\label{ch:cached-implementation}
+
+In the previous chapter, we presented a design overview for cached and its 
+components. In this chapter we will how the above design has been implemented, 
+the structures and functions that have been created.
+
+More specifically, sections ? - ? provide...
+
+\section{Implementation of xcache}
+
+%Enter C code here
+
+\subsection{Concurrency control}
+
+\paragraph{Reference counting}
+
+The refcount model in xcache should be familiar to most people:
+
+% Turn this to figure
+\begin{itemize}
+	\item When an entry is inserted in cache, the cache holds a reference 
+		for it (ref = 1).
+	\item Whenever a new lookup for this cache entry succeeds, the reference 
+		is increased by 1 (ref++)
+	\item When the request that has issued the lookup has finished with an 
+		entry, the reference is decreased by 1. (ref--)
+	\item When a cache entry is evicted by cache, the its ref is decreased 
+		by 1. (ref--)
+\end{itemize}
+
+Some common refcount cases are:
+
+\begin{itemize}
+	\item active entry with pending jobs (ref > 1)
+	\item active entry with no pending jobs (ref = 1)
+	\item evicted entry with pending jobs (ref > 0)
+	\item evicted entry with no pending jobs (ref = 0)
+\end{itemize}
+
+and, as always, the entry is freed only when its ref = 0.
+

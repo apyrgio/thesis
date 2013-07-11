@@ -24,7 +24,7 @@ own implementation that aims to fill the above requirements.
 More specifically, this chapter provides an in-depth description of the design 
 of cached.  Section ? provides a general overview of cached. Sections ? - ?  
 present the building blocks of cached and their design. Section ? presents the 
-interaction of cached and its building blocks. Finally, in Section ? we 
+interaction of cached and its building blocks. Finally, in Section ?  we 
 illustrate the flow of requests for cached.
 
 \section{Design overview}
@@ -36,23 +36,60 @@ requirements, we had to create our own implementation. Its name is simply cached
 seen in chapter ? %link to chapter
 \end{comment}
 
-Cached is a peer that can operate in two modes: writethrough and writeback.
+Cached is a peer that operates between the vlmc and blocker. Every request that 
+the vlmc peer sends to the blocker, the cached peer can \textit{intercept} it, 
+so to speak, and cache it. This follows the same principle with bcache, which 
+plugs its own request\_fn() function to the virtual device it creates. Unlike 
+bcache however, cached can be plugged on and off at any time.
 
-In writeback mode, the data are written directly to cache...
-In writethrough mode, the data are written to the backing storage and then to 
-cache...
+Cached has two different caching policies, \textbf{write-through} and 
+\textbf{write-back}. These policies aren't new and have been discussed 
+extensively in chapter ?, but let's see what these policies translate to in 
+cached context.
+
+\begin{itemize}
+	\item
+		In \textbf{write-back} mode, cached caches writes, immediately 
+		serves the request back and marks the data as dirty. When a read 
+		arrives, it either serves the request with the dirty data 
+		(read-hit) or forwards the request to the storage peer and 
+		caches the answer (read-miss).
+
+		This policy is used when we want to improve read and write speed 
+		and can sacrifice data safety.
+	\item
+		In \textbf{write-through} mode, cached forwards writes to 
+		blocker, servers the request when blocker replies, caches the 
+		data and marks them as valid.  When a read arrives, it either 
+		serves the request with the valid data (read-hit) or forwards 
+		the request to the storage peer and caches the answer 
+		(read-miss).
+
+		This policy is used when we want to improve read speed and want 
+		to make sure that no data will be lost.
+\end{itemize}	
+
+\subsection{And we cache... what exactly?...}
 
 Since Archipelago divides internally the volumes to objects (usually 4MB), the 
-cached peer operates on object level. Also, in order to know which parts of the 
-cached object are actually written, or are in the process of being read etc.  
-cached further divides objects to the next logical entity, buckets (typically 
-4KB). Each bucket consists of each data and metadata and cannot be half-empty, 
-or half-allocated. Thus, a bucket can be considered as the quantum of cached 
-objects.
+cached peer must operate on object level. Also, in order to know which parts of 
+the cached object are actually written, or are in the process of being read etc.  
+cached further divides objects to the next and final logical entity, buckets 
+(typically 4KB). Each bucket consists of its data and metadata and cannot be 
+half-empty, or half-allocated. You can say that the bucket is the quantum of 
+cached objects.
 
-The cached peer consists of a number of building blocks. Per Archipelago policy, 
-these building blocks have been written in the xtypes fashion. The reasons 
-behind this decision have been discussed in chapter ?
+I'll attempt to make the above a bit clearer. When cached receives a request, it 
+first checks the request target (i.e. the object name and then calculates which 
+bucket objects are within the request's range. It is easy to see that this is a 
+1:1 mapping to the object's data.
+
+\subsection{Cached components}
+
+Let's see now the design of cached in detail. The cached peer consists of a 
+number of building blocks.  Per Archipelago policy, most of these building 
+blocks have been written in the xtypes fashion. The reasons behind this decision 
+have been discussed in chapter ?
 % Link to where we define xtypes
 but for completeness' sake, we will mention once more the merits of xtypes:
 
@@ -71,16 +108,16 @@ The fact that objects are pre-allocated means two things:
 2) We cannot index single buckets. <FILLME>
 \end{comment}
 
-The main parts that cached consists of are the following:
+The components of cached can be seen below:
 
 % TODO: Link List to the definitions
 \begin{itemize}
-	\item xcache, an xtype that mainly provides indexing support
+	\item xcache, an xtype that provides indexing support, amongst many 
+		other things
 	\item xworkq, an xtype that guarantees atomicity for execution of jobs 
-		on the same target
-	\item xwaitq, an xtype that allows condition execution of jobs
-	\item bucket pool, a pre-allocated memory pool for buckets and their 
-		metadata
+		on the same object
+	\item xwaitq, an xtype that allows conditional execution of jobs
+	\item bucket pool, a pre-allocated memory pool for buckets
 \end{itemize}
 
 and their design will be discussed in-depth in the following sections.
@@ -91,9 +128,9 @@ xcache is the main component of cached. It is responsible for several key
 aspects of caching such as:
 
 \begin{itemize}
-	\item object indexing,
-	\item eviction handling and
-	\item coherency
+	\item entry indexing,
+	\item entry eviction, and
+	\item concurrency control
 \end{itemize}
 
 Below we can see a design overview of xcache:
@@ -101,21 +138,20 @@ Below we can see a design overview of xcache:
 % Add figure for xcache with both hash tables, xq etc.
 
 % While explaining, point to the diagram objects, a, b, c etc.
-More specifically, xcache utilizes two hash tables. One hash table is 
-responsible for indexing objects (or more generally speaking "cache entries") 
+As we can see above, xcache utilizes two hash tables. One hash table is 
+responsible for indexing entriess (or more generally speaking "cache entries") 
 that are active in cache.  The other hash table is responsible for indexing 
 evicted cache entries that have pending jobs.  Again, more generally speaking, 
 evicted cache entries are entries whose refcount has not dropped to zero yet.
 
-\subsection{Indexing}
+\subsection{Entry indexing}
 
-In order to index the cached objects, xcache relies on another xtype, xhash, 
-which is a hash table. What's more, it's actually the C implementation of the 
+In order to index the cached entries, xcache relies on another xtype, xhash, 
+which is a hash table. Moreover, it's actually the C implementation of the 
 dictionary used in Python.
-% explain that for sparce Python dictionaries, accesses are O(1)
+% explain that for sparse Python dictionaries, accesses are O(1)
 
 We have chosen to use a hash table as our index because:
-
 % List of pros and cons of hash tables and why cons are ok in our book
 
 Finally, the xhash xtype gives provides us with the basic hash table functions, 
@@ -127,48 +163,12 @@ namely:
 	\item Deletion
 \end{itemize}
 
-\subsection{Eviction}
+\subsection{Entry eviction}
 
-When xcache reaches its maximum capacity and is requested to index a new entry, 
-we have to resort to the eviction of an older cached entry. But, which cache 
-entry must we evict? This is a well documented problem that was first faced when 
-creating hardware caches (the L1, L2 CPU caches we are familiar with). In 1966, 
-Lazlo Belady proved that the best strategy is to evict the entry that is going 
-to be used more later on in the future\cite{Belady}. However, the clairvoyance 
-needed for this strategy was a little difficult to implement, so we had to 
-resort to one of the following, well-known strategies:
-
-% Mention ehcache approach: 
-% http://ehcache.org/documentation/apis/cache-eviction-algorithms
-%
-% Also look at the following papers
-%L. Belady, “A Study of Replacement Algorithms for a
-%Virtual-Storage Computer,” IBM Systems Journal, vol.5,
-%no.2, pp.78-101, 1966.
-\begin{itemize}
-	\item \textbf{Random:} Simply, a randomly chosen entry is evicted. This 
-		strategy, although it seems simplistic at first, is sometimes chosen 
-		due to the ease and speed of each. It is preferred in random workloads 
-		where getting fast free space for an object is more important than the 
-		object that will be evicted.
-	\item \textbf{FIFO (First-In-First-Out):} The entry that was first inserted 
-		will also be the first to evict. This is also a very simplistic 
-		approach as well as easy and fast. Interestingly, although it would 
-		seem to produce better results than Random eviction, it is rarely used 
-		though, since it assumes that cache entries are used only once, which 
-		is not common in real-life situations.
-	\item \textbf{LRU (Least-Recently-Used)}
-	\item \textbf{LFU (Least-Frequently-Used)}
-\end{itemize}
-
-Choosing the LRU strategy is usually a no-brainer. Not only does it 
-\textit{seem} more optimal than the other algorithms, but it has also been 
-proven, using a Bayesian statistic model, that no other algorithm that tracks 
-the last K references to an object can be more optimal.
-%Also, check out this paper:
-%An optimality proof of the LRU-K page replacement algorithm
-%that proves that no algorithm that keeps track of the K most recent references 
-%for a page can be more optimal than LRU.
+As we can see in figure ?, xcache has been designed to index a pre-defined 
+number of entries. That means that when xcache reaches its maximum capacity and 
+is requested to index a new entry, it has to resort to the eviction of a 
+previously cached entry. We have chosen the LRU strategy 
 
 Also, an added bonus is that we won't need to sacrifice speed over optimality, 
 since that, our hash table approach allows us to create an O(1) LRU algorithm 
@@ -186,6 +186,8 @@ This design allows us to do all of the following action in constant time:
 	\item Remove an arbitrary entry
 \end{itemize}
 
+% TODO: Explain what is the interesting thing here, that evictions happen 
+% implicitly
 Another interesting feature of xcache is that evictions occur implicitly and not 
 explicitly. The user doesn't need to interact with the LRU queue.
 
@@ -195,6 +197,89 @@ manually. Also, the user will be notified via specific event hook that is
 triggered upon eviction that an entry has been evicted.
 
 More about hooks can be seen in the following subsection.
+
+\subsection{Concurrency control}
+
+The concept of concurrency control has been discussed in chapter ?. The goal of 
+xcache is to handle safely - and preferably fast - simultaneous accesses to 
+shared memory.
+
+In order to do so, we must first identify which are the critical sections of 
+xcache, that is the sections where a thread can modify a shared structure. These 
+sections are the following
+
+\begin{itemize}
+	\item
+		All xhash operations: Two of the three xhash operations (inserts 
+		and removals) can modify the hash table (e.g. they can resize it 
+		and reallocate space for it). This means that the third one 
+		(lookups) must not run concurrently with the other.
+	\item
+		Cache node claiming: Before an entry is inserted, it must	
+		acquire one of the pre-allocated nodes and we must ensure that 
+		this can happen from all threads.
+	\item
+		Entry migration: An entry can migrate from one hash table to 
+		the other e.g. on cache eviction. This migration involves a 
+		series of xhash operations; removal from one hash table and 
+		subsequent insertion to the other. This a scenario that must be 
+		handled properly.
+	\item
+		Reference counting: Every entry must have a reference counter.  
+		Reference counters provide a simple way to determine when an 
+		entry can be safely removed. You can see more about reference 
+		counting in chapter ?
+	\item
+		LRU updates: Most actions that involve cache entries must 
+		subsequently update the LRU queue. Being a doubly linked list, 
+		if two threads update the LRU simultaneously, we can lead to 
+		segfaults.
+\end{itemize}
+
+Let's see what guarantees we provide for each of the above scenarios:
+
+\begin{itemize}
+	\item
+		xhash operations: We provide a lock for each hash table
+	\item
+		Cache node claiming: The free node queue is protected by a fast 
+		lock
+	\item
+		Entry migration: We always take fist the lock for entries and 
+		then for rm\_entries
+	\item
+		Reference counting: Another important guarantee is the 
+		reference counting of entrys. xcache uses atomic gets and puts 
+		to update the reference count of an entry.
+	\item
+		LRU updates: Since all LRU operations take place for entries in 
+		"entries" hash table and LRU updates are blazing fast we can 
+		secure our LRU with the cache->lock.
+\end{itemize}
+
+% TODO: Yada yada about refcount
+
+\subsection{Re-insertion}
+
+We have previously mentioned that in xcache, there can be data migration 
+between hash tables. This is easy to see why in case of evictions: an entry 
+that previously was in "entries" must now be migrated to "rm\_entries" until 
+its reference count falls to zero and can be freed.
+
+However, what happens when xcache receives a request for an evicted entry? 
+
+%Explain, explain, explain the re-insertion
+there is a concept called "re-insertion".  In order for an entry to
+be re-inserted to the primary hash table (which will be called "entries" from
+now on) it must first reside in the hash table that indexes the evicted cache
+entries (which will be called "rm\_entries" from now on). As mentioned above,
+an entry that is in rm\_entries has probably pending jobs that delay its
+removal.
+
+So, what happens if a lookup arrives for that entry while on this stage? In
+this case, we re-insert it to entries and increase its refcount by 2, since
+there is one reference by the hash table and one reference by the one who
+requested the lookup.
 
 \begin{comment}
 \subsection{Hooks}
@@ -216,94 +301,6 @@ The hooks that xcache provides to users are:
 \end{itemize}
 
 \end{comment}
-
-\subsection{Concurrency control}
-
-The concept of thread-safety has been discussed in chapter ?. The goal of xcache 
-is to provide the necessary guarantees so that the code can be accessed from 
-different threads at the same time.
-
-In order to do so, we must first identify which are the critical sections of 
-xcache, that is the sections where a thread can modify a shared structure. These 
-sections are the following
-
-\begin{itemize}
-	\item All xhash operations: Two of the three xhash operations (inserts and 
-		removals) can modify the hash table (e.g. they can resize it and 
-		reallocate space for it). This means that the third one (lookups) must 
-		not run concurrently with the other.
-	\item Cache node claiming: Before an entry is inserted, it must	acquire one 
-		of the pre-allocated nodes and we must ensure that this can happen from 
-		all threads.
-	\item Entry migration: An entry can migrate from one hash table to the other 
-		e.g. on cache eviction. This migration involves a series of xhash 
-		operations; removal from one hash table and subsequent insertion to the 
-		other. This a scenario that must be handled properly.
-	\item Reference counting: Every entry must have a reference counter.  
-		Reference counters provide a simple way to determine when an entry can 
-		be safely removed. You can see more about reference counting in chapter 
-		?
-	\item LRU updates: Most actions that involve cache entries must subsequently 
-		update the LRU queue. Being a doubly linked list, if two threads update 
-		the LRU simultaneously, we can lead to segfaults.
-\end{itemize}
-
-Let's see what guarantees we provide for each of the above scenarios:
-
-xhash operations: We provide a lock for each hash table
-Cache node claiming: The free node queue is protected by a fast lock
-Entry migration: We always take fist the lock for entries and then for 
-rm\_entries
-LRU updates: Since all LRU operations take place for entries in "entries" hash 
-table and LRU updates are blazing fast we can secure our LRU with the 
-cache->lock.
-
-Another important guarantee is the reference counting of objects. xcache uses 
-atomic gets and puts to update the reference count of an object.
-
-\begin{comment}
-The refcount model in xcache should be familiar to most people:
-
-\begin{itemize}
-	\item When an entry is inserted in cache, the cache holds a reference 
-		for it (ref = 1).
-	\item Whenever a new lookup for this cache entry succeeds, the reference 
-		is increased by 1 (ref++)
-	\item When the request that has issued the lookup has finished with an 
-		entry, the reference is decreased by 1. (ref--)
-	\item When a cache entry is evicted by cache, the its ref is decreased 
-		by 1. (ref--)
-\end{itemize}
-
-Some common refcount cases are:
-
-\begin{itemize}
-	\item active entry with pending jobs (ref > 1)
-	\item active entry with no pending jobs (ref = 1)
-	\item evicted entry with pending jobs (ref > 0)
-	\item evicted entry with no pending jobs (ref = 0)
-\end{itemize}
-
-and, as always, the entry is freed only when its ref = 0.
-
-Finally, xcache uses one lock for each hash table but when a cache entry shifts
-from one hash table to the other, both locks are acquired.
-
-\end{comment}
-
-\subsection{Re-insertion}
-
-In xcache, there is a concept called "re-insertion". In order for an entry to
-be re-inserted to the primary hash table (which will be called "entries" from
-now on) it must first reside in the hash table that indexes the evicted cache
-entries (which will be called "rm\_entries" from now on). As mentioned above,
-an entry that is in rm\_entries has probably pending jobs that delay its
-removal.
-
-So, what happens if a lookup arrives for that entry while on this stage? In
-this case, we re-insert it to entries and increase its refcount by 2, since
-there is one reference by the hash table and one reference by the one who
-requested the lookup.
 
 \subsection{xcache flow}
 
