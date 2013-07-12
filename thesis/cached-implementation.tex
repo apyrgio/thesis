@@ -37,5 +37,19 @@ Some common refcount cases are:
 	\item evicted entry with no pending jobs (ref = 0)
 \end{itemize}
 
+\begin{table}[tbp]
+	\centering
+	\begin{tabular}{ | l | l | }
+		\hline
+		Case & Refcount \\ \hline \hline
+		active entry with pending jobs & ref > 1 \\ \hline
+		active entry with no pending jobs & ref = 1 \\ \hline
+		evicted entry with pending jobs & ref > 0 \\ \hline
+		evicted entry with no pending jobs & ref = 0 \\ \hline
+	\end{tabular}
+	\caption{Reference counting of xcache}
+	\label{tab:refcount}
+\end{table}
+
 and, as always, the entry is freed only when its ref = 0.
 
