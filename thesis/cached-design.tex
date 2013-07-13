@@ -394,6 +394,32 @@ hard-coded in the struct of each object which can be used in such cases.
 \subsection{Write policy}
 
 The user must define beforehand what is the write policy of cache. There are
-two options: writethrough and writeback. On a side note, as far as reads and
+two options: write-through and write-back. On a side note, as far as reads and
 cache misses are concerned, cached operates under a write-allocate policy.
+
+\section{Cached Operation}
+
+\subsection{Write-through mode}
+
+Here we will see how cached operates in write-through mode.
+
+\subsubsection{Write}
+
+This is the flow for the write path:
+
+\subsubsection{Read}
+
+This is the flow for the read path:
+
+\subsection{Write-back mode}
+
+Here we will see how cached operates in write-back mode.
+
+\subsubsection{Write}
+
+This is the flow for the write path:
+
+\subsubsection{Read}
+
+This is the flow for the read path:
 
