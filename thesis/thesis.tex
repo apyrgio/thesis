@@ -26,6 +26,7 @@
 \usepackage{multicol}
 \usepackage{wrapfig}
 \usepackage{lipsum}
+\usepackage{l3regex}
 
 % FONT SETTINGS ===============================================================
 
@@ -121,41 +122,9 @@
 
 \usepackage{listings}
 
+% Define colors that will be used
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
-
-\begin{comment}
-\lstset{
-	language=Haskell,
-	basicstyle=\footnotesize\ttfamily,
-	numbers=left,
-	numberstyle=\tiny\color{gray},
-	stepnumber=1,
-	numbersep=5pt,
-	backgroundcolor=\color{white},
-	showspaces=false,
-	showstringspaces=false,
-	showtabs=false,
-	frame=single,
-	rulecolor=\color{black},
-	tabsize=2,
-	captionpos=b,
-	breaklines=true,
-	breakatwhitespace=false,
-	title=\lstname,
-        xleftmargin=17pt,
-        xrightmargin=5pt,
-        aboveskip=\baselineskip
-}
-
-\newcommand\haskellcode[2]{\lstinputlisting[language=Haskell,caption={#1},label=#1]{src/#2}}
-\newcommand\rubycode[2]{\lstinputlisting[language=Ruby,caption={#1},label=#1]{src/#2}}
-\newcommand\erlangcode[1]{\lstinputlisting[language=erlang,captionpos=]{src/#1}}
-\newcommand\plaintext[1]{\lstinputlisting[language=,captionpos=,stepnumber=0]{src/#1}}
-\end{comment}
-
-% Define colors that will be used
-
 \definecolor{mygreen}{rgb}{0,0.6,0}
 \definecolor{mygray}{rgb}{0.5,0.5,0.5}
 \definecolor{mymauve}{rgb}{0.58,0,0.82}
@@ -218,7 +187,8 @@
 % Create new commands for simpler usage
 
 \newcommand\ccode[2]{
-	\lstinputlisting[style=c, caption={#1}, label=lst:#1]{src/#2}
+	%\regex_extract_once:nnN {/*./} {#1} \seqvar
+	\lstinputlisting[style=c, caption={#1}, label=lst:#2]{src/#2}
 }
 
 \newcommand\haskellcode[3]{
