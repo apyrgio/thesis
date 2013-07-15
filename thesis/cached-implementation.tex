@@ -18,10 +18,26 @@ This is the main xcache struct:
 
 \ccode{Main xcache struct}{xcache-struct.h}
 
+Each of the above xcache struct fields serves a design purpose.
+Let's see which fields help in what:
+
+\subsection{Entry Preallocation}
+
+The relevant code for this purpose can be seen in Listings 
+\ref{xcache-prealloc.h}.
+
+\ccode{xcache struct fields for preallocated entries}{xcache-prealloc.h}
+
+When entries are preallocated, they take up a contiguous space in memory. The 
+start of this space is the where the *nodes field points to 
+
 
 
 \subsection{Entry Indexing}
 
+The relevant code for this purpose can be seen in Listings \ref{xcache-index.h}.
+
+\ccode{xcache struct fields for entry indexing}{xcache-index.h}
 
 
 \subsection{Concurrency control}

@@ -140,6 +140,16 @@ that are active in cache.  The other hash table is responsible for indexing
 evicted cache entries that have pending jobs.  Again, more generally speaking, 
 evicted cache entries are entries whose refcount has not dropped to zero yet.
 
+\subsection{Entry Preallocation}
+
+Since xcache has a bounded number of entries that will allocate, there is no 
+need to allocate them on-the fly using malloc/free. Considering that we are 
+caching at RAM level and not at SSD level, the system call overhead will have a 
+considerable impact on performance.
+
+Thus, the best thing to do in our case would be to pre-allocate the necessary 
+space.
+
 \subsection{Entry indexing}
 
 In order to index the cached entries, xcache relies on another xtype, xhash, 
