@@ -187,7 +187,6 @@
 % Create new commands for simpler usage
 
 \newcommand\ccode[2]{
-	%\regex_extract_once:nnN {/*./} {#1} \seqvar
 	\lstinputlisting[style=c, caption={#1}, label=lst:#2]{src/#2}
 }
 

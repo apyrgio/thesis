@@ -84,6 +84,14 @@ first checks the request target (i.e. the object name and then calculates which
 bucket objects are within the request's range. It is easy to see that this is a 
 1:1 mapping to the object's data.
 
+The fact that objects are pre-allocated means two things:
+
+\begin{enumerate}
+	\item We don't need to care about memory fragmentation and system call 
+		overhead
+	\item We cannot index single buckets. <FILLME>
+\end{enumerate}
+
 \subsection{Cached components}
 
 Let's see now the design of cached in detail. The cached peer consists of a 
@@ -95,18 +103,6 @@ but for completeness' sake, we will mention once more the merits of xtypes:
 
 % Mention merits briefly
 
-
-\begin{comment}
-More specifically, cached consists of the cache provided by xcache aasfs as safa
-asfasfnd a
-pre-allocated number of objects. An object is divided in buckets and its size,
-as well as bucket size, are defined by the user.
-
-The fact that objects are pre-allocated means two things:
-
-1) We don't need to care about memory fragmentation and system call overhead
-2) We cannot index single buckets. <FILLME>
-\end{comment}
 
 The components of cached can be seen below:
 
