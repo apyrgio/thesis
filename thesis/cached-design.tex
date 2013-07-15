@@ -150,7 +150,7 @@ considerable impact on performance.
 Thus, the best thing to do in our case would be to pre-allocate the necessary 
 space.
 
-\subsection{Entry indexing}
+\subsection{Entry indexing}\label{sec:xcache-index-design}
 
 In order to index the cached entries, xcache relies on another xtype, xhash, 
 which is a hash table. Moreover, it's actually the C implementation of the 
