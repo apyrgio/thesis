@@ -262,41 +262,12 @@
 % Required packages
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \RequirePackage{graphicx}
-\RequirePackage[cm-default]{fontspec}
+\RequirePackage{fontspec}
 %\RequirePackage{xunicode}
 %\RequirePackage{xltxtra}
 \defaultfontfeatures{Mapping=tex-text}
 \RequirePackage[english]{babel}
 \RequirePackage{xgreek}
-
-% XeLaTeX fonts
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% My twist for fontspec
-\def\deffontfamily#1{
-  \edef\@tempa{%
-    \noexpand\DeclareRobustCommand\noexpand#1%
-      {\noexpand\fontfamily{\zf@family}\noexpand\selectfont}}%
-  \@tempa}
-
-% roman font
-\zf@fontspec{}{Times New Roman}
-\let\rmdefault\zf@family
-\deffontfamily\fontroman
-\normalfont
-
-% sans serif font
-\zf@fontspec{Scale=MatchLowercase}{Arial}
-\let\sfdefault\zf@family
-\deffontfamily\fontsans
-
-% typewriter font
-\zf@fontspec{Scale=MatchLowercase}{Liberation Mono}
-%\zf@fontspec{Scale=MatchLowercase}{DejaVu Sans Mono}
-%\zf@fontspec{Scale=MatchLowercase}{Lucida Sans Typewriter}
-%\zf@fontspec{Scale=MatchLowercase}{Free Monospaced}
-%\zf@fontspec{Scale=MatchLowercase}{Bitstream Vera Sans Mono}
-\let\ttdefault\zf@family
-\deffontfamily\fonttypewriter
 
 % Headings
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
