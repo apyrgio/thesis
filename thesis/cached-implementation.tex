@@ -11,27 +11,40 @@ actual initialization and blabla operations using excerpts from the code.
 
 \section{Implementation of xcache}
 
-In this section we describe how we implemented the design concept of 
-Section\ref{sec:xcache-design}.
+In this section, we describe how we implemented the design concept of section 
+\ref{sec:xcache-design}. The main \xcache structure is the following:
 
-This is the main \texttt{xcache} struct:
-
-\ccode{Main xcache struct}{xcache-struct.h}
+\ccode{Main \xcache struct}{xcache-struct.h}
 
 Each of the above xcache struct fields serves a design purpose.
 Let's see which fields help in what:
 
 \subsection{Entry Preallocation}
 
-The relevant code for this purpose can be seen in Listings 
+The relevant fields for this purpose can be seen in Listings 
 \ref{xcache-prealloc.h}.
 
 \ccode{xcache struct fields for preallocated entries}{xcache-prealloc.h}
 
 When entries are preallocated, they take up a contiguous space in memory. The 
-start of this space is the where the *nodes field points to 
+start of this space is the where the \texttt{*nodes} field points to. The type 
+of this field is \texttt{xcache entry} so let's see the \texttt{xcache entry} 
+struct:
 
+\ccode{\texttt{xcache entry} struct}{xcache-entry.h}
 
+The biggest field in the structure is the name field. Since we can't know 
+beforehand the size of the object names, we must allocate enough space for the 
+largest name possible. As of writing this, \texttt{XSEG\_MAX\_TARGETLEN} is 256 
+characters. An interesting field is the \texttt{state} field, which is used to 
+indicate whether the entry is evicted or not. The \text{volatile uint32\_t ref} 
+field is used for reference counting reasons and will be discussed in depth in 
+Paragraph \ref{par:refcount-imp}.
+
+Finally, as we have mentioned in Section \ref{sec:entry-prealloc-design}, xcache 
+must be agnostic of the cache contents.  To this end, we use the \texttt{void 
+	*priv} field as a pointer to the real contents, which is a very common 
+practice.
 
 \subsection{Entry Indexing}
 
@@ -42,7 +55,7 @@ The relevant code for this purpose can be seen in Listings \ref{xcache-index.h}.
 
 \subsection{Concurrency control}
 
-\paragraph{Reference counting}
+\paragraph{Reference counting}\label{par:refcount-imp}
 
 The refcount model in xcache should be familiar to most people:
 

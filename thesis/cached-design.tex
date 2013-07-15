@@ -140,7 +140,7 @@ that are active in cache.  The other hash table is responsible for indexing
 evicted cache entries that have pending jobs.  Again, more generally speaking, 
 evicted cache entries are entries whose refcount has not dropped to zero yet.
 
-\subsection{Entry Preallocation}
+\subsection{Entry Preallocation}\label{sec:entry-prealloc-design}
 
 Since xcache has a bounded number of entries that will allocate, there is no 
 need to allocate them on-the fly using malloc/free. Considering that we are 
