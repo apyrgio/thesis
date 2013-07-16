@@ -16,25 +16,25 @@ In this section, we describe how we implemented the design concept of section
 
 \ccode{Main \xcache struct}{xcache-struct.h}
 
-Each of the above xcache struct fields serves a design purpose.
+Each of the above \xcache struct fields serves a design purpose.
 Let's see which fields help in what:
 
 \subsection{Entry Preallocation}
 
 The relevant fields for this purpose can be seen in the following code listing:
 
-\ccode{xcache struct fields for preallocated entries}{xcache-prealloc.h}
+\ccode{\xcache struct fields for preallocated entries}{xcache-prealloc.h}
 
-Also, the \texttt{xcache entry} struct which shows up in \texttt{xcache} struct 
-follows:
+and the definition of the \texttt{xcache entry} struct which shows up in 
+\texttt{xcache} struct can be seen below:
 
 \ccode{\texttt{xcache entry} struct}{xcache-entry.h}
 
 Let's start by listing what \texttt{xcache entry} consists of. First of all, it 
 must have a name. Since we preallocate the entries and cannot know in runtime 
 their length, we must allocate as much space as possible. The \texttt{char 
-	name[XSEG\_MAX\_TARGETLEN + 1]} field, which is 256 characters long, is 
-considered enough to hold the target's name. Also, an interesting field is the 
+	name[XSEG\_MAX\_TARGETLEN + 1]} field, which is 256 characters long, is long 
+enough to hold the target's name. Also, an interesting field is the 
 \texttt{state} field, which is used to indicate whether the entry is evicted or 
 not. The \texttt{volatile uint32\_t ref} and \texttt{struct xlock lock} fields 
 are used for reference counting reasons and will be discussed in depth in 
