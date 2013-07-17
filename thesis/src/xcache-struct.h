@@ -1,15 +1,17 @@
 struct xcache {
-	struct xlock lock;
-	uint32_t size;
-	uint32_t nr_nodes;
-	struct xq free_nodes;
-	xhash_t *entries;
-	xhash_t *rm_entries;
-	struct xlock rm_lock;
-	struct xcache_entry *nodes;
-	struct xcache_ops ops;
-	uint32_t flags;
-	void *priv;
+	struct xlock lock;			/* Main xcache lock */
+	uint32_t size;				/* Upper limit of entries */
+	uint32_t nr_nodes;			/* Shadow entries */
+	struct xq free_nodes;		/* Unclaimed (?) entries */
+	xhash_t *entries;			/* Hash-table for valid entries */
+	xhash_t *rm_entries;		/* Hash-table for evicted entries */
+	struct xlock rm_lock;		/* Lock for rm_entries */
+	struct xcache_entry *nodes;	/* Data segment */
+	struct xcache_entry *lru;	/* O(1) lru implementation-specific */
+	struct xcache_entry *mru;	/* O(1) lru implementation-specific */
+	struct xcache_ops ops;		/* Hooks */
+	uint32_t flags;				/* Flags */
+	void *priv;					/* Pointer to peer struct */
 };
 
 
