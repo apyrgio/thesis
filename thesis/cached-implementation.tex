@@ -33,12 +33,12 @@ and the definition of the \texttt{xcache entry} struct which shows up in
 Let's start by listing what \texttt{xcache entry} consists of. First of all, it 
 must have a name. Since we preallocate the entries and cannot know in runtime 
 their length, we must allocate as much space as possible. The \texttt{char 
-	name[XSEG\_MAX\_TARGETLEN + 1]} field, which is 256 characters long, is long 
-enough to hold the target's name. Also, an interesting field is the 
-\texttt{state} field, which is used to indicate whether the entry is evicted or 
-not. The \texttt{volatile uint32\_t ref} and \texttt{struct xlock lock} fields 
-are used for reference counting reasons and will be discussed in depth in 
-Section \ref{sec:conc-imp}.
+	name[XSEG\_MAX\_TARGETLEN + 1]} field, which is 256 characters long, is 
+long enough to hold the target's name. Also, as we have mentioned in Section 
+\ref{sec:entry-prealloc-design}, xcache must be agnostic of the cache contents.  
+To this end, we use the generic \texttt{void *priv} field as a pointer to the 
+actual entry content. The rest of the fields will be explained in the following 
+chapters.
 
 Let's continue now with the fields of Listing \ref{lst:xcache-prealloc.h}. Since 
 we preallocate the entries using \texttt{malloc}, they take up a contiguous 
@@ -47,14 +47,9 @@ points to. The \texttt{free\_nodes} field works similarly to the free\_entries
 field in Section \ref{sec:get-req-archip} i.e. it is a stack where indexes to 
 unused nodes are pushed.
 
-Finally, as we have mentioned in Section \ref{sec:entry-prealloc-design}, xcache 
-must be agnostic of the cache contents. To this end, we use the generic 
-\texttt{void *priv} field as a pointer to the actual entry content.
-
 \subsection{Entry Indexing}
 
-The relevant code for this purpose can be seen in Listings 
-\ref{lst:xcache-index.h}.
+The relevant fields for this purpose can be seen in the following code listing:
 
 \ccode{xcache struct fields for entry indexing}{xcache-index.h}
 
@@ -66,7 +61,33 @@ respectively.
 
 \subsection{Entry eviction}
 
+The relevant fields for this purpose can be seen in the following code listing:
+
+\ccode{\xcache struct fields for eviction}{xcache-evict.h}
+
+As we have mentioned in Section \ref{sec:xcache-evict-design}, we resort to 
+eviction when the cache is full and new entries can't be inserted. This entry is 
+the Least Recently Used entry. The doubly-linked list we maintain for this end 
+can be seen below:
+
+\ccode{Doubly-linked LRU list}{xcache-dlist.h}
+
+Lets explain these fields a bit:
+
+\begin{description}
+	\item[lru:] Obviously, the least recently used entry. It can be 
+		considered as the one end of the doubly linked list.
+	\item[mru:] The entry that has just been used. It can be considered as 
+		the other end of the doubly-linked list
+	\item[younger:] This entry specific field points to an entry used right 
+		after our entry was used.
+	\item[older:] Same as "younger", it points to the entry that has been 
+		used right before our entry was used.
+\end{description}
+
 \subsection{Concurrency control}\label{sec:conc-imp}
+
+\paragraph{Locking}\label{par:lock}
 
 \paragraph{Reference counting}\label{par:refcount-imp}
 

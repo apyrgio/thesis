@@ -182,7 +182,8 @@ which you can see in the following figure:
 
 % Insert figure for O(1) LRU and hash table
 
-In a nutshell, our LRU implementation uses a doubly linked list blablabla.
+In a nutshell, our LRU implementation uses a doubly linked list and utilize the 
+hash table to jump to the element (instead of traversing the list linearly).
 This design allows us to do all of the following action in constant time:
 
 \begin{itemize}
