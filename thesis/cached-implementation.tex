@@ -45,7 +45,9 @@ we preallocate the entries using \texttt{malloc}, they take up a contiguous
 space in memory.  The start of this space is the where the \texttt{*nodes} field 
 points to. The \texttt{free\_nodes} field works similarly to the free\_entries 
 field in Section \ref{sec:get-req-archip} i.e. it is a stack where indexes to 
-unused nodes are pushed.
+unused nodes are pushed. These indexes will be seen in various code excerpts in 
+this chapter and have a specific name, 
+\texttt{xcache\_handler}\footnote{\#define xcache\_handler uint64\_t}.
 
 \subsection{Entry Indexing}
 
@@ -58,6 +60,50 @@ hash tables, one for the cached entries and one for the former cached entries
 (or evicted entries or removed entries). These hash tables can be accessed from 
 the \texttt{xcache struct} and are \texttt{*entries} and \texttt{*rm\_entries} 
 respectively.
+
+These are the functions which are related to indexing and \xcache exposes to the 
+peer function:
+
+\ccode{Indexing functions}{xcache-index.c}
+
+All of these function need a pointer to the \xcache struct. Here's a brief 
+description of them:
+
+\begin{description}
+	\item[xcache\_lookup:]
+		Takes the target's name as an argument and searches for it in 
+		cache.\\
+		Returns on failure: NoEntry\footnote{\#define NoEntry 
+			(xcache\_handler)-1}\\
+		Returns on success: the requested handler.\\
+		\textbf{Note:} Looks only in \texttt{entries}.
+	\item[xcache\_insert:]
+		Takes the handler of an allocated entry as an argument and uses 
+		it to index that entry.\\
+		Returns on failure: NoEntry.
+		Returns on success:
+		\begin{inparaenum}[\itshape a\upshape)]
+		\item the same handler or
+		\item another one, if this entry already exists in cache.
+		\end{inparaenum}
+		\textbf{Note:} It looks up first if the entry exist in 
+		\texttt{entries} or \texttt{rm\_entries}. The later case can 
+		lead to re-insertions.
+	\item[xcache\_remove:]
+		Takes the handler of an allocated entry as an argument and uses 
+		it to remove that entry.\\
+		Returns on failure: -1.
+		Returns on success: 0.
+		\textbf{Note:} Removes entries only from \texttt{entries} hash 
+		table.
+	\item[xcache\_invalidate:]
+		An \texttt{xcache\_remove} spin-off. Takes the name of the entry 
+		as an argument, looks it up and then removes it
+		Returns on failure: -1.
+		Returns on success: 0.
+		\textbf{Note:} Unlike remove, entries can either be on 
+		\texttt{entries} or \texttt{rm\_entries} hash table.
+\end{description}
 
 \subsection{Entry eviction}
 
@@ -75,14 +121,26 @@ can be seen below:
 Lets explain these fields a bit:
 
 \begin{description}
-	\item[lru:] Obviously, the least recently used entry. It can be 
+	\item[lru:] Obviously, it's the least recently used entry. It can be 
 		considered as the one end of the doubly linked list.
 	\item[mru:] The entry that has just been used. It can be considered as 
 		the other end of the doubly-linked list
-	\item[younger:] This entry specific field points to an entry used right 
+	\item[younger:] This entry-specific field points to an entry used right 
 		after our entry was used.
 	\item[older:] Same as "younger", it points to the entry that has been 
 		used right before our entry was used.
+\end{description}
+
+Finally, as we have explained in Section \ref{sec:xcache-evict-design}, the 
+eviction internals should normally not bother the user. However, if the user 
+wants to, \xcache provides the exposes the following functions:
+
+\begin{description}
+	\item[xcache\_evict\_lru:] The name says it all, it evicts the recently 
+		used item.
+	\item[xcache\_peek\_and\_get\_lru:] This function allows the user to 
+		atomically take a peek on the Least Recently Used entry and also 
+		update its refcount.
 \end{description}
 
 \subsection{Concurrency control}\label{sec:conc-imp}
