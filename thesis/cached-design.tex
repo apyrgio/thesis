@@ -43,9 +43,9 @@ illustrate the flow of requests for cached.
 
 \marginpar{
 	Requirements:\\
-	1. \sout{Nativity}
-	2. Pluggability
-	3. Object Awareness
+	1. \sout{Nativity}\\
+	2. Pluggability\\
+	3. Object Awareness\\
 	4. In-memory
 }
 
@@ -103,6 +103,14 @@ The buckets are pre-allocated, which means two things:
 	\item We cannot index single buckets. <FILLME>
 \end{enumerate}
 
+Finally, an important aspect of cached is its multi-threading support.  
+Specifically, cached can work with multiple threads that can accept requests 
+from cached's request queue and serve them concurrently with the other threads.  
+Of course, multi-threading can be very tricky, especially when we are dealing 
+with I/O requests and simultaneous accesses to the same object blocks. So, in 
+order to achieve a balance between safety and speed, we use a
+fine-grained locking scheme in critical sections that can be seen is discussed 
+in detail in Section \ref{sec:xworkq-design}.
 
 \subsection{Cached components}
 
@@ -333,7 +341,7 @@ Figure
 
 Figure
 
-\section{The xworkq xtype}
+\section{The xworkq xtype}\label{sec:xworkq-design}
 
 The xworkq xtype is a useful (what?) for concurrency control on object level. It 
 is important to distinguish between cache level operations and object level 
