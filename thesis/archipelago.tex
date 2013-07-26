@@ -28,7 +28,7 @@ Three concepts for locking:
 	\item Deadlocking
 \end{enumerate}
 
-\subsection{IPC}
+\subsection{Typical IPC}
 
 Below we can see some IPC methods:
 
@@ -61,7 +61,7 @@ There are some XSEG stuff such as:
 
 \subsection{Libraries}
 
-\subsection{Xtypes}
+\subsection{Xtypes}\label{sec:arch-xtypes}
 
 The rationale behind xtypes is:
 
@@ -100,7 +100,42 @@ The rationale behind xtypes is:
 		even exists...)
 \end{itemize}	
 
-\subsection{Peers}
+\subsection{Peers}\label{sec:arch-peer}
+
+Peers are Archipelago components that are responsible for accepting, processing 
+and sending of the I/O requests. They are essential for the modular nature of 
+Archipelago since each of them can be considered as a separate entity. They do 
+their own logging, signal handling and processing.
+
+The main Archipelago peers can be seen in Figure ?. As we can see from this 
+figure, peers are processes that are attached to an XSEG segment. In the 
+previous chaptr, we have mentioned that XSEG segments facilitate the IPC between 
+different Archipelago components by offering a shared space where process can 
+read and write to very fast. This however barely scratches the surface of IPC in 
+Archipelago. In the following section, we will discuss more in-length the 
+details behind Archipelago IPC
+
+\subsection{Archipelago IPC}\label{sec:arch-ipc}
+
+Fist of all, we must clarify that in Archipelago, IPC is done strictly between 
+peers in the \textbf{same} memory segment. The reason is that we have crafted 
+our own methods for IPC and the processes that need it must attain to a certain 
+architecture, which is the peer architecture.
+
+The entrance point for IPC is the peer port. When a peer is registered in the 
+segment, it attaches itself to a port range. Peer ports are completely different 
+to common ports (which are these ports?). When a peer wants to send a request to 
+another peer, it must first "get" the registered port on the segment. The xseg 
+port is a structure that holds the necessary information as to where to send the 
+request. Every port has three different queues; reply, request, free queue.
+
+Request queues are typically a stack that can be addressed from different peers 
+in the same segment. For this reason, they are designed as xtypes. For speed 
+resons, they are pre-allocated to a certain length and re-allocated on-line, if 
+there is need
+
+Also, ports are designed to be considered as paths. That is, when a request is 
+sent from one port to another...
 
 \section{Request flow example}
 

@@ -11,11 +11,23 @@ requirements that our solution must have:
 
 % List the requirements for our solution
 \begin{enumerate}
-	\item Requirement 1
-	\item Requirement 2
-	\item Requirement 3
-	\item Requirement 4
+	\item \textbf{Nativity:} Our solution must be native to Archipelago i.e.  
+		not need any translation layers to communicate with it.
+		%explain why
+	\item \textbf{Pluggability:} Our solution must be able to provide a 
+		caching layer between peers that are already in operating mode 
+		without restarting Archipelago.
+	\item \textbf{Object awareness:} Our solution must be able to operate on 
+		object level, which are the data entities Archipelago 
+		understands.
+	\item \textbf{In-memory:} Our solution must cache requests in RAM, since 
+		the next fastest tier, SSDs, are already being used in RADOS as 
+		a journal.
 \end{enumerate}
+
+For the following chapters, we will drop the \textit{"solution"} moniker and we 
+will use instead the proper name of our implementation, \emph{"cached"}, which 
+simply means \textbf{cache d}aemon).
 
 The following two chapters are the main bulk of this thesis and they present our 
 own implementation that aims to fill the above requirements.
@@ -29,62 +41,61 @@ illustrate the flow of requests for cached.
 
 \section{Design overview}
 
-\begin{comment}
-In order to provide a caching tier for Archipelago that would blabla our 
-requirements, we had to create our own implementation. Its name is simply cached 
-(\textbf{cache d}aemon) and is another XSEG peer with similar structure to those 
-seen in chapter ? %link to chapter
-\end{comment}
+\marginpar{
+	Requirements:\\
+	1. \sout{Nativity}
+	2. Pluggability
+	3. Object Awareness
+	4. In-memory
+}
 
-Cached is a peer that operates between the vlmc and blocker. Every request that 
-the vlmc peer sends to the blocker, the cached peer can \textit{intercept} it, 
-so to speak, and cache it. This follows the same principle with bcache, which 
-plugs its own request\_fn() function to the virtual device it creates. Unlike 
-bcache however, cached can be plugged on and off at any time.
+First of all, cached has been designed as an Archipelago user-space peer (see 
+Section \ref{sec:arch-peer} about Archipleago peers). This design decision 
+covers the nativity requirement we posed at the beginning of this chapter.
 
-Cached has two different caching policies, \textbf{write-through} and 
-\textbf{write-back}. These policies aren't new and have been discussed 
-extensively in chapter ?, but let's see what these policies translate to in 
-cached context.
+Also, cached's purpose is to provide a caching layer between the vlmc and 
+blocker. Due to the fact that cached is a peer, this is easily achievable even 
+under normal operation because:
 
-\begin{itemize}
+\begin{enumerate}
+	\item 
+		As we have mentioned in Section \ref{sec:arch-ipc}, XSEG ports 
+		can be registered on-line.
 	\item
-		In \textbf{write-back} mode, cached caches writes, immediately 
-		serves the request back and marks the data as dirty. When a read 
-		arrives, it either serves the request with the dirty data 
-		(read-hit) or forwards the request to the storage peer and 
-		caches the answer (read-miss).
+		During normal operation, the administrator can add the cached 
+		port to the request path between vlmc and blocker, and all 
+		requests will seamlessly be intercepted by cached. This follows 
+		the same principle with bcache, which plugs its own 
+		request\_fn() function to the virtual device it creates.  Unlike 
+		bcache however, cached can be plugged on and off at any time.
+\end{enumerate}
 
-		This policy is used when we want to improve read and write speed 
-		and can sacrifice data safety.
-	\item
-		In \textbf{write-through} mode, cached forwards writes to 
-		blocker, servers the request when blocker replies, caches the 
-		data and marks them as valid.  When a read arrives, it either 
-		serves the request with the valid data (read-hit) or forwards 
-		the request to the storage peer and caches the answer 
-		(read-miss).
+Thus, the pluggability requirement has also been covered.
 
-		This policy is used when we want to improve read speed and want 
-		to make sure that no data will be lost.
-\end{itemize}	
-
-\subsection{And we cache... what exactly?...}
-
-Since Archipelago divides internally the volumes to objects (usually 4MB), the 
-cached peer must operate on object level. Also, in order to know which parts of 
-the cached object are actually written, or are in the process of being read etc.  
-cached further divides objects to the next and final logical entity, buckets 
-(typically 4KB). Each bucket consists of its data and metadata and cannot be 
-half-empty, or half-allocated. You can say that the bucket is the quantum of 
+Furthermore, one of the most important aspects of cached's design is the index 
+mechanism. Specifically, we have utilized an in-memory hash table to index our 
 cached objects.
 
-I'll attempt to make the above a bit clearer. When cached receives a request, it 
-first checks the request target (i.e. the object name and then calculates which 
-bucket objects are within the request's range. It is easy to see that this is a 
-1:1 mapping to the object's data.
+Moreover, cached has been designed to be object aware. This means that we search 
+in the hash table with the object name as key.%Anything else?
 
-The fact that objects are pre-allocated means two things:
+There is however a problem when operating solely on object level. Objects have 
+typically 4MB of size. What would happen if a user requested e.g. a 16KB chunk 
+of an object?
+
+In this case, we would need to read and cache the whole object just to reply to 
+the user's request. If the user then requests a chunk from another object, we 
+would have to cache that object too and in the end, we would thrash our 
+cache\footnote{cache thrashing occurs when we aggressively cache data that is 
+	only used once and effectively leads to a snowball of evictions}.
+
+The solution to this is to further divide objects to the next and final logical 
+entity, \emph{buckets} (typically 4KB of size). Each bucket consists of its data 
+and metadata and cannot be half-empty, or half-allocated. This way, we can also 
+know which parts of the cached object are actually written, or are in the 
+process of being read etc.
+
+The buckets are pre-allocated, which means two things:
 
 \begin{enumerate}
 	\item We don't need to care about memory fragmentation and system call 
@@ -92,17 +103,13 @@ The fact that objects are pre-allocated means two things:
 	\item We cannot index single buckets. <FILLME>
 \end{enumerate}
 
+
 \subsection{Cached components}
 
 Let's see now the design of cached in detail. The cached peer consists of a 
 number of building blocks.  Per Archipelago policy, most of these building 
-blocks have been written in the xtypes fashion. The reasons behind this decision 
-have been discussed in chapter ?
-% Link to where we define xtypes
-but for completeness' sake, we will mention once more the merits of xtypes:
-
-% Mention merits briefly
-
+blocks have been written in the xtypes fashion (see Section \ref{arch-xtypes} 
+about xtypes).
 
 The components of cached can be seen below:
 
@@ -218,9 +225,10 @@ sections are the following
 \begin{itemize}
 	\item
 		All xhash operations: Two of the three xhash operations (inserts 
-		and removals) can modify the hash table (e.g. they can resize it 
-		and reallocate space for it). This means that the third one 
-		(lookups) must not run concurrently with the other.
+		and removals) can modify the hash table (e.g. they can resize 
+		it, add more entries or delete existing ones).  This means that 
+		the third one (lookups) must not run concurrently with the 
+		other.
 	\item
 		Cache node claiming: Before an entry is inserted, it must	
 		acquire one of the pre-allocated nodes and we must ensure that 
@@ -398,13 +406,46 @@ when an object has to allocate its own peer request e.g. due to a flushing of
 its dirty buckets. Since this must be fast, there are pre-allocated requests
 hard-coded in the struct of each object which can be used in such cases.
 
-\subsection{Write policy}
+\subsection{Write policy}\label{sec:wcp-design}
 
 The user must define beforehand what is the write policy of cache. There are
-two options: write-through and write-back. On a side note, as far as reads and
-cache misses are concerned, cached operates under a write-allocate policy.
+two options: write-through and write-back. These policies aren't new and have 
+been discussed extensively in chapter ?, but let's see what these policies 
+translate to in cached context.
 
-\section{Cached Operation}
+\begin{itemize}
+	\item
+		In \textbf{write-back} mode, cached caches writes, immediately 
+		serves the request back and marks the data as dirty. When a read 
+		arrives, it either serves the request with the dirty data 
+		(read-hit) or forwards the request to the storage peer and 
+		caches the answer (read-miss).
+
+		This policy is used when we want to improve read and write speed 
+		and can sacrifice data safety.
+	\item
+		In \textbf{write-through} mode, cached forwards writes to 
+		blocker, servers the request when blocker replies, caches the 
+		data and marks them as valid.  When a read arrives, it either 
+		serves the request with the valid data (read-hit) or forwards 
+		the request to the storage peer and caches the answer 
+		(read-miss).
+
+		This policy is used when we want to improve read speed and want 
+		to make sure that no data will be lost.
+\end{itemize}	
+
+These policies are specified once during cached's deployment and cannot be 
+switched on/off later on.
+
+\section{Cached Operation}\label{sec:op-design}
+
+\begin{comment}
+Let's attempt to make the above a bit clearer. When cached receives a request, 
+it first checks the request target (i.e. the object name and then calculates 
+which bucket objects are within the request's range. It is easy to see that this 
+is a 1:1 mapping to the object's data.
+\end{comment}
 
 \subsection{Write-through mode}
 
