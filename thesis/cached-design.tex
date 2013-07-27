@@ -117,10 +117,11 @@ in detail in Section \ref{sec:xworkq-design}.
 Let's see now the design of cached in detail. The cached peer consists of a 
 number of building blocks.  Per Archipelago policy, most of these building 
 blocks have been written in the xtypes fashion (see Section \ref{arch-xtypes} 
-about xtypes).
+about xtypes). Also, we must note that these components were not created by the 
+author and the contribution to them was limited.
 
 The components of cached can be seen below:
-
+ 
 % TODO: Link List to the definitions
 \begin{itemize}
 	\item xcache, an xtype that provides indexing support, amongst many 
@@ -128,7 +129,6 @@ The components of cached can be seen below:
 	\item xworkq, an xtype that guarantees atomicity for execution of jobs 
 		on the same object
 	\item xwaitq, an xtype that allows conditional execution of jobs
-	\item bucket pool, a pre-allocated memory pool for buckets
 \end{itemize}
 
 and their design will be discussed in-depth in the following sections.
@@ -150,7 +150,7 @@ Below we can see a design overview of xcache:
 
 % While explaining, point to the diagram objects, a, b, c etc.
 As we can see above, xcache utilizes two hash tables. One hash table is 
-responsible for indexing entriess (or more generally speaking "cache entries") 
+responsible for indexing entries (or more generally speaking "cache entries") 
 that are active in cache.  The other hash table is responsible for indexing 
 evicted cache entries that have pending jobs.  Again, more generally speaking, 
 evicted cache entries are entries whose refcount has not dropped to zero yet.
@@ -343,23 +343,37 @@ Figure
 
 \section{The xworkq xtype}\label{sec:xworkq-design}
 
-The xworkq xtype is a useful (what?) for concurrency control on object level. It 
-is important to distinguish between cache level operations and object level 
-operations. Cache level operations include insertions, lookups, removals, 
-allocations and refcount handling. On object level, there is a different set of 
-operations that must be synchronized across threads. Namely, we have bucket 
-claiming, read/write operations and object flushes.
+The xworkq xtype is a useful abstraction for concurrency control. It's purpose 
+is to enqueue "jobs" and ensure that only one thread will execute them at a 
+time. This means that xworkq is generally used when multiple threads want atomic 
+access to the same memory segment. xworkq is also generic by nature, since the 
+"jobs" are simply a set of functions and their input data.
+
+In cached context, it is used when we have received a read/write request for an 
+object and we want to atomically acess/modify the requested data range.
+
+\begin{comment}
+	This is wrong, xworkq understands only jobs.
+on object level.  It is important to distinguish between cache level operations 
+and object level operations. Cache level operations include insertions, lookups, 
+removals, allocations and refcount handling. On object level, there is a 
+different set of operations that must be synchronized across threads. Namely, we 
+have bucket claiming, read/write operations and object flushes.
 
 The above distinction makes it easy to see that provided that operations on 
 object level need not worry about interactions with other objects. Each object 
 is "sandboxed", so to speak.
+\end{comment}
 
-Let's see the design of the xworkq xtype. It consist of a queue where jobs (e.g.  
-read from block, write to block) are enqueued. The thread that enqueues a job 
-can attempt to execute it to, by acquiring a lock for the workq. If the lock is 
-free, the thread will be able to execute the enqueued job. Also, other threads 
-can enqueue their jobs, so the thread that has the lock can do those too. There 
-is an xworkq for every object.
+Let's see the design of the xworkq xtype. 
+
+% Design of xworkq
+
+It consist of a queue where jobs (e.g.  read from block, write to block) are 
+enqueued. The thread that enqueues a job can attempt to execute it to, by 
+acquiring a lock for the workq. If the lock is free, the thread will be able to 
+execute the enqueued job. Also, other threads can enqueue their jobs, so the 
+thread that has the lock can do those too. There is an xworkq for every object.
 
 Every object has a workq. Whenever a new request is accepted/received for an
 object, it is enqueued in the workq and we are sure that only one thread at a
