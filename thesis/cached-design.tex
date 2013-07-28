@@ -345,12 +345,17 @@ Figure
 
 The xworkq xtype is a useful abstraction for concurrency control. It's purpose 
 is to enqueue "jobs" and ensure that only one thread will execute them at a 
-time. This means that xworkq is generally used when multiple threads want atomic 
+time. There is no distinction as to which thread this will be, as well as no 
+execution condition. The winner is simply the one that acquires first the lock.
+
+This means that xworkq is generally used when multiple threads want atomic 
 access to the same memory segment. xworkq is also generic by nature, since the 
 "jobs" are simply a set of functions and their input data.
 
-In cached context, it is used when we have received a read/write request for an 
-object and we want to atomically acess/modify the requested data range.
+In cached context, every object has a workq. Whenever a new request is 
+accepted/received for an object, it is enqueued in the workq and we are sure 
+that only one thread at a time can have access to the object's data and 
+metadata.
 
 \begin{comment}
 	This is wrong, xworkq understands only jobs.
@@ -369,25 +374,28 @@ Let's see the design of the xworkq xtype.
 
 % Design of xworkq
 
-It consist of a queue where jobs (e.g.  read from block, write to block) are 
+It consists of a queue where jobs (e.g.  read from block, write to block) are 
 enqueued. The thread that enqueues a job can attempt to execute it to, by 
 acquiring a lock for the workq. If the lock is free, the thread will be able to 
 execute the enqueued job. Also, other threads can enqueue their jobs, so the 
 thread that has the lock can do those too. There is an xworkq for every object.
 
-Every object has a workq. Whenever a new request is accepted/received for an
-object, it is enqueued in the workq and we are sure that only one thread at a
-time can have access to the objects data and metadata.
-
-For more information, see the xworkq.
 
 \section{The xwaitq xtype}
 
-When a thread tries to insert an object in cache but fails, due to the fact
-that cache is full, the request is enqueued in the xcache waitq, which is
-signaled every time an object is freed.
+The xwaitq xtype bears some similarities to the xworkq xtype. Like xworkq, it is 
+also an abstraction where "jobs" are enqueued and dequeued later on to be 
+executed. Unlike xworkq though, in xwaitq the "jobs" that are being enqueued are 
+considered to be thread-safe and can be executed concurrently by any thread.  
+Moreover, the execution scheme is different. Specifically, jobs are executed 
+only when a specific condition is true. This way, xwaitq provides an abstraction 
+to...
 
-For more information, see the xwaitq.
+In cached context...
+
+Let's see the design of the xwaitq xtype. 
+
+% Design of xwaitq
 
 \section{Cached internals}
 
