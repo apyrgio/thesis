@@ -188,6 +188,24 @@ Some common refcount cases are:
 
 and, as always, the entry is freed only when its ref = 0.
 
+\subsection{Event hooks}
+
+The hooks that xcache provides to users are:
+
+\begin{itemize}
+	\item on\_ init: called on cache entry initialization.
+	\item on\_put: called when the last reference to the cache entry is put
+	\item on\_evict: called when a cache entry is evicted.
+	\item on\_node\_init: called on initial node preparation.
+	\item post\_evict: called after an eviction has occurred, with cache  
+		lock held.
+	\item on\_free: called when a cache entry is freed.
+	\item on\_finalize: called to hint the user that the cache entry's ref 
+		has dropped to zero.
+	\item on\_reinsert: called when a cache entry has been in cache
+\end{itemize}
+
+
 \section{Implementation of cached}\label{sec:cached-imp}
 
 The cached is the following:

@@ -116,6 +116,7 @@ aspects of caching such as:
 	\item entry indexing,
 	\item entry eviction, and
 	\item concurrency control
+	\item event hooks
 \end{itemize}
 
 We have to note here that xcache pre- our contribution to xcache 
@@ -280,26 +281,26 @@ this case, we re-insert it to entries and increase its refcount by 2, since
 there is one reference by the hash table and one reference by the one who
 requested the lookup.
 
-\begin{comment}
-\subsection{Hooks}
+\subsection{Event hooks}
 
+We have mentioned that xcache is not a standalone program but aims to provide 
+core caching functionalities for other peers to use. Moreover, an important 
+design feature is to not bother the top peer with the xcache internals, such as 
+refcounting or which hash table its resides.
 
-The hooks that xcache provides to users are:
+There is an issue that arise with this bla.
 
-\begin{itemize}
-	\item on\_ init: called on cache entry initialization.
-	\item on\_put: called when the last reference to the cache entry is put
-	\item on\_evict: called when a cache entry is evicted.
-	\item on\_node\_init: called on initial node preparation.
-	\item post\_evict: called after an eviction has occurred, with cache  
-		lock held.
-	\item on\_free: called when a cache entry is freed.
-	\item on\_finalize: called to hint the user that the cache entry's ref 
-		has dropped to zero.
-	\item on\_reinsert: called when a cache entry has been in cache
-\end{itemize}
+Different peers have different things to cache. For example, cached needs to 
+cache objects but xcache was originally created for another peer that needed to 
+cache file descriptors. So, xcache may pose no restriction to what is cached but 
+that also means that it has no control over what happens to the peer's contents 
+on insertion, eviction, removal etc. This is fair, but shouldn't the peer be 
+alarmed for events such as eviction of an entry?
 
-\end{comment}
+To this end, we have crafted event hooks in xcache onto which the peer can plug 
+its own function and take brief control of the event. For example, when cached 
+is on writeback mode, it plugs a special function on the entry eviction hook to 
+check if this entry is dirty.
 
 \subsection{xcache flow}
 
