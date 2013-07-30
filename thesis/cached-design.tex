@@ -71,29 +71,6 @@ cached objects.
 Moreover, cached has been designed to be object aware. This means that we search 
 in the hash table with the object name as key.%Anything else?
 
-There is however a problem when operating solely on object level. Objects have 
-typically 4MB of size. What would happen if a user requested e.g. a 16KB chunk 
-of an object?
-
-In this case, we would need to read and cache the whole object just to reply to 
-the user's request. If the user then requests a chunk from another object, we 
-would have to cache that object too and in the end, we would thrash our 
-cache\footnote{cache thrashing occurs when we aggressively cache data that is 
-	only used once and effectively leads to a snowball of evictions}.
-
-The solution to this is to further divide objects to the next and final logical 
-entity, \emph{buckets} (typically 4KB of size). Each bucket consists of its data 
-and metadata and cannot be half-empty, or half-allocated. This way, we can also 
-know which parts of the cached object are actually written, or are in the 
-process of being read etc.
-
-The buckets are pre-allocated, which means two things:
-
-\begin{enumerate}
-	\item We don't need to care about memory fragmentation and system call 
-		overhead
-	\item We cannot index single buckets. <FILLME>
-\end{enumerate}
 
 Finally, an important aspect of cached is its multi-threading support.  
 Specifically, cached can work with multiple threads that can accept requests 
@@ -398,7 +375,46 @@ Let's see the design of the xwaitq xtype.
 
 \section{Cached internals}
 
-\subsection{Object states}
+The components that have been discussed in the previous sections provide core 
+functionalities for cached. Also, besides bridging these components, cached also 
+has some internal bla bla that are crucial for cached's operation.
+
+Namely, these are:
+
+\begin{enumerate}
+	\item Bucket pool
+	\item Bucket/Objects states
+	\item Per-object request queues
+	\item Write policy
+\end{enumerate}
+
+\section{Bucket pool}
+
+There is however a problem when operating solely on object level. Objects have 
+typically 4MB of size. What would happen if a user requested e.g. a 16KB chunk 
+of an object?
+
+In this case, we would need to read and cache the whole object just to reply to 
+the user's request. If the user then requests a chunk from another object, we 
+would have to cache that object too and in the end, we would thrash our 
+cache\footnote{cache thrashing occurs when we aggressively cache data that is 
+	only used once and effectively leads to a snowball of evictions}.
+
+The solution to this is to further divide objects to the next and final logical 
+entity, \emph{buckets} (typically 4KB of size). Each bucket consists of its data 
+and metadata and cannot be half-empty, or half-allocated. This way, we can also 
+know which parts of the cached object are actually written, or are in the 
+process of being read etc.
+
+The buckets are pre-allocated, which means two things:
+
+\begin{enumerate}
+	\item We don't need to care about memory fragmentation and system call 
+		overhead
+	\item We cannot index single buckets. <FILLME>
+\end{enumerate}
+
+\subsection{Bucket/Object states}
 
 Every object has a state, which is set atomically by threads. The state list is
 the following:
