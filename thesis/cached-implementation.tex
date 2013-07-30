@@ -190,3 +190,66 @@ and, as always, the entry is freed only when its ref = 0.
 
 \section{Implementation of cached}\label{sec:cached-imp}
 
+The cached is the following:
+
+\ccode{Main cached struct}{cached.h}
+
+and the cached entries are the following
+
+\ccode{Cahed entry struct}{ce.h}
+
+\section{Bucket pool}
+
+And the bucket implementation is the following:
+
+\ccode{Bucket implementation}{bucket.h}
+
+\subsection{Bucket/Object states}
+
+Every object has a state, which is set atomically by threads. The state list is
+the following:
+
+\begin{itemize}
+	\item READY: the object is ready to be used
+	\item FLUSHING: the object is flushing its dirty buckets
+	\item DELETING: there is a delete request that has been sent to the 
+		blocker for this object
+	\item INVALIDATED: the object has been deleted
+	\item FAILED: something went very wrong with this object
+\end{itemize}
+
+Also, object buckets have their own states too. These are divided in allocation 
+states:
+
+\begin{itemize}
+	\item FREE: the bucket has not been touched or has been flushed
+	\item CLAIMED: the bucket has been claimed
+\end{itemize}
+
+and data states:
+
+\begin{itemize}
+	\item INVALID: the same as empty
+	\item LOADING: there is a pending read to blocker for this bucket
+	\item VALID: the bucket is clean and can be read
+	\item DIRTY: the bucket can be read but its contents have not been
+		written to the underlying storage
+	\item WRITING: there is a pending write to blocker for this bucket
+\end{itemize}
+
+Also, for cios we have the following:
+
+\begin{itemize}
+	\item FAILED: at least one of the cio request(s) has failed
+	\item ACCEPTED: normal mode
+	\item READING: at least one of the cio request(s) is pending a read
+	\item WRITING: at least one of the cio request(s) is pending a write
+	\item SERVED: all requests have been served
+\end{itemize}
+
+
+Finally, for every object there are bucket state counters, which are increased/
+decreased when a bucket state is changed. These counters give us an O(1)
+glimpse to the bucket states of an object.
+
+

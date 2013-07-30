@@ -383,8 +383,8 @@ Namely, these are:
 
 \begin{enumerate}
 	\item Bucket pool
-	\item Bucket/Objects states
 	\item Per-object request queues
+	\item Bucket/Object/cio states
 	\item Write policy
 \end{enumerate}
 
@@ -414,35 +414,6 @@ The buckets are pre-allocated, which means two things:
 	\item We cannot index single buckets. <FILLME>
 \end{enumerate}
 
-\subsection{Bucket/Object states}
-
-Every object has a state, which is set atomically by threads. The state list is
-the following:
-
-\begin{itemize}
-	\item READY: the object is ready to be used
-	\item FLUSHING: the object is flushing its dirty buckets
-	\item DELETING: there is a delete request that has been sent to the 
-		blocker for this object
-	\item INVALIDATED: the object has been deleted
-	\item FAILED: something went very wrong with this object
-\end{itemize}
-
-Also, object buckets have their own states too:
-
-\begin{itemize}
-	\item INVALID: the same as empty
-	\item LOADING: there is a pending read to blocker for this bucket
-	\item VALID: the bucket is clean and can be read
-	\item DIRTY: the bucket can be read but its contents have not been
-		written to the underlying storage
-	\item WRITING: there is a pending write to blocker for this bucket
-\end{itemize}
-
-Finally, for every object there are bucket state counters, which are increased/
-decreased when a bucket state is changed. These counters give us an O(1)
-glimpse to the bucket states of an object.
-
 \subsection{Per-object peer requests}
 
 Reads and writes to objects are practically read/write request from other
@@ -450,6 +421,12 @@ peers, for which a peer request has been allocated. There are cases though
 when an object has to allocate its own peer request e.g. due to a flushing of
 its dirty buckets. Since this must be fast, there are pre-allocated requests
 hard-coded in the struct of each object which can be used in such cases.
+
+\subsection{Bucket/Object states}
+
+In order to know on how to operate on an object/bucket/cio, we must have some 
+sort of book-keeping. The book-keeping we use is to check the state of the 
+above. (arggh, silly)
 
 \subsection{Write policy}\label{sec:wcp-design}
 
