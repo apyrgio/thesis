@@ -41,14 +41,6 @@ illustrate the flow of requests for cached.
 
 \section{Design overview}
 
-\marginpar{
-	Requirements:\\
-	1. \sout{Nativity}\\
-	2. Pluggability\\
-	3. Object Awareness\\
-	4. In-memory
-}
-
 First of all, cached has been designed as an Archipelago user-space peer (see 
 Section \ref{sec:arch-peer} about Archipleago peers). This design decision 
 covers the nativity requirement we posed at the beginning of this chapter.
@@ -133,6 +125,11 @@ The components of cached can be seen below:
 
 and their design will be discussed in-depth in the following sections.
 
+Also, we must note that the above components predate our cached implementation 
+and are not a contribution of this thesis\footnote{xcache is an exception since 
+	we have extended its functionalities for our purposes}. They are 
+presented however in this thesis for clarity reasons. 
+
 \section{The xcache xtype}\label{sec:xcache-design}
 
 xcache is the main component of cached. It is responsible for several key 
@@ -143,6 +140,8 @@ aspects of caching such as:
 	\item entry eviction, and
 	\item concurrency control
 \end{itemize}
+
+We have to note here that xcache pre- our contribution to xcache 
 
 Below we can see a design overview of xcache:
 
