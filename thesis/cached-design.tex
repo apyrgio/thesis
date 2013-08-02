@@ -389,6 +389,17 @@ Namely, these are:
 	\item Write policy
 \end{enumerate}
 
+\subsection{Buckets}
+
+% Explain what buckets are:
+% a) That they are bounded
+% b) That they have states
+% c) That they are preallocated and every thread enqueues and dequeues an index 
+% to them
+
+\subsection{Object states}
+
+
 \section{Bucket pool}
 
 There is however a problem when operating solely on object level. Objects have 
@@ -462,6 +473,12 @@ These policies are specified once during cached's deployment and cannot be
 switched on/off later on.
 
 \section{Cached Operation}\label{sec:op-design}
+
+\subsection{Polling for new requests}
+
+We have explained in Section ? that a peer can send an I/O request to another 
+peer by submitting to its port. However, what is are
+
 
 \begin{comment}
 Let's attempt to make the above a bit clearer. When cached receives a request, 
