@@ -1,22 +1,46 @@
 \chapter{Evaluation of Cached}\label{ch:cached-evaluation}
 
-In this chapter, we are going to see how cached measures up against the current 
-storage implementation. 
+\begin{flushright}
+	\textit{"There are three kinds of lies:\\
+		lies, damned lies, \\
+		and \sout{statistics} benchmarks."}	\\
 
-More specifically, Section ? does this, Section ? does that.
+	Mark Twain (modernized)
+\end{flushright}
 
-\section{Current status}
+In this chapter, we are about to tackle the tricky task of justifying our 
+implementation. It is a tricky task because we need to show results that are 
+better that improve on our own storage implementation. bla bla.
 
-The results for sosd can be seen below
+We must also tackle one more problem, that is which results to show. Our 
+implementation has many different aspects which deserve their own benchmarks and 
+these are
 
-As expected, the bandwidth is... and the latency is...
+\begin{enumerate}
+	\item Bucket size
+	\item IOdepth
+	\item Cache size
+	\item Max cached objects
+	\item Write policy
+	\item ...
+\end{enumerate}
 
-\section{A brief look with cached}
+For this reason, we have to distinguish between which are more important 
+payloads and which not. Important payloads are considered payloads that are met 
+in production environments. The most troublesome payload of production 
+environments is by far the stampede of 4k random writes and this is the one that 
+we will view first.
 
-Cached instead has  the following results
+\begin{figure}[hb]
+	\centering
+	\includegraphics[]{diagrams/out.pdf}
+	\caption{Cached vs. sosd}
+	\label{fig:comp}
+\end{figure}
 
-\section{A more thorough look to cached's results}
 
-If we look carefully, bla bla
+Amazing results, right?
+
+Let's see now the ugly truth...
 
 

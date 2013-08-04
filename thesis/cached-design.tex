@@ -406,7 +406,7 @@ There is however a problem when operating solely on object level. Objects have
 typically 4MB of size. What would happen if a user requested e.g. a 16KB chunk 
 of an object?
 
-In this case, we would need to read and cache the whole object just to reply to 
+n this case, we would need to read and cache the whole object just to reply to 
 the user's request. If the user then requests a chunk from another object, we 
 would have to cache that object too and in the end, we would thrash our 
 cache\footnote{cache thrashing occurs when we aggressively cache data that is 
