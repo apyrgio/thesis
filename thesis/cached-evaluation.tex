@@ -1,4 +1,4 @@
-\chapter{Evaluation of Cached}\label{ch:cached-evaluation}
+\chapter{Performance evaluation of Cached}\label{ch:cached-evaluation}
 
 \begin{flushright}
 	\textit{"There are three kinds of lies:\\
@@ -8,9 +8,48 @@
 	Mark Twain (modernized)
 \end{flushright}
 
-In this chapter, we are about to tackle the tricky task of justifying our 
-implementation. It is a tricky task because we need to show results that are 
-better that improve on our own storage implementation. bla bla.
+It may seem as an ironic statement, considering that we are about to provide 
+benchmark results for cached, but it actually is a very valid one. What Mr.  
+Twain tries to say here
+\footnote{
+	a phrase usually not heard in programming contexts...
+}
+is that the presentation of partials facts for something can be used to 
+fabricate a plausible truth for it. In science's case, it so often happens that 
+promising results for an experiment can seem more important to the researcher's 
+eye than negative ones due to positive reinforcement.
+
+In out case, we will try not to merely smear the next pages with diagrams but 
+first explain the benchmarking methodology behind them.
+
+The skeleton of this chapter is the following: Section \ref{sec:perf-meth} 
+explains the methodology behind our measurements. Section \ref{sec:perf-plot} 
+presents the results of the benchmarks that we have done and provides in-depth 
+explanations about each of them. Finally, Section ? is undefined.
+
+\section{Benchmark methodology}
+
+The benchmarks that have been executed and whose results are presented in this 
+chapter, will be split in two categories, both of which have their own distinct 
+goals:
+
+The first category is the comparison between using cached on top of the sosd 
+(sosd has been discussed here ?) and using solely the sosd. The category's goal 
+is to "defend" one of the core thesis arguments, that tiering is a key element 
+that will improve the performance of Archipelago. 
+
+In order to compare effectively the performance of cached and sosd, we must 
+consider the following: 
+
+\begin{enumerate}[i]
+	\item The comparisons of two peers are should not aim to test the all 
+		the implementation settings but focus on what is the best 
+		performance that these peers can achieve.
+	\item Both peers must be tested with the under the same, reasonable 
+		workload.
+	\item The workload must be reasonable i.e can be encountered in 
+		production environments and test
+
 
 We must also tackle one more problem, that is which results to show. Our 
 implementation has many different aspects which deserve their own benchmarks and 
