@@ -1,4 +1,4 @@
-\chapter{Performance evaluation of Cached}\label{ch:cached-evaluation}
+\chapter{Performance evaluation of cached}\label{ch:cached-evaluation}
 
 \begin{flushright}
 	\textit{"There are three kinds of lies:\\
@@ -9,15 +9,17 @@
 \end{flushright}
 
 It may seem as an ironic statement, considering that we are about to provide 
-benchmark results for cached, but it actually is a very valid one. What Mr.  
-Twain tries to say here
+benchmark results for cached, but it's actually is a valid one. What Mr.  Twain 
+tries to say here
 \footnote{
-	a phrase usually not heard in programming contexts...
+	and that's a phrase usually not heard in programming contexts...
 }
 is that the presentation of partials facts for something can be used to 
-fabricate a plausible truth for it. In science's case, it so often happens that 
-promising results for an experiment can seem more important to the researcher's 
-eye than negative ones due to positive reinforcement.
+fabricate a plausible truth for it.
+%This is shit, fix it
+In science's case, it so often happens that promising results for an experiment 
+can seem more important to the researcher's eye than negative ones due to 
+positive reinforcement.
 
 In out case, we will try not to merely smear the next pages with diagrams but 
 first explain the benchmarking methodology behind them.
@@ -27,33 +29,64 @@ explains the methodology behind our measurements. Section \ref{sec:perf-plot}
 presents the results of the benchmarks that we have done and provides in-depth 
 explanations about each of them. Finally, Section ? is undefined.
 
-\section{Benchmark methodology}
+\section{Benchmark methodology}\label{sec:perf-meth}
 
 The benchmarks that have been executed and whose results are presented in this 
 chapter, will be split in two categories, both of which have their own distinct 
 goals:
 
 The first category is the comparison between using cached on top of the sosd 
-(sosd has been discussed here ?) and using solely the sosd. The category's goal 
-is to "defend" one of the core thesis arguments, that tiering is a key element 
-that will improve the performance of Archipelago. 
+(sosd has been discussed here ?) and using solely the sosd as the Archipelago 
+storage. The category's goal is to "defend" one of the core thesis arguments, 
+that tiering is a key element that will improve the performance of Archipelago. 
 
 In order to compare effectively the performance of cached and sosd, we must 
 consider the following: 
 
-\begin{enumerate}[i]
-	\item The comparisons of two peers are should not aim to test the all 
-		the implementation settings but focus on what is the best 
-		performance that these peers can achieve.
-	\item Both peers must be tested with the under the same, reasonable 
-		workload.
-	\item The workload must be reasonable i.e can be encountered in 
-		production environments and test
+\begin{enumerate}
+	\item The comparison of the two peers should try to focus on what is 
+		the best performance that these peers can achieve for a series 
+		of tough workloads.
+	\item The circumstances under which both peers will be tested need not 
+		be thorough but challenging. For example, it may be interesting 
+		to test both peers against sequential requests, but
+		\begin{inparaenum}[i)]
+		\item such patterns are rarely a nuisance for production 
+			environments
+		\item they do not stress the peers enough to provide something 
+			conclusive
+		\item they are out of the scope of this section as there can be 
+			many of them and adding them all here will impede the 
+			document's readability.
+		\end{inparaenum}
+		
+	\item Both peers must be tested under the same, reasonable workload, 
+		i.e a workload that can be encountered in production 
+		environments.
+	\item If the peer doesn't show a consistent behavior for a workload, it 
+		must be depicted in the results.
+\end{enumerate}
 
+Having the above in mind, the next step is to choose a suitable workload.  This 
+choice though is fairly straight-forward; in production environments, the most 
+troublesome workload is the stampede of small random reads/writes and is 
+usually the most tested scenario.  
 
-We must also tackle one more problem, that is which results to show. Our 
-implementation has many different aspects which deserve their own benchmarks and 
-these are
+One may ponder however, how many requests can be considered as a "stampede" or 
+which block size is considered as "small". Of course, there is not only one 
+answer to this question so, we will work with ranges. For our workload, we will 
+use block sizes ranging from 4KB to 64KB and parallel requests ranging from 4 
+to 16.
+
+The second category deals solely with the inner-workings of cached and its 
+behavior on different operation modes or states. Its aim is not to capture the 
+performance against a tough workload, but to explain \textbf{why} this 
+performance is observed and how each of the options affect it. For example, we 
+will measure things (blarg?) such as writethrough mode vs writeback mode, 
+single-threaded vs multi-threaded etc.
+
+Finally, the following list is the options of cached that affect the 
+measurements: 
 
 \begin{enumerate}
 	\item Bucket size
@@ -64,11 +97,7 @@ these are
 	\item ...
 \end{enumerate}
 
-For this reason, we have to distinguish between which are more important 
-payloads and which not. Important payloads are considered payloads that are met 
-in production environments. The most troublesome payload of production 
-environments is by far the stampede of 4k random writes and this is the one that 
-we will view first.
+\section{Performance comparison between cached and sosd}
 
 \begin{figure}[hb]
 	\centering
@@ -76,10 +105,4 @@ we will view first.
 	\caption{Cached vs. sosd}
 	\label{fig:comp}
 \end{figure}
-
-
-Amazing results, right?
-
-Let's see now the ugly truth...
-
 
