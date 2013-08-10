@@ -85,7 +85,7 @@ performance is observed and how each of the options affect it. For example, we
 will measure things (blarg?) such as writethrough mode vs writeback mode, 
 single-threaded vs multi-threaded etc.
 
-Finally, the following list is the options of cached that affect the 
+Also, here is the following list is the options of cached that affect the 
 measurements: 
 
 \begin{enumerate}
@@ -97,12 +97,28 @@ measurements:
 	\item ...
 \end{enumerate}
 
+Finally, in the following sections for brevity reasons we will talk about 
+comparing cached and sosd. What the reader must keep in mind however is that 
+cached is the cache layer above sosd. 
+
 \section{Performance comparison between cached and sosd}
+
+As mentioned above, for our first test, we will evaluate the read and write 
+performance of cached and sosd (in bandwidth and latency) for a random workload 
+with parallel requests of small size. The results can be seen in Figure 
+\ref{fig:comp-lie}. 
 
 \begin{figure}[hb]
 	\centering
-	\includegraphics[]{diagrams/out.pdf}
-	\caption{Cached vs. sosd}
-	\label{fig:comp}
+	\includegraphics[]{diagrams/bw-write-comp-lie.pdf}
+	\caption{Bandwidth performance for write}
+	\label{fig:bw-write-comp-lie}
+\end{figure}
+
+\begin{figure}[hb]
+	\centering
+	\includegraphics[]{diagrams/bw-read-comp-lie.pdf}
+	\caption{Bandwidth performance for read}
+	\label{fig:bw-read-comp-lie}
 \end{figure}
 
