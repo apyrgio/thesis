@@ -166,6 +166,10 @@ sizes is approximately 50x, whereas for larger block sizes it ranges between
 
 From these first two diagrams we can extract the following points:
 
+\textbf{Why is there such a vast improvement?}
+
+(Explain that it's because we don't write past cache's size)
+
 \textbf{Where is the speedup difference between read and writes attributed to?}
 
 The speedup difference is attributed to three factors:
@@ -221,5 +225,19 @@ This slight improvement we see is mainly due to the fact that requests are
 effectively being pipelined while waiting each other to release locks. (explain 
 better)
 
+Let's proceed now to the latency results. The write performance can be seen in 
+Figure \ref{fig:lat-write-comp-lie.pdf} while the read performance can be seen 
+in Figure \ref{fig:lat-read-comp-lie.pdf}.
 
+\diagram{lat-write-comp-lie.pdf}{Comparison of latency performance for writes}
+\diagram{lat-read-comp-lie.pdf}{Comparison of latency performance for reads}
 
+We will measure the speedup of the write and read performance of cached. It is 
+bla-bla for writes and bla-bla for reads.
+
+We can also see that the latency results confirm our previous observations. The 
+latency is increased proportionally with the iodepth, which indicates that we 
+need a more fine-grained locking scheme. Also, latency results are in the order 
+of microseconds instead of nanoseconds which further supports the assertion 
+that the results are dominated by index-related stuff (argh, think of something 
+prettier)
