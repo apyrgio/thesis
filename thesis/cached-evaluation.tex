@@ -105,20 +105,23 @@ cached is the cache layer above sosd.
 
 As mentioned above, for our first test, we will evaluate the read and write 
 performance of cached and sosd (in bandwidth and latency) for a random workload 
-with parallel requests of small size. The results can be seen in Figure 
-\ref{fig:comp-lie}. 
+with parallel requests of small size. In order to measure accurately their 
+performance, we will use two different metrics:
 
-\begin{figure}[hb]
-	\centering
-	\includegraphics[]{diagrams/bw-write-comp-lie.pdf}
-	\caption{Bandwidth performance for write}
-	\label{fig:bw-write-comp-lie}
-\end{figure}
+\begin{description}
+	\item[Bandwidth:] We will measure the bandwidth for the bulk of our 
+		requests. This is a metric from the peer's perspective that reflects 
+		how much request size requests our peers can handle per second.
+	\item[Latency:] We will measure the average time the requests need to be 
+		served. Unlike bandwidth, this metric reflects the responsiveness of 
+		the implementation. For example...
+	\item[IOPS:] (Should we include them?)
+\end{description}
 
-\begin{figure}[hb]
-	\centering
-	\includegraphics[]{diagrams/bw-read-comp-lie.pdf}
-	\caption{Bandwidth performance for read}
-	\label{fig:bw-read-comp-lie}
-\end{figure}
+Let's see now the bandwidth performance of our peers. The write performance can 
+be seen in Figure \ref{fig:bw-write-comp-lie.pdf} while the read performance 
+can be seen in Figure \ref{fig:bw-read-comp-lie.pdf}.
+
+\diagram{bw-write-comp-lie.pdf}{Comparison of bandwidth performance for writes}
+\diagram{bw-read-comp-lie.pdf}{Comparison of bandwidth performance for reads}
 

@@ -87,7 +87,7 @@
 \newcommand\with[3]{with \; \tuple{#1}{#2} \; do \; #3}
 
 % Success Typing macros
-\newcommand\ssub{\sqsubseteq_S}
+\newcommand\ssub{\sqsubseteq\_S}
 
 % Core Ruby Success Typing letter bindings
 \newcommand\classlist{\Delta}
@@ -123,7 +123,18 @@
 \newcommand\tyconaptwo[3]{\ensuremath{\mbox{\typerep{#1}} \:\: \mbox{#2} \:\: \mbox{#3}}}
 
 
-% FLOAT SETUP ==================================================================
+% FIGURE SETUP ===============================================================
+
+\newcommand\diagram[2]{
+	\begin{figure}[hb]
+		\centering
+		\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]
+		{diagrams/#1}
+		\caption{#2}
+		\label{fig:#1}
+	\end{figure}
+}
+
 
 % SPELLING =====================================================================
 
