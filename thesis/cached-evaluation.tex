@@ -196,20 +196,30 @@ The speedup difference is attributed to three factors:
 		levels: on OSD level, on RAID controller level and thus is faster.
 \end{enumerate}
 
-
-We can see that cached doesn't scale as well as sosd. This happens for the 
-following reason:
-
-\textbf{Why is cached's performance increased with block size?}
+\textbf{Why is cached's performance increased along with block size?}
 
 This is another interesting observation but first, why doesn't it apply on 
-sosd? Well, the explanation is pretty simple. Sosd's primary storage are hard 
-disk drives, which have a major drawback; their seek time is not constant and 
-is affected by the location of the contents in the disk platters. Cached 
-however stores data in RAM and we would expect that writing 16 x 4k blocks and 
-1 x 64k block to take approximately the same time.
+sosd? This is because sosd's primary storage are hard disk drives, which have a 
+major drawback; their seek time is not constant and is affected by the location 
+of the contents in the disk platters. Cached however stores data in RAM and we 
+would expect that writing 16 x 4k blocks and 1 x 64k block to take 
+approximately the same time.
 
-From this observation, we can extract that indexing (job enqueuing, lock 
-spinning, hash table indexing) dominates the cached's performance. To ensure 
-this is the case, we also expect to have latency in microsends instead of 
-nanoseconds, which is typical for RAM.
+From this observation, we can extract that the indexing-related stuff (job 
+enqueuing, lock spinning, hash table indexing) dominate the cached's 
+performance. We can make sure this is the case if the latency results are in
+microseconds instead of nanoseconds, which is typical for RAM.
+
+\textbf{Why isn't the performance of cached improved proportionally as the 
+	parallel requests increase?}
+
+The reason why we see a minor increase in the performance of cached, even 
+though it's multi-threaded, is because our locking scheme is not fine-grained 
+enough. We have a single lock for our request queue, a single lock for most of 
+the hash table accesses and this inevitably causes a lot of threads to spin.  
+This slight improvement we see is mainly due to the fact that requests are 
+effectively being pipelined while waiting each other to release locks. (explain 
+better)
+
+
+
