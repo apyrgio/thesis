@@ -99,14 +99,37 @@ measurements:
 
 Finally, in the following sections for brevity reasons we will talk about 
 comparing cached and sosd. What the reader must keep in mind however is that 
-cached is the cache layer above sosd. 
+cached is the cache layer above sosd.  
+
+\section{Specifications of test-bed}
+
+The specifications of the server on which we conducted our benchmarks is the 
+following.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | }
+		\hline
+		Component & Description \\ \hline \hline
+		CPU &  2 x Intel(R) Xeon(R) CPU E5645 @ 2.40GHz \cite{e5645} \\
+		 & Each CPU has six cores with Hyper-Threading enabled, which equals to 
+		 24 threads. \\ \hline
+		RAΜ & 2 banks x 6 DIMMs PC3-10600 \\
+		& Peak transfer rate: 10660 MB/s \\ \hline
+	\end{tabular}
+	\caption{dev100 specs}
+	\label{tab:specs}
+\end{table}
+
+Also, mention that we evaluated both peers by sending requests directly at 
+their request queues
 
 \section{Performance comparison between cached and sosd}
 
 As mentioned above, for our first test, we will evaluate the read and write 
-performance of cached and sosd (in bandwidth and latency) for a random workload 
-with parallel requests of small size. In order to measure accurately their 
-performance, we will use two different metrics:
+performance of cached and sosd for a random workload with parallel requests of 
+small size. In order to measure accurately their performance, we will use two 
+different metrics:
 
 \begin{description}
 	\item[Bandwidth:] We will measure the bandwidth for the bulk of our 
@@ -125,3 +148,68 @@ can be seen in Figure \ref{fig:bw-read-comp-lie.pdf}.
 \diagram{bw-write-comp-lie.pdf}{Comparison of bandwidth performance for writes}
 \diagram{bw-read-comp-lie.pdf}{Comparison of bandwidth performance for reads}
 
+Before we proceed with the interpretation of the diagram results, we will 
+briefly comment on the diagram structure. Due to the fact that the performance 
+of the two peers differs in at least two orders of magnitude, the results would 
+look too flat in a conventional diagram that would scale from 0 to 11000. To 
+amend this, we have broken the y-axis of our diagrams in two parts with 
+different scales and starting values, in order to make the comparison easier to 
+the eye.
+
+We will begin the diagram interpretation with the bandwidth performance of the 
+two peers. First, let's see the speedups of write and read requests with the 
+addition of cached. For write requests, the speedup for very small block sizes 
+(4KB - 16KB) is approximately 100x whereas for larger ones (32KB - 64KB) it 
+ranges from 50x to 200x. For read requests, the speedup for very small block 
+sizes is approximately 50x, whereas for larger block sizes it ranges between 
+20x - 75x.
+
+From these first two diagrams we can extract the following points:
+
+\textbf{Where is the speedup difference between read and writes attributed to?}
+
+The speedup difference is attributed to three factors:
+
+\begin{enumerate}
+	\item The performance of cached is almost the same for writes and reads.  
+		This is expected behavior as the read and write paths for cached have 
+		many common parts (see Figure ? and ?). However, if we go one step 
+		further we will see that under closer inspection, the reads seem 
+		consistently a bit faster than writes. So, how can these happen if both 
+		paths are the same? \\
+		\\
+		This is actually typical RAM behavior. Reads are reportedly faster than 
+		writes (find paper) due to the fact that the update of a bit of an 
+		SDRAM is slower than the read (arg, it's dumb).
+	\item Cached doesn't scale much past the 16KB block size. This is an 
+		interesting observation with an unexpected answer. It may seem 
+		implausible at first, but what happens is that we are actually hitting 
+		the bandwidth limit of the server's RAM. You can see in Table 
+		\ref{tab:specs} that the bandwidth limit is ~10.7GB/s. This limit is 
+		approached asymptotically as the block size increases and the CPU 
+		overhead decreases (more about the CPU overhead later on). Once more, 
+		the experienced eye may see that in reads we surpass this limit, which 
+		is logical given the fact that we have a multi channel RAM setup that 
+		reportedly increases marginally the RAM's performance (why reportedly 
+		and how marginally? Explain...)
+	\item On reads, sosd is benefited from the existence of caches in various 
+		levels: on OSD level, on RAID controller level and thus is faster.
+\end{enumerate}
+
+
+We can see that cached doesn't scale as well as sosd. This happens for the 
+following reason:
+
+\textbf{Why is cached's performance increased with block size?}
+
+This is another interesting observation but first, why doesn't it apply on 
+sosd? Well, the explanation is pretty simple. Sosd's primary storage are hard 
+disk drives, which have a major drawback; their seek time is not constant and 
+is affected by the location of the contents in the disk platters. Cached 
+however stores data in RAM and we would expect that writing 16 x 4k blocks and 
+1 x 64k block to take approximately the same time.
+
+From this observation, we can extract that indexing (job enqueuing, lock 
+spinning, hash table indexing) dominates the cached's performance. To ensure 
+this is the case, we also expect to have latency in microsends instead of 
+nanoseconds, which is typical for RAM.
