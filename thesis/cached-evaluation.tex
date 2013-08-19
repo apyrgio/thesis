@@ -236,8 +236,29 @@ We will measure the speedup of the write and read performance of cached. It is
 bla-bla for writes and bla-bla for reads.
 
 We can also see that the latency results confirm our previous observations. The 
-latency is increased proportionally with the iodepth, which indicates that we 
-need a more fine-grained locking scheme. Also, latency results are in the order 
-of microseconds instead of nanoseconds which further supports the assertion 
-that the results are dominated by index-related stuff (argh, think of something 
-prettier)
+latency is increased proportionally with the iodepth, which indicates once more 
+that we need a more fine-grained locking scheme. Also, latency results are in 
+the order of microseconds instead of nanoseconds which further supports the 
+assertion that the results are dominated by index-related stuff (argh, think of 
+something prettier)
+
+We now proceed to the second part of the comparison between cached and sosd.  
+On this part, we will once again evaluate their performance against a random 
+workload with many parallel requests. Unlike the first part though, where the 
+cache size was the same as the workload's, on this part the cache size will be 
+only a fraction of it. This is after all the projected usage of cached in
+production environments.
+
+For this test, there are two main parameters we must take into account: the 
+cache size and the maximum objects. These parameters have been decoupled in our 
+implementation and we expect different results for each combination. We have 
+chosen to measures cache sizes that start from the 1/64th of the workload's 
+size and reach up to the 1/8th of the workload's size. The maximum objects are 
+chosed differently (oversubscriptions on cache size etc.) they start from a 1/1 
+and reach up to 8/1.
+
+The results can be seen below:
+
+
+
+
