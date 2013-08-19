@@ -40,13 +40,13 @@ To this end, we use the generic \texttt{void *priv} field as a pointer to the
 actual entry content. The rest of the fields will be explained in the following 
 chapters.
 
-Let's continue now with the fields of Listing \ref{lst:xcache-prealloc.h}. Since 
-we preallocate the entries using \texttt{malloc}, they take up a contiguous 
-space in memory.  The start of this space is the where the \texttt{*nodes} field 
-points to. The \texttt{free\_nodes} field works similarly to the free\_entries 
-field in Section \ref{sec:get-req-archip} i.e. it is a stack where indexes to 
-unused nodes are pushed. These indexes will be seen in various code excerpts in 
-this chapter and have a specific name, 
+Let's continue now with the fields of Listing \ref{lst:xcache-prealloc.h}.  
+Since we preallocate the entries using \texttt{malloc}, they take up a 
+contiguous space in memory.  The start of this space is the where the 
+\texttt{*nodes} field points to. The \texttt{free\_nodes} field works similarly 
+to the free\_entries field in Section \ref{sec:get-req-archip} i.e. it is a 
+stack where indexes to unused nodes are pushed. These indexes will be seen in 
+various code excerpts in this chapter and have a specific name, 
 \texttt{xcache\_handler}\footnote{\#define xcache\_handler uint64\_t}.
 
 \subsection{Entry Indexing}
@@ -227,9 +227,19 @@ The hooks that xcache provides to users are:
 
 \section{Implementation of cached}\label{sec:cached-imp}
 
-The cached is the following:
+The cached structure is the following:
 
 \ccode{Main cached struct}{cached.h}
+
+We will briefly comment on the less important entries:
+
+\begin{description}
+	\item[*cache:]
+		This is the connection between cached and xcache. The xcache struct is 
+		stored here.
+	\item[total\_size:]
+		T
+\end{description}
 
 and the cached entries are the following
 
