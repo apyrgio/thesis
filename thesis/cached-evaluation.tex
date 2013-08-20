@@ -257,8 +257,30 @@ size and reach up to the 1/8th of the workload's size. The maximum objects are
 chosed differently (oversubscriptions on cache size etc.) they start from a 1/1 
 and reach up to 8/1.
 
-The results can be seen below:
+In Figure \ref{fig:bw-write-comp-truth.pdf} and Figure 
+\ref{fig:bw-read-comp-truth.pdf} we can see how cached performs for the above 
+scenario. sosd's result are of-course un-affected from the cache size and 
+maximum cache objects, and that's will be used as indicative lines for 
+slowness, fastness, does this word even exist?
 
+Comparing these results with the results Figure \ref{fig:bw-write-comp-lie.pdf} 
+and \ref{fig:bw-read-comp-lie.pdf}, there is a vast drop in the performance. 
+Writes specifically cannot outperform the sosd. On the other hand, reads are 
+generally faster than sosd, about 1.5x.
 
+\diagram{bw-write-comp-truth.pdf}{Comparison of bandwidth performance for 
+	writes}
+\diagram{bw-read-comp-truth.pdf}{Comparison of bandwidth performance for reads}
+
+\textbf{Why adding more objects makes us slower?}
+
+\textbf{Why reads manage to remain faster?}
+
+We will accompany the above diagrams with latency results. You can see them 
+below:
+
+\diagram{lat-write-comp-truth.pdf}{Comparison of latency performance for 
+	writes}
+\diagram{lat-read-comp-truth.pdf}{Comparison of latency performance for reads}
 
 
