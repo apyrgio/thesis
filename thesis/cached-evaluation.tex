@@ -175,29 +175,32 @@ From these first two diagrams we can extract the following points:
 The speedup difference is attributed to three factors:
 
 \begin{enumerate}
-	\item The performance of cached is almost the same for writes and reads.  
-		This is expected behavior as the read and write paths for cached have 
-		many common parts (see Figure ? and ?). However, if we go one step 
-		further we will see that under closer inspection, the reads seem 
-		consistently a bit faster than writes. So, how can these happen if both 
-		paths are the same? \\
+	\item The performance of cached is almost the same for writes and 
+		reads.  This is expected behavior as the read and write paths 
+		for cached have many common parts (see Figure ? and ?).  
+		However, if we go one step further we will see that under 
+		closer inspection, the reads seem consistently a bit faster 
+		than writes. So, how can these happen if both paths are the 
+		same? \\
 		\\
-		This is actually typical RAM behavior. Reads are reportedly faster than 
-		writes (find paper) due to the fact that the update of a bit of an 
-		SDRAM is slower than the read (arg, it's dumb).
+		This is actually typical RAM behavior. Reads are reportedly 
+		faster than writes (find paper) due to the fact that the update 
+		of a bit of and SDRAM is slower than the read (arg, it's dumb).
 	\item Cached doesn't scale much past the 16KB block size. This is an 
 		interesting observation with an unexpected answer. It may seem 
-		implausible at first, but what happens is that we are actually hitting 
-		the bandwidth limit of the server's RAM. You can see in Table 
-		\ref{tab:specs} that the bandwidth limit is ~10.7GB/s. This limit is 
-		approached asymptotically as the block size increases and the CPU 
-		overhead decreases (more about the CPU overhead later on). Once more, 
-		the experienced eye may see that in reads we surpass this limit, which 
-		is logical given the fact that we have a multi channel RAM setup that 
-		reportedly increases marginally the RAM's performance (why reportedly 
-		and how marginally? Explain...)
-	\item On reads, sosd is benefited from the existence of caches in various 
-		levels: on OSD level, on RAID controller level and thus is faster.
+		implausible at first, but what happens is that we are actually 
+		hitting the bandwidth limit of the server's RAM. You can see in 
+		Table \ref{tab:specs} that the bandwidth limit is ~10.7GB/s. 
+		This limit is approached asymptotically as the block size 
+		increases and the CPU overhead decreases (more about the CPU 
+		overhead later on). Once more, the experienced eye may see that 
+		in reads we surpass this limit, which is logical given the fact 
+		that we have a multi channel RAM setup that reportedly 
+		increases marginally the RAM's performance (why reportedly and 
+		how marginally? Explain...)
+	\item On reads, sosd is benefited from the existence of caches in 
+		various levels: on OSD level, on RAID controller level and thus 
+		is faster.
 \end{enumerate}
 
 \textbf{Why is cached's performance increased along with block size?}
@@ -282,5 +285,61 @@ below:
 \diagram{lat-write-comp-truth.pdf}{Comparison of latency performance for 
 	writes}
 \diagram{lat-read-comp-truth.pdf}{Comparison of latency performance for reads}
+
+
+\section{Performance evaluation of cached parameters}
+
+On this part, we will see what impact do different cached parameters have on 
+its performance. We will test the following:
+
+\begin{enumerate}
+	\item Impact of different number of threads
+	\item Impact of cold cache vs. hot cache
+	\item Impact of writeback vs. writethrough mode
+\end{enumerate}
+
+Note that the tests above are run with the following parameters:
+
+\begin{description}
+	\item[Mode] Writeback
+	\item[Block size] 4k
+	\item[Cache size] Always larger than benchmark size
+\end{description}
+
+The above options have been chosen to isolate cached of any other factors that 
+may alter it's performance. This way, we will be able to see more clearly the   
+that in any other
+
+\subsubsection{Threads}
+
+Checking the performance impact of multi-tasking is meaningless without issuing
+parallel requests. Therefore, for each number of threads, we will use different 
+IOdepth and measure its performance.
+
+The bandwidth results can be seen in Figure \ref{fig:bw-write-threads.pdf} 
+whereas the latency results can be seen in Figure 
+\ref{fig:lat-write-threads.pdf}.
+
+\diagram{bw-write-threads.pdf}{Bandwidth performance per number of threads}
+\diagram{lat-write-threads.pdf}{Latency performance per number of threads}
+
+From these results, we derive the following conclusions:
+
+\begin{enumerate}
+	\item Our implementation is benefited from multi-threading. We achieve 
+		a major performance improvement of up to 75\% when using two 
+		threads, as well as lower performance improvement for up to 
+		four threads, as the number of parallel requests increases.
+	\item We don't scale well past the two threads and four parallel 
+		requests.
+	\item Adding more than two threads degenerates significantly the 
+		performance when the number of parallel requests is small.
+\end{enumerate}
+
+Finally, these results, along with the results of the first part, clearly show 
+the dark spot of our implementation; it needs a more fine-grained locking 
+scheme else most of the thread's time will be spent spinning for a lock.
+
+\subsubsection{Cold cache vs Hot cache}
 
 
