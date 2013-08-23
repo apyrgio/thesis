@@ -9,8 +9,9 @@
 \end{flushright}
 
 It may seem as an ironic statement, considering that we are about to provide 
-benchmark results for cached, but it's actually is a valid one. What Mr.  Twain 
-tries to say here
+benchmark results for cached, but it's actually is a valid one.
+\begin{comment}
+What Mr.  Twain tries to say here
 \footnote{
 	and that's a phrase usually not heard in programming contexts...
 }
@@ -20,14 +21,16 @@ fabricate a plausible truth for it.
 In science's case, it so often happens that promising results for an experiment 
 can seem more important to the researcher's eye than negative ones due to 
 positive reinforcement.
-
-In out case, we will try not to merely smear the next pages with diagrams but 
+\end{comment}
+In our case, we will try not to merely smear the next pages with diagrams but 
 first explain the benchmarking methodology behind them.
 
 The skeleton of this chapter is the following: Section \ref{sec:perf-meth} 
-explains the methodology behind our measurements. Section \ref{sec:perf-plot} 
-presents the results of the benchmarks that we have done and provides in-depth 
-explanations about each of them. Finally, Section ? is undefined.
+explains the methodology behind our measurements. Section \ref{sec:test-bed} 
+provides details about the hardware on which we have conducted our benchmarks. 
+Section \ref{sec:perf-plot} presents the results of the benchmarks that we have 
+done and provides in-depth explanations about each of them.  Finally, Section ?  
+is undefined.
 
 \section{Benchmark methodology}\label{sec:perf-meth}
 
@@ -56,8 +59,8 @@ consider the following:
 		\item they do not stress the peers enough to provide something 
 			conclusive
 		\item they are out of the scope of this section as there can be 
-			many of them and adding them all here will impede the 
-			document's readability.
+			many of these kinds of tests and adding them all here 
+			will impede the document's readability.
 		\end{inparaenum}
 		
 	\item Both peers must be tested under the same, reasonable workload, 
@@ -70,7 +73,7 @@ consider the following:
 Having the above in mind, the next step is to choose a suitable workload.  This 
 choice though is fairly straight-forward; in production environments, the most 
 troublesome workload is the stampede of small random reads/writes and is 
-usually the most tested scenario.  
+usually the most common one that is benchmarked.  
 
 One may ponder however, how many requests can be considered as a "stampede" or 
 which block size is considered as "small". Of course, there is not only one 
@@ -97,11 +100,12 @@ measurements:
 	\item ...
 \end{enumerate}
 
-Finally, in the following sections for brevity reasons we will talk about 
+Finally, in the following sections, for brevity reasons, we will talk about 
 comparing cached and sosd. What the reader must keep in mind however is that 
-cached is the cache layer above sosd.  
+cached is essentially the cache layer above sosd. Thus we actually test sosd vs 
+cached over sosd.
 
-\section{Specifications of test-bed}
+\section{Specifications of test-bed}\label{sec:test-bed}
 
 The specifications of the server on which we conducted our benchmarks is the 
 following.
@@ -124,7 +128,7 @@ following.
 Also, mention that we evaluated both peers by sending requests directly at 
 their request queues
 
-\section{Performance comparison between cached and sosd}
+\section{Performance comparison between cached and sosd}\label{sec:perf-plot}
 
 As mentioned above, for our first test, we will evaluate the read and write 
 performance of cached and sosd for a random workload with parallel requests of 
@@ -203,13 +207,16 @@ The speedup difference is attributed to three factors:
 		is faster.
 \end{enumerate}
 
+To sum up, the cached's performance remains relatively the same in both reads 
+and writes, it's merely the sosd that is getting faster due to caches. 
+
 \textbf{Why is cached's performance increased along with block size?}
 
-This is another interesting observation but first, why doesn't it apply on 
-sosd? This is because sosd's primary storage are hard disk drives, which have a 
-major drawback; their seek time is not constant and is affected by the location 
-of the contents in the disk platters. Cached however stores data in RAM and we 
-would expect that writing 16 x 4k blocks and 1 x 64k block to take 
+This is another interesting observation but first, why don't we ask the same 
+about sosd? This is because sosd's primary storage are hard disk drives, which 
+have a major drawback; their seek time is not constant and is affected by the 
+location of the contents in the disk platters. Cached however stores data in 
+RAM and we would expect that writing 16 x 4k blocks and 1 x 64k block to take 
 approximately the same time.
 
 From this observation, we can extract that the indexing-related stuff (job 
@@ -342,4 +349,31 @@ scheme else most of the thread's time will be spent spinning for a lock.
 
 \subsubsection{Cold cache vs Hot cache}
 
+This scenario will attempt to evaluate the overhead of cache misses in cached
+against cache hits for \textbf{write} operations. Theoretically, this should 
+account to the overhead of adding new entries to cached and consecutively, an 
+indication of the complexity of our index mechanism.
 
+For this reason, we have written 128K (where \textit{K} is 1024 and \textit{M} 
+is 1024\^2), 256K, 512K and 1M objects and have measured their latency 
+performance. We expect that the experimental results will verify the claim that 
+our implementation is O(1).
+
+To get the most accurate results and since we want to test just the performance 
+of our indexing mechanism, we have also used only 1 thread and only 1 IOdepth. 
+
+On Figure \ref{fig:cold1.pdf} we can see the results we were talking about. The 
+major point in these results is that we can see that write latency, either of 
+cold or warm cache, remains practically the same as the number of objects 
+increases.
+
+\diagram{cold1.pdf}{Latency performance of cold/warm cache for variable sizes}
+
+As a side note, we observe a constant decrease in latency as the number of 
+objects increase this is not something that should be attributed to our 
+implementation. (explain that we have used a hash table that holds 2million 
+objects, so it is not mapped to our process's address space. When more objects 
+are indexed, the hash table becomes fuller and the latency of mmap()s is 
+equally distributed to the objects. Else, the hash table is more scarce but the 
+same blocks are hit, albeit not fully written, and thus the mmap latency is the 
+same but distributed to less objects.)
