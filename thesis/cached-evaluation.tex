@@ -128,7 +128,8 @@ following.
 Also, mention that we evaluated both peers by sending requests directly at 
 their request queues
 
-\section{Performance comparison between cached and sosd}\label{sec:perf-plot}
+\label{sec:perf-plot}
+\subsection{Performance comparison between cached and sosd}
 
 As mentioned above, for our first test, we will evaluate the read and write 
 performance of cached and sosd for a random workload with parallel requests of 
@@ -144,6 +145,8 @@ different metrics:
 		the implementation. For example...
 	\item[IOPS:] (Should we include them?)
 \end{description}
+
+\subsubsection{Workload smaller than cache size - Peak behavior}
 
 Let's see now the bandwidth performance of our peers. The write performance can 
 be seen in Figure \ref{fig:bw-write-comp-lie.pdf} while the read performance 
@@ -170,7 +173,7 @@ sizes is approximately 50x, whereas for larger block sizes it ranges between
 
 From these first two diagrams we can extract the following points:
 
-\textbf{Why is there such a vast improvement?}
+\textit{\textbf{Why is there such a vast improvement?}}
 
 (Explain that it's because we don't write past cache's size)
 
@@ -251,6 +254,8 @@ that we need a more fine-grained locking scheme. Also, latency results are in
 the order of microseconds instead of nanoseconds which further supports the 
 assertion that the results are dominated by index-related stuff (argh, think of 
 something prettier)
+
+\subsection{Workload larger than cache size - Consistent behavior}
 
 We now proceed to the second part of the comparison between cached and sosd.  
 On this part, we will once again evaluate their performance against a random 
