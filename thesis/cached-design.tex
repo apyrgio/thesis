@@ -32,16 +32,16 @@ own implementation that aims to fill the above requirements.
 
 % Foretell what the following sections will contain
 More specifically, this chapter provides an in-depth description of the design 
-of cached.  Section \ref{sec:over-design} provides a general overview of cached 
-and explains how its design meets the above requirements. Section 
+of cached. Section \ref{sec:rationale-design} provides the design rationale of 
+cached and explains how its design meets the above requirements. Section 
 \ref{sec:comp-design} presents the building blocks of cached while Sections 
 \ref{sec:xcache-design}, \ref{sec:xworkq-design} and \ref{sec:xwaitq-design} 
 provide a detailed explanation of their design. Section \ref{sec:cached-design}  
 presents the interaction between cached and its building blocks as well as the 
-unique components that cached consists of. Finally, in Section ?  we illustrate 
-the flow of requests for cached.
+unique components that cached consists of.  Finally, in Section ?  we 
+illustrate the flow of requests for cached.
 
-\section{Design overview}\label{sec:over-design}
+\section{Design rationale}\label{sec:rationale-design}
 
 One of the first architectural decisions was to implement cached as an 
 Archipelago user-space peer (see Section \ref{sec:arch-peer} about Archipelago 
@@ -111,13 +111,18 @@ So, in order to achieve a balance between safety and speed, we use a
 fine-grained locking scheme in critical sections that can be seen is discussed 
 in detail in Section \ref{sec:xworkq-design}.
 
-\subsection{Cached components}\ref{sec:comp-design}
+\section{Cached components}\label{sec:comp-design}
 
-Let's see now the design of cached in detail. The cached peer consists of a 
-number of building blocks.  Per Archipelago policy, most of these building 
-blocks have been written in the xtypes fashion (see Section \ref{arch-xtypes} 
-about xtypes). Also, we must note that these components were not created by the 
-author and the contribution to them was limited.
+At this point, we must do an intermission before we show the design of cached.  
+Specifically, we will show first the design of the cached's components, since 
+many cached operations rely on them and the reader needs prior knowledge of 
+them to grasp the cached design.
+
+\subsection{Overview}
+
+In this section, we will list the main components that cached relies on. Per 
+Archipelago policy, most of these components have been written in the xtypes 
+fashion (see Section \ref{arch-xtypes} about xtypes).  
 
 The components of cached can be seen below:
  
@@ -137,95 +142,89 @@ and are not a contribution of this thesis\footnote{xcache is an exception since
 	we have extended its functionalities for our purposes}. They are 
 presented however in this thesis for clarity reasons. 
 
-\section{The xcache xtype}\label{sec:xcache-design}
+\subsection{The xcache xtype}\label{sec:xcache-design}
 
-xcache is the main component of cached. It is responsible for several key 
-aspects of caching such as:
+xcache is the most important component of cached. It is responsible for several 
+key aspects of caching such as:
 
 \begin{itemize}
 	\item entry indexing,
-	\item entry eviction, and
-	\item concurrency control
+	\item entry eviction,
+	\item concurrency control and
 	\item event hooks
 \end{itemize}
 
-We have to note here that xcache pre- our contribution to xcache 
+Below, we can see a design graph of xcache:
 
-Below we can see a design overview of xcache:
-
-% Add figure for xcache with both hash tables, xq etc.
+\fixme add Figure here
 
 % While explaining, point to the diagram objects, a, b, c etc.
+\fixme add better design explanation \\
 As we can see above, xcache utilizes two hash tables. One hash table is 
 responsible for indexing entries (or more generally speaking "cache entries") 
 that are active in cache.  The other hash table is responsible for indexing 
 evicted cache entries that have pending jobs.  Again, more generally speaking, 
 evicted cache entries are entries whose refcount has not dropped to zero yet.
 
-\subsection{Entry Preallocation}\label{sec:xcache-entry-design}
+On the following subsections, we present the features of xcache as well as 
+their design.
 
-Since xcache has a bounded number of entries that will allocate, there is no 
-need to allocate them on-the fly using malloc/free. Considering that we are 
-caching at RAM level and not at SSD level, the system call overhead will have a 
-considerable impact on performance.
+\subsubsection{Entry Preallocation}\label{sec:xcache-entry-design}
 
-Thus, the best thing to do in our case would be to pre-allocate the necessary 
-space.
+Since xcache indexes a bounded number of entries, there is no need to allocate 
+them on-the fly using malloc/free. Considering that we are caching at RAM level 
+and not at SSD level, the system call overhead will have a considerable impact 
+on performance. Thus, in our case we pre-allocate the necessary space in 
+advance.
 
-\subsection{Entry indexing}\label{sec:xcache-index-design}
+\subsubsection{Entry indexing}\label{sec:xcache-index-design}
 
-In order to index the cached entries, xcache relies on another xtype, xhash, 
-which is a hash table. Moreover, it's actually the C implementation of the 
-dictionary used in Python.
-% explain that for sparse Python dictionaries, accesses are O(1)
+The index mechanism that xcache uses is a hash table named xhash, also an 
+xtype. The reason why a hash table is used as an index mechanism is because:
 
-We have chosen to use a hash table as our index because:
-% List of pros and cons of hash tables and why cons are ok in our book
+\begin{enumerate}
+	\item Given that we index only a certain number of entries, we expect 
+		the that the insert, lookup and delete operations are in 
+		constant time (see below for an explanation why)
+	\item Hash tables can preallocate the space needed whereas 
+		tries/b-trees/bst will allocate nodes as new entries are 
+		inserted. Again, the fact that we index a certain number of 
+		entries means that we expect that we will have many evictions 
+		and insertions.
+	\item We don't need to do substring matches (advantage of tries)
+	\item We don't need to traverse the entries sequentially (advantage of 
+		B-trees and BSTs)
+\end{enumerate}
 
-Finally, the xhash xtype gives provides us with the basic hash table functions, 
-namely:
-
-\begin{itemize}
-	\item Insertion
-	\item Look-up
-	\item Deletion
-\end{itemize}
+The hash table that is used is heavily based on dictobject\cite{dictobject},
+the Python dictionary implementation in C. Distobject has been created to 
+minimize the collisions and the hops (\fixme Explain that better). Its only 
+drawback is that it needs to resize when the table's entry history has reached 
+the 2/3 of its capacity.
 
 \subsection{Entry eviction}
 
-As we can see in figure ?, xcache has been designed to index a pre-defined 
-number of entries. That means that when xcache reaches its maximum capacity and 
-is requested to index a new entry, it has to resort to the eviction of a 
-previously cached entry. We have chosen the LRU strategy 
+The decision to have xcache index a bounded number of entries means that when 
+it reaches its maximum capacity and is requested to index a new entry, it has 
+to resort to the eviction of a previously cached entry.
 
-Also, an added bonus is that we won't need to sacrifice speed over optimality, 
-since that, our hash table approach allows us to create an O(1) LRU algorithm 
-which you can see in the following figure:
+xcache handles evictions in an interesting way. More specifically, evictions 
+occur implicitly and not explicitly, meaning that the user (peer) doesn't have 
+to evict entries manually. For example, when a user tries to insert a new entry 
+to an already full cache, the insertion will succeed and the user will not be 
+prompted to evict an entry manually. Moreover, the user will be notified via 
+specific event hook that is triggered upon eviction.
 
-% Insert figure for O(1) LRU and hash table
+The scheme of implicit evictions and later on notification of the user has the 
+advantage that lookups, inserts and evictions can occur atomically by xcache.  
+This wouldn't be the case if the user was responsible for the evictions.
 
-In a nutshell, our LRU implementation uses a doubly linked list and utilize the 
-hash table to jump to the element (instead of traversing the list linearly).
-This design allows us to do all of the following action in constant time:
-
-\begin{itemize}
-	\item Insert a new entry to the LRU list
-	\item Evict the LRU entry
-	\item Update an entry's access time (i.e. mark it as MRU)
-	\item Remove an arbitrary entry
-\end{itemize}
-
-% TODO: Explain what is the interesting thing here, that evictions happen 
-% implicitly
-Another interesting feature of xcache is that evictions occur implicitly and not 
-explicitly. The user doesn't need to interact with the LRU queue.
-
-For example, when a user tries to insert a new entry to an already full cache, 
-the insertion will succeed and the user will not be prompted to evict an entry 
-manually. Also, the user will be notified via specific event hook that is 
-triggered upon eviction that an entry has been evicted.
-
-More about hooks can be seen in the following subsection.
+As for the eviction strategy, we have utilized an LRU queue. Not only it's 
+optimal (\fixme verify it) for our purposes, but we have also mitigated the 
+cost of keeping the last references for each entry by creating a simple LRU 
+algorithm, which has O(1) complexity for all update actions. More about the 
+implementation of the LRU algorithm can be found in Section 
+\ref{xcache-evict-imp}.
 
 \subsection{Concurrency control}
 

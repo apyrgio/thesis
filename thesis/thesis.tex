@@ -48,7 +48,17 @@
 %\setromanfont{Linux Libertine O}
 \setromanfont{Times New Roman}
 
-% CUSTOM COMMANDS ==============================================================
+% CUSTOM COLORS ===============================================================
+
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+% CUSTOM COMMANDS =============================================================
+
+\newcommand\fixme{\textrm{\textbf{\textcolor{red}{FIXME: }}}}
 
 % Layout macros
 \newcommand\spa[1]{\; #1 \;}
@@ -98,6 +108,7 @@
 % Core Ruby Success Typing inferencing macros
 \newcommand\stinfer[5]{\classlist; \; #1; \; \fields \; \underset{\currclass}{\vdash} \; #2: #3 \; \& \; #4; \; #5}
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CACHED STUFF %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newcommand\xcache{\texttt{xcache} }
@@ -140,13 +151,6 @@
 
 % CODE HIGHLIGHTING ============================================================
 
-% Define colors that will be used
-\definecolor{gray}{rgb}{0.5,0.5,0.5}
-\definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
-\definecolor{mygreen}{rgb}{0,0.6,0}
-\definecolor{mygray}{rgb}{0.5,0.5,0.5}
-\definecolor{mymauve}{rgb}{0.58,0,0.82}
-
 % Define common settings for code listings
 
 \lstset{
@@ -161,14 +165,14 @@
 	frame=single,                   % adds a frame around the code
 	keepspaces=true,                % keeps spaces in text, useful for 
 	%keywordstyle=\color{blue}\bfseries,
-									% keyword style
+					% keyword style
 	numbers=left,
 	numbersep=5pt,                  % how far the line-numbers are from the 
-									% code
+					% code
 	numberstyle=\tiny\color{mygray},% style for line-numbers
 	rulecolor=\color{black},
 	stepnumber=1,                   % the step between two line-numbers. If 
-									% it's 1, each line will be numbered
+					% it's 1, each line will be numbered
 	stringstyle=\color{mymauve},    % style for strings
 	tabsize=2,                      % sets default tabsize to 2 spaces
 }
