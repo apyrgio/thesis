@@ -214,7 +214,7 @@ its refcount to 2, one reference from the user and one standard reference from
 the hash table. When we lookup for an entry, we use the entry's name as a key 
 and then increment by 1 its refcount. 
 
-\subsubsection{Entry eviction}
+\subsubsection{Entry eviction}\label{xcache-eviction-design}
 
 The decision to have xcache index a bounded number of entries means that when 
 it reaches its maximum capacity and is requested to index a new entry, it has 
@@ -323,26 +323,46 @@ in order not to be freed amidst this process.
 This way, we can avoid waiting for an entry that has just been evicted to flush 
 its data. 
 
-\subsection{Event hooks}
+\subsubsection{Event hooks}
 
-We have mentioned that xcache is not a standalone program but aims to provide 
-core caching functionalities for other peers to use.  Moreover, an important 
-design feature is to not bother the top peer with the xcache internals, such as 
-refcounting or which hash table its resides.
+Since xcache is created to provide core caching functionalities for other 
+peers, it must also notify them when it takes an implicit action that the peer 
+is not aware of. In Section \ref{xcache-eviction-design} we have seen one 
+implicit action that xccahe takes when a user inserts an entry, namely 
+eviction. 
 
-There is an issue that arise with this bla.
+Besides this event, there are others. The complete list is the following:
 
-Different peers have different things to cache. For example, cached needs to 
-cache objects but xcache was originally created for another peer that needed to 
-cache file descriptors. So, xcache may pose no restriction to what is cached but 
-that also means that it has no control over what happens to the peer's contents 
-on insertion, eviction, removal etc. This is fair, but shouldn't the peer be 
-alarmed for events such as eviction of an entry?
+\begin{description}
+\item[cache node initialization:]
+	This hook is triggered when a cache node is initialized. It is 
+	triggered once only for each node, during the initialization phase of 
+	xcache.
+\item[cache entry initialization:]
+	This hook is triggered when a cache entry has been inserted in the 
+	cache.
+\item[cache entry eviction:]
+	This hook is triggered when a cache entry has been evicted from the 
+	cache.
+\item[cache entry reinsertion:]
+	This hook is triggered when an evicted entry has been reinserted in the 
+	cache.
+\item[cache entry finalization:]
+	This hook is triggered when an evicted entry's refcount has dropped to 
+	0. This serves as a warning for the user who has the opportunity to let 
+	the cache entry go or increment its refcount.
+\item[cache entry put:]
+	This hook is triggered when an evicted entry has been totally removed 
+	from the cache.
+\item[cache entry free:]
+	This hook is triggered when a removed entry's cache node has been sent 
+	back to the cache node pool.
+\end{description}
 
-To this end, we have crafted event hooks in xcache onto which the peer can plug 
-its own function and take brief control of the event. For example, when cached 
-is on writeback mode, it plugs a special function on the entry eviction hook to 
-check if this entry is dirty.
+For each of the above events, we have created the respective event hook. The 
+peer that uses xcache may choose, if it wants, to use them and if so, it can 
+plug its own event function for each hook which will be called when the event 
+is triggered.
 
 \subsection{xcache flow}
 
