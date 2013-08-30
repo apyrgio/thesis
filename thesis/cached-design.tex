@@ -174,8 +174,9 @@ their design.
 Since xcache indexes a bounded number of entries, there is no need to allocate 
 them on-the fly using malloc/free. Considering that we are caching at RAM level 
 and not at SSD level, the system call overhead will have a considerable impact 
-on performance. Thus, in our case we pre-allocate the necessary space in 
-advance.
+on performance. Thus, in our case, we pre-allocate the necessary space in 
+advance and store them in a cache-node pool (note that this is different from 
+the bucket pool).
 
 \subsubsection{Entry indexing}\label{sec:xcache-index-design}
 
@@ -202,11 +203,25 @@ minimize the collisions and the hops (\fixme Explain that better). Its only
 drawback is that it needs to resize when the table's entry history has reached 
 the 2/3 of its capacity.
 
-\subsection{Entry eviction}
+Besides the hash table, which answers to the question "Where is the entry?" we 
+also need another mechanism to answer the question "Is the entry still 
+referenced?". xcache has such a mechanism which is commonly called "reference 
+counting". Specifically, each entry has a counter that is 
+incremented/decremented when a user accesses/releases an entry.
+
+To sum up, when an entry is inserted, we use its name as a key and we update 
+its refcount to 2, one reference from the user and one standard reference from 
+the hash table. When we lookup for an entry, we use the entry's name as a key 
+and then increment by 1 its refcount. 
+
+\subsubsection{Entry eviction}
 
 The decision to have xcache index a bounded number of entries means that when 
 it reaches its maximum capacity and is requested to index a new entry, it has 
-to resort to the eviction of a previously cached entry.
+to resort to the eviction of a previously cached entry. Evicted entries are not 
+removed immediately from xcache. They are instead set in an "evicted" state and 
+they reside in a special-purpose hash table until the user confirms that they 
+can be removed. 
 
 xcache handles evictions in an interesting way. More specifically, evictions 
 occur implicitly and not explicitly, meaning that the user (peer) doesn't have 
@@ -226,94 +241,92 @@ algorithm, which has O(1) complexity for all update actions. More about the
 implementation of the LRU algorithm can be found in Section 
 \ref{xcache-evict-imp}.
 
-\subsection{Concurrency control}
+\subsubsection{Concurrency control}
 
 The concept of concurrency control has been discussed in chapter ?. The goal of 
-xcache is to handle safely - and preferably fast - simultaneous accesses to 
+xcache is to handle safely - and preferably fast - simultaneous accesses to the 
 shared memory.
 
 In order to do so, we must first identify which are the critical sections of 
-xcache, that is the sections where a thread can modify a shared structure. These 
-sections are the following
+xcache, to wit, the sections where a thread modifies a shared structure. These 
+sections are the following:
 
 \begin{itemize}
 	\item
-		All xhash operations: Two of the three xhash operations (inserts 
-		and removals) can modify the hash table (e.g. they can resize 
-		it, add more entries or delete existing ones).  This means that 
-		the third one (lookups) must not run concurrently with the 
-		other.
+		\textbf{Most xhash operations:} Inserts and removals can modify 
+		the hash table (e.g. they can resize it, add more entries or 
+		delete existing ones). This also means that lookups must not 
+		run simultaneously with the above two operations.
 	\item
-		Cache node claiming: Before an entry is inserted, it must	
-		acquire one of the pre-allocated nodes and we must ensure that 
-		this can happen from all threads.
+		\textbf{Cache node claiming:} Before an entry is inserted, it 
+		must	acquire one of the pre-allocated nodes from the 
+		cache-node pool and we must ensure that this can happen 
+		concurrently from all threads.
 	\item
-		Entry migration: An entry can migrate from one hash table to 
-		the other e.g. on cache eviction. This migration involves a 
-		series of xhash operations; removal from one hash table and 
-		subsequent insertion to the other. This a scenario that must be 
-		handled properly.
+		\textbf{Entry migration:} An entry can migrate from one hash 
+		table to the other e.g. on cache eviction. This migration 
+		involves a series of xhash operations; removal from one hash 
+		table and subsequent insertion to the other. These two 
+		operations must occur atomically.
 	\item
-		Reference counting: Every entry must have a reference counter.  
-		Reference counters provide a simple way to determine when an 
-		entry can be safely removed. You can see more about reference 
-		counting in chapter ?
+		\textbf{Reference counting:} Every entry must have a reference 
+		counter.  Reference counters provide a simple way to determine 
+		when an entry can be safely removed. Since many threads can 
+		have access to the same entry, we must provide a way to update 
+		the reference counters atomically.
 	\item
-		LRU updates: Most actions that involve cache entries must 
-		subsequently update the LRU queue. Being a doubly linked list, 
-		if two threads update the LRU simultaneously, we can lead to 
-		segfaults.
+		\textbf{LRU updates:} Most actions that involve cache entries 
+		must subsequently update the LRU queue. The updates at the LRU 
+		queue must also occur atomically.
 \end{itemize}
 
 Let's see what guarantees we provide for each of the above scenarios:
 
 \begin{itemize}
 	\item
-		xhash operations: We provide a lock for each hash table
+		\textbf{xhash operations:} We provide a lock for each hash 
+		table. Only one thread can access each hash table at any time.
 	\item
-		Cache node claiming: The free node queue is protected by a fast 
-		lock
+		\textbf{Cache node claiming:} The cache-node queue, is also 
+		protected by a lock.
 	\item
-		Entry migration: We always take fist the lock for entries and 
-		then for rm\_entries
+		\textbf{Entry migration:} When an entry is migrated from one 
+		hash table to the other, we always acquire the lock of the hash 
+		table of active entries and then the lock of the hash table of 
+		the evicted entries. The order on which we take the locks is 
+		very strict to avoid deadlocks.
 	\item
-		Reference counting: Another important guarantee is the 
-		reference counting of entrys. xcache uses atomic gets and puts 
-		to update the reference count of an entry.
+		\textbf{Reference counting:} For the atomic increases and 
+		decreases of a counter, we don't need a lock and its added 
+		overhead. Instead, we can use the atomic get and atomic put 
+		operations that the CPU provides.
 	\item
-		LRU updates: Since all LRU operations take place for entries in 
-		"entries" hash table and LRU updates are blazing fast we can 
-		secure our LRU with the cache->lock.
+		\textbf{LRU updates:} Since the majority of LRU updates take
+		place when a new entry is inserted in the hash table, we can 
+		protect our LRU under the same cache lock.
 \end{itemize}
 
-% TODO: Yada yada about refcount
-
-\subsection{Re-insertion}
+\subsubsection{Re-insertion}
 
 We have previously mentioned that in xcache, there can be data migration 
-between hash tables. This is easy to see why in case of evictions: an entry 
-that previously was in "entries" must now be migrated to "rm\_entries" until 
+between hash tables. Most commonly, an entry that is evicted from the active 
+cache entries migrates to the hash table of the evicted cache entries, until 
 its reference count falls to zero and can be freed.
 
-However, what happens when xcache receives a request for an evicted entry? 
+However, what happens when xcache receives a request for an evicted entry which 
+hasn't been freed yet? 
 
-%Explain, explain, explain the re-insertion
-there is a concept called "re-insertion".  In order for an entry to
-be re-inserted to the primary hash table (which will be called "entries" from
-now on) it must first reside in the hash table that indexes the evicted cache
-entries (which will be called "rm\_entries" from now on). As mentioned above,
-an entry that is in rm\_entries has probably pending jobs that delay its
-removal.
+In this case, the entry switches state again and is inserted back to the hash 
+table of active entries. Also, its reference counter is incremented accordingly 
+in order not to be freed amidst this process.
 
-So, what happens if a lookup arrives for that entry while on this stage? In
-this case, we re-insert it to entries and increase its refcount by 2, since
-there is one reference by the hash table and one reference by the one who
-requested the lookup.
+This way, we can avoid waiting for an entry that has just been evicted to flush 
+its data. 
 
 \subsection{Event hooks}
 
 We have mentioned that xcache is not a standalone program but aims to provide 
-core caching functionalities for other peers to use. Moreover, an important 
+core caching functionalities for other peers to use.  Moreover, an important 
 design feature is to not bother the top peer with the xcache internals, such as 
 refcounting or which hash table its resides.
 
