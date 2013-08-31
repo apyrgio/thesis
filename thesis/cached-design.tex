@@ -366,59 +366,51 @@ is triggered.
 
 \subsection{xcache flow}
 
-Below we will see three important scenarios
+To make the way xcache works a bit more clearer, we will see the flow for three 
+of the main xcache operations; lookup of an entry; insertion of a new entry and 
+removal of an entry:
 
-\textbf{Insertion}
+\subsubsection{Insertion}
 
-Figure
+\fixme add figure and explanation
 
-\textbf{Lookup}
+\subsubsection{Lookup}
 
-Figure
+\fixme add figure and explanation
 
-\textbf{Put}
+\subsubsection{Put}
 
-Figure
+\fixme add figure and explanation
 
 \section{The xworkq xtype}\label{sec:xworkq-design}
 
-The xworkq xtype is a useful abstraction for concurrency control. It's purpose 
-is to enqueue "jobs" and ensure that only one thread will execute them at a 
-time. There is no distinction as to which thread this will be, as well as no 
-execution condition. The winner is simply the one that acquires first the lock.
+The xworkq xtype is a useful abstraction for concurrency control. Its purpose 
+is to enqueue "jobs" (protected by a lock) and ensure that only one thread will 
+execute them. There is no distinction as to which thread this will be, as well 
+as no execution condition. The executive thread is simply the one that acquires 
+the lock first.
 
-This means that xworkq is generally used when multiple threads want atomic 
-access to the same memory segment. xworkq is also generic by nature, since the 
-"jobs" are simply a set of functions and their input data.
+xworkq is generally used when multiple threads want simultaneous access to a 
+critical section. Instead of spinning indefinitely, waiting for a thread to 
+finish, they can enqueue their job in the xworkq and resume processing other 
+requests. xworkq is also generic by nature, since the "job" is simply a target 
+function and its input data.
 
-In cached context, every object has a workq. Whenever a new request is 
-accepted/received for an object, it is enqueued in the workq and we are sure 
-that only one thread at a time can have access to the object's data and 
-metadata.
-
-\begin{comment}
-	This is wrong, xworkq understands only jobs.
-on object level.  It is important to distinguish between cache level operations 
-and object level operations. Cache level operations include insertions, lookups, 
-removals, allocations and refcount handling. On object level, there is a 
-different set of operations that must be synchronized across threads. Namely, we 
-have bucket claiming, read/write operations and object flushes.
-
-The above distinction makes it easy to see that provided that operations on 
-object level need not worry about interactions with other objects. Each object 
-is "sandboxed", so to speak.
-\end{comment}
-
-Let's see the design of the xworkq xtype. 
+On the following figure, we can see the design of xworkq:
 
 % Design of xworkq
+\fixme add figure
 
 It consists of a queue where jobs (e.g.  read from block, write to block) are 
-enqueued. The thread that enqueues a job can attempt to execute it to, by 
-acquiring a lock for the workq. If the lock is free, the thread will be able to 
-execute the enqueued job. Also, other threads can enqueue their jobs, so the 
-thread that has the lock can do those too. There is an xworkq for every object.
+enqueued. The thread that enqueues a job can attempt to execute it too, by 
+acquiring a lock for the workq. If the lock is unheld, the thread will acquire 
+and will be able to execute the enqueued job. Else, it can safely leave and its 
+job will be executed by the thread that has holds the lock.
 
+In cached context, every object has an xworkq. Whenever a new request is 
+accepted/received for an object, it is enqueued in the xworkq and we are thus 
+ensured that only one thread at a time can have access to the object's data and 
+metadata.
 
 \section{The xwaitq xtype}\label{sec:xwaitq-design}
 
