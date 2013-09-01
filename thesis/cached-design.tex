@@ -401,11 +401,11 @@ On the following figure, we can see the design of xworkq:
 % Design of xworkq
 \fixme add figure
 
-It consists of a queue where jobs (e.g.  read from block, write to block) are 
-enqueued. The thread that enqueues a job can attempt to execute it too, by 
-acquiring a lock for the workq. If the lock is unheld, the thread will acquire 
-and will be able to execute the enqueued job. Else, it can safely leave and its 
-job will be executed by the thread that has holds the lock.
+It consists of a queue where jobs are enqueued.  The thread that enqueues a job 
+can attempt to execute it too, by acquiring a lock for the xworkq. If the lock 
+is unheld, the thread will acquire and will be able to execute the enqueued 
+job. Else, it can safely leave and its job will be executed by the thread that 
+has holds the lock.
 
 In cached context, every object has an xworkq. Whenever a new request is 
 accepted/received for an object, it is enqueued in the xworkq and we are thus 
@@ -414,19 +414,29 @@ metadata.
 
 \section{The xwaitq xtype}\label{sec:xwaitq-design}
 
-The xwaitq xtype bears some similarities to the xworkq xtype. Like xworkq, it is 
-also an abstraction where "jobs" are enqueued and dequeued later on to be 
-executed. Unlike xworkq though, in xwaitq the "jobs" that are being enqueued are 
-considered to be thread-safe and can be executed concurrently by any thread.  
-Moreover, the execution scheme is different. Specifically, jobs are executed 
-only when a specific condition is true. This way, xwaitq provides an abstraction 
-to...
+The xwaitq xtype bears some similarities to the xworkq xtype. Like xworkq, it 
+is also an abstraction where "jobs" are enqueued and dequeued later on to be 
+executed. Unlike xworkq though, jobs are executed only when a predefined 
+condition is met. Another distinction is that the jobs in xwaitq are considered 
+to be thread-safe and can be executed concurrently by any thread.  
 
-In cached context...
-
-Let's see the design of the xwaitq xtype. 
+xwaitq is commonly used in non-critical code sections that can be executed only 
+under specific, predefined circumstances. The "jobs" that are enqueued in 
+xwaitq are the same as the jobs of xworkq.
 
 % Design of xwaitq
+\fixme add figure
+
+Unlike xworkq, before a job is enqueued, the thread can attempt to execute it 
+by checking the execution condition. Only if the condition is \textbf{not} met 
+does the thread enqueue the job to the queue. Before the thread leaves, it 
+"signals" the queue and essentially rechecks the condition to ensure that it 
+can't be executed. It can then safely leave since its job will be executed when 
+another thread signals the queue successfully.
+
+In cached context, xwaitqs are used to enqueue jobs which cannot be executed 
+immediately. Common cases are when we have run out of space, when we have run 
+out of requests etc.
 
 \section{Cached internals}\label{sec:cached-design}
 
