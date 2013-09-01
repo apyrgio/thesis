@@ -37,9 +37,9 @@ cached and explains how its design meets the above requirements. Section
 \ref{sec:comp-design} presents the building blocks of cached while Sections 
 \ref{sec:xcache-design}, \ref{sec:xworkq-design} and \ref{sec:xwaitq-design} 
 provide a detailed explanation of their design. Section \ref{sec:cached-design}  
-presents the interaction between cached and its building blocks as well as the 
-unique components that cached consists of.  Finally, in Section ?  we 
-illustrate the flow of requests for cached.
+presents the interaction between cached and its  as well as the unique 
+components that cached consists of.  Finally, in Section ?  we illustrate the 
+flow of requests for cached.
 
 \section{Design rationale}\label{sec:rationale-design}
 
@@ -438,20 +438,54 @@ In cached context, xwaitqs are used to enqueue jobs which cannot be executed
 immediately. Common cases are when we have run out of space, when we have run 
 out of requests etc.
 
-\section{Cached internals}\label{sec:cached-design}
+\section{Cached Design}\label{sec:cached-design}
 
-The components that have been discussed in the previous sections provide core 
-functionalities for cached. Also, besides bridging these components, cached also 
-has some internal bla bla that are crucial for cached's operation.
+At this point, we have discussed in length the design of the cached components.  
+Having the above sections in mind, we can proceed with presenting how cached 
+has been designed.
 
-Namely, these are:
+Cached has been been designed mainly as the orchestrator, a peer that utilizes 
+several different components to handle various tasks such as indexing (xcache), 
+concurrency (xworkq) and deferred/conditional execution (xwaitq). Cached 
+however is not limited to the above role as these components do not cover all 
+of the needed tasks. There are several other key tasks that cached must 
+undertake, namely:
+
+\begin{enumerate}
+	\item Request handling
+	\item Write policy enforcing
+	\item Coherency control
+\end{enumerate}
+
+To achieve the above, cached extends its repertoire using some unique 
+structures, namely:
 
 \begin{enumerate}
 	\item Bucket pool
-	\item Per-object request queues
-	\item Bucket/Object/cio states
-	\item Write policy
+	\item Per-object peer requests
+	\item Bucket/Object states and counters
 \end{enumerate}
+
+We will illustrate the design of cached in Figure \ref{fig:cached-design.pdf} 
+and we will further explain how it handles the above in the following sections.
+
+\diagram{cached-design.pdf}{Cached design}
+
+\subsection{Request handling}
+
+Cached operates as a peer that receives requests from the vlmc. The majority of 
+these requests will be read/write requests, but there are other types of 
+requests too such as copy requests (send when an object is copied-on-write) and 
+info requests i.e. queries on what is the size of an object. Each of these 
+requests must be handled independently, using special-purpose functions.
+
+Furthermore, cached will also issue requests to the blocker mainly on two 
+occasions: when it flushes a dirty object and when operating in write-through 
+mode.
+
+To sum up, cached must be able to categorize requests and send them to the 
+appropriate functions. Moreover, it must be able to create requests of its own,
+as well as handle cases such as running out of requests.
 
 \subsection{Buckets}
 
