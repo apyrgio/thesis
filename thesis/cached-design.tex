@@ -563,7 +563,7 @@ cannot be sure about the order on which the data will be written.
 To solve this problem, flush jobs must be deferred (using an xwaitq) if another 
 flush for the same object is in flight. 
 
-\subsection{Buckets}
+\subsection{Bucket pool}
 
 % Explain what buckets are:
 % a) That they are bounded
@@ -571,34 +571,57 @@ flush for the same object is in flight.
 % c) That they are preallocated and every thread enqueues and dequeues an index 
 % to them
 
-\subsection{Object states}
+We have already explained in Section \ref{sec:rationale-design} the reason why 
+cached caches objects. There is, however, one important design issue that we 
+must address. The issue is how will cached perceive the object's data. To make 
+it a bit clearer, given that an object typically has 4MB of size, what should 
+cached do when a user requests e.g. a 16KB chunk of it?
 
+If we perceived the object's data as a monolithic chunk, we would need to read 
+and cache the whole object just to reply to the user's request. If the user 
+then requests a chunk from another object, we would have to cache that object 
+too and in the end, we would thrash our cache
+\footnote{
+	cache thrashing occurs when we aggressively cache data that is only 
+	used once and effectively leads to a snowball of evictions
+}.
 
-\section{Bucket pool}
+The solution we propose is to further divide objects to the next and final 
+logical entity, \emph{buckets} (typically 4KB of size). Each bucket consists of 
+its data and metadata and cannot be half-empty, or half-allocated. This way, we 
+can also know which parts of the cached object are actually written, or are in 
+the process of being read etc.
 
-There is however a problem when operating solely on object level. Objects have 
-typically 4MB of size. What would happen if a user requested e.g. a 16KB chunk 
-of an object?
+Thus, our solution to the hypothetical problem we have posed above is to 
+request 16KB from the blocker, store the result in 4 buckets and then respond 
+the request to the user.
 
-n this case, we would need to read and cache the whole object just to reply to 
-the user's request. If the user then requests a chunk from another object, we 
-would have to cache that object too and in the end, we would thrash our 
-cache\footnote{cache thrashing occurs when we aggressively cache data that is 
-	only used once and effectively leads to a snowball of evictions}.
+The above answer, however, is not entirely complete. It implies that buckets 
+are something readily available or attached to the object. Although each object 
+\textit{could} have its buckets pre-allocated, this would limit the objects 
+that we can cache since that, even if the user requested only a small chunk, 
+each object would statically need 4MB of space.
 
-The solution to this is to further divide objects to the next and final logical 
-entity, \emph{buckets} (typically 4KB of size). Each bucket consists of its data 
-and metadata and cannot be half-empty, or half-allocated. This way, we can also 
-know which parts of the cached object are actually written, or are in the 
-process of being read etc.
+Ideally, we would like to be able to cache thousands of objects but
+\begin{inparaenum}[i)]
+\item allocate a much smaller amount of buckets and
+\item strictly when the user requests to.
+\end{inparaenum}
+To make things even faster, we would also like the buckets to be preallocated 
+(like cache nodes in Section \ref{sec:xcache-entry-design}) to avoid the 
+overhead of malloc/free system calls.
 
-The buckets are pre-allocated, which means two things:
+We have achieved the above by creating a bucket pool. The design of the bucket 
+pool is the following:
 
-\begin{enumerate}
-	\item We don't need to care about memory fragmentation and system call 
-		overhead
-	\item We cannot index single buckets. <FILLME>
-\end{enumerate}
+\fixme add diagram
+
+The bucket pool size is static and has been set during initialization by the 
+administrator. After the necessary space has been allocated, it is divided in 
+buckets and all the bucket indexes are pushed in a lock-protected stack (xq).  
+Then, each thread can pop bucket indexes from the pool and attach them
+to an object when needed. When that object is evicted, its attached buckets 
+indexes are pushed back to the pool.
 
 \subsection{Per-object peer requests}
 
