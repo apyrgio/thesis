@@ -461,8 +461,8 @@ Moreover, cached extends its repertoire using some unique components, namely:
 
 \begin{enumerate}
 	\item Bucket pool
-	\item Per-object peer requests
-	\item Bucket/Object states and counters
+	\item Cache-IO
+	\item Book-keeping
 \end{enumerate}
 
 We will illustrate the design of cached from two different perspectives: the 
@@ -623,56 +623,93 @@ Then, each thread can pop bucket indexes from the pool and attach them
 to an object when needed. When that object is evicted, its attached buckets 
 indexes are pushed back to the pool.
 
-\subsection{Per-object peer requests}
+\subsection{Cache-IO}
 
-Reads and writes to objects are practically read/write request from other
-peers, for which a peer request has been allocated. There are cases though
-when an object has to allocate its own peer request e.g. due to a flushing of
-its dirty buckets. Since this must be fast, there are pre-allocated requests
-hard-coded in the struct of each object which can be used in such cases.
+When a request is accepted, all Archipelago peers commonly embed it in a peer 
+request (you can see more about peer requests here ?). The peer request always 
+holds the original request and optionally, several other fields that are of 
+importance to the peer.
 
-\subsection{Bucket/Object states}
+In our case, we keep in cached's peer requests a new structure called Cache-IO, 
+on which we store the xcache handler of the request handler as well as the 
+state of the request. Moreover, since the request may break internally in many 
+others, we keep track of how many pending requests remain until the original 
+one can be completed.
 
-In order to know on how to operate on an object/bucket/cio, we must have some 
-sort of book-keeping. The book-keeping we use is to check the state of the 
-above. (arggh, silly)
+\subsection{Book-keeping}
+
+In order to know when an object is in flushing state, when a bucket has been 
+allocated or when a bucket is being read, cached must employ some sort of 
+book-keeping of their states. The entities that require to track their states 
+are:
+
+\begin{enumerate}
+\item \textbf{buckets:} Each bucket has two different states that must be 
+	tracked. The first is its allocation state:
+	\begin{enumerate}[i)]
+		\item free, meaning that the bucket is not allocated
+		\item claimed, meaning that the bucket is allocated
+	\end{enumerate}
+	The second is its data state:
+	\begin{enumerate}[i)]
+		\item invalid, meaning that it currently holds no data
+		\item valid, meaning that it has data that correspond with the 
+			blockers data
+		\item loading, meaning that a read request has been sent to the 
+			blocker to be filled with data
+		\item dirty, meaning that it currently holds newer data that 
+			what the blocker has.
+	\end{enumerate}
+\item \textbf{Objects:} The bucket states of an object provide a good 
+	indication of the object's status, yet not a complete one. The statuses 
+	we keep for the objects are:
+	\begin{enumerate}[i)]
+		\item ready, meaning that it is ready to accept data
+		\item invalidated, meaning that it is not ready to accept data
+		\item flushing, meaning that it is currently flushing dirty 
+			data to the blocker
+		\item failed, meaning that a request has failed for this object 
+			and we must stop using it
+	\end{enumerate}
+\item \textbf{Cache-ios:} Cache-ios also have states. They are the 
+	following:
+	\begin{enumerate}[i)]
+		\item accpted, meaning that the request has just been accepted
+		\item reading, meaning that the request wants to read data
+		\item writing, meaning that the request wants to write data
+		\item served, meaning that the request has been served the data 
+			it needed
+		\item failed, meaning that the request has failed
+	\end{enumerate}
+\end{enumerate}
+
+Moreover, we keep global and per-object counters of every object's bucket 
+states. The benefits from this approach is that we can know at any time if an 
+object (or cached in general) has a bucket in a certain state.
 
 \section{Cached Operation}\label{sec:op-design}
 
-\subsection{Polling for new requests}
-
-We have explained in Section ? that a peer can send an I/O request to another 
-peer by submitting to its port. However, what is are
-
-
-\begin{comment}
-Let's attempt to make the above a bit clearer. When cached receives a request, 
-it first checks the request target (i.e. the object name and then calculates 
-which bucket objects are within the request's range. It is easy to see that this 
-is a 1:1 mapping to the object's data.
-\end{comment}
-
-\subsection{Write-through mode}
-
-Here we will see how cached operates in write-through mode.
-
-\subsubsection{Write}
+\subsection{Write}
 
 This is the flow for the write path:
 
-\subsubsection{Read}
+\fixme add diagram and explanation
+
+\subsection{Read}
 
 This is the flow for the read path:
 
-\subsection{Write-back mode}
+\fixme add diagram and explanation
 
-Here we will see how cached operates in write-back mode.
-
-\subsubsection{Write}
-
-This is the flow for the write path:
-
-\subsubsection{Read}
+\subsection{Copy}
 
 This is the flow for the read path:
+
+\fixme add diagram and explanation
+
+\subsection{Info}
+
+This is the flow for the read path:
+
+\fixme add diagram and explanation
 
