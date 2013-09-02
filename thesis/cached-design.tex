@@ -457,8 +457,7 @@ undertake, namely:
 	\item Coherency control
 \end{enumerate}
 
-To achieve the above, cached extends its repertoire using some unique 
-structures, namely:
+Moreover, cached extends its repertoire using some unique components, namely:
 
 \begin{enumerate}
 	\item Bucket pool
@@ -466,16 +465,21 @@ structures, namely:
 	\item Bucket/Object states and counters
 \end{enumerate}
 
-We will illustrate the design of cached in Figure \ref{fig:cached-design.pdf} 
-and we will further explain how it handles the above in the following sections.
+We will illustrate the design of cached from two different perspectives: the 
+operational perspective, which can be seen in Figure 
+\ref{fig:cached-design.pdf}, and the component perspective, which can be seen 
+if Figure ?. Moreover, we will further explain how cached manages the above new 
+components and tasks in the following sections.
 
 \diagram{cached-design.pdf}{Cached design}
+
+\fixme add component diagram for cached (xcache, xworkq, objects, buckets etc.)
 
 \subsection{Request handling}
 
 Cached operates as a peer that receives requests from the vlmc. The majority of 
 these requests will be read/write requests, but there are other types of 
-requests too such as copy requests (send when an object is copied-on-write) and 
+requests too such as copy requests (sent when an object is copied-on-write) and 
 info requests i.e. queries on what is the size of an object. Each of these 
 requests must be handled independently, using special-purpose functions.
 
@@ -486,6 +490,63 @@ mode.
 To sum up, cached must be able to categorize requests and send them to the 
 appropriate functions. Moreover, it must be able to create requests of its own,
 as well as handle cases such as running out of requests.
+
+\subsection{Write policy enforcing}\label{sec:cached-wcp-design}
+
+The user must define beforehand what will the write policy of cached be. There 
+are two options: write-through and write-back. These policies aren't new and 
+have been discussed extensively in chapter ?, but let's see what these policies 
+translate to in cached context.
+
+\begin{itemize}
+	\item
+		In \textbf{write-back} mode, cached caches writes, immediately 
+		serves the request back and marks the data as dirty. When a read 
+		arrives, it either serves the request with the dirty data 
+		(read-hit) or forwards the request to the storage peer and 
+		caches the answer (read-miss).
+
+		This policy is used when we want to improve read and write speed 
+		and can sacrifice data safety.
+	\item
+		In \textbf{write-through} mode, cached forwards writes to 
+		blocker, servers the request when blocker replies, caches the 
+		data and marks them as valid.  When a read arrives, it either 
+		serves the request with the valid data (read-hit) or forwards 
+		the request to the storage peer and caches the answer 
+		(read-miss).
+
+		This policy is used when we want to improve read speed and want 
+		to make sure that no data will be lost.
+\end{itemize}	
+
+These policies are specified once during cached's deployment and cannot be 
+switched on/off later on.
+
+\subsection{Coherency control}
+
+Coherency control or cache coherency, is a concept that is closely connected 
+with concurrency control, as is evident in Figure \ref{fig:cached-design.pdf}.  
+It is commonly used as a term in caches of multiprocessor systems or 
+distributed caches and it refers to:
+
+\begin{enumerate}
+	\item the consistency of data that are stored in the cache and
+	\item how each change is propagated through the system, to the other 
+		storage tiers.
+\end{enumerate}
+
+If we rephrased the above to bring it in cached context, we could say that it 
+refers to the consistency of the data that are stored in cached and how each 
+change is propagated to the blocker.
+
+The consistency of the cached data is greatly secured using the xworkq to have 
+access to the object's data. However, the guarantee that data updates are 
+conducted atomically does not suffice since there are cases where such as 
+eviction of an object, re-insertion and then eviction
+
+To make the above more clear, consid
+
 
 \subsection{Buckets}
 
@@ -537,38 +598,6 @@ hard-coded in the struct of each object which can be used in such cases.
 In order to know on how to operate on an object/bucket/cio, we must have some 
 sort of book-keeping. The book-keeping we use is to check the state of the 
 above. (arggh, silly)
-
-\subsection{Write policy}\label{sec:wcp-design}
-
-The user must define beforehand what is the write policy of cache. There are
-two options: write-through and write-back. These policies aren't new and have 
-been discussed extensively in chapter ?, but let's see what these policies 
-translate to in cached context.
-
-\begin{itemize}
-	\item
-		In \textbf{write-back} mode, cached caches writes, immediately 
-		serves the request back and marks the data as dirty. When a read 
-		arrives, it either serves the request with the dirty data 
-		(read-hit) or forwards the request to the storage peer and 
-		caches the answer (read-miss).
-
-		This policy is used when we want to improve read and write speed 
-		and can sacrifice data safety.
-	\item
-		In \textbf{write-through} mode, cached forwards writes to 
-		blocker, servers the request when blocker replies, caches the 
-		data and marks them as valid.  When a read arrives, it either 
-		serves the request with the valid data (read-hit) or forwards 
-		the request to the storage peer and caches the answer 
-		(read-miss).
-
-		This policy is used when we want to improve read speed and want 
-		to make sure that no data will be lost.
-\end{itemize}	
-
-These policies are specified once during cached's deployment and cannot be 
-switched on/off later on.
 
 \section{Cached Operation}\label{sec:op-design}
 
