@@ -454,7 +454,7 @@ undertake, namely:
 \begin{enumerate}
 	\item Request handling
 	\item Write policy enforcing
-	\item Coherency control
+	\item Cache coherence
 \end{enumerate}
 
 Moreover, cached extends its repertoire using some unique components, namely:
@@ -487,15 +487,15 @@ Furthermore, cached will also issue requests to the blocker mainly on two
 occasions: when it flushes a dirty object and when operating in write-through 
 mode.
 
-To sum up, cached must be able to categorize requests and send them to the 
-appropriate functions. Moreover, it must be able to create requests of its own,
-as well as handle cases such as running out of requests.
+This means that, cached must be able to categorize requests and send them to 
+the appropriate functions. Moreover, it must be able to create requests of its 
+own, as well as handle cases such as running out of requests.
 
 \subsection{Write policy enforcing}\label{sec:cached-wcp-design}
 
-The user must define beforehand what will the write policy of cached be. There 
-are two options: write-through and write-back. These policies aren't new and 
-have been discussed extensively in chapter ?, but let's see what these policies 
+The user defines beforehand what will the write policy of cached be. There are 
+two options: write-through and write-back. These policies aren't new and have 
+already been discussed in chapter ?, but let's see what these policies 
 translate to in cached context.
 
 \begin{itemize}
@@ -523,30 +523,45 @@ translate to in cached context.
 These policies are specified once during cached's deployment and cannot be 
 switched on/off later on.
 
-\subsection{Coherency control}
+\subsection{Cache coherence}
 
-Coherency control or cache coherency, is a concept that is closely connected 
-with concurrency control, as is evident in Figure \ref{fig:cached-design.pdf}.  
-It is commonly used as a term in caches of multiprocessor systems or 
-distributed caches and it refers to:
+Cache coherence is a concept that is closely connected with concurrency 
+control, as is evident in Figure \ref{fig:cached-design.pdf}. It is commonly 
+used as a term in the literature on the subject of caches for multiprocessor 
+systems or distributed caches and it refers to:
 
 \begin{enumerate}
 	\item the consistency of data that are stored in the cache and
 	\item how each change is propagated through the system, to the other 
-		storage tiers.
+		storage tiers.\label{list:second-coherence}
 \end{enumerate}
 
-If we rephrased the above to bring it in cached context, we could say that it 
+If we wanted to rephrase the above to match our case, we could say that it 
 refers to the consistency of the data that are stored in cached and how each 
 change is propagated to the blocker.
 
-The consistency of the cached data is greatly secured using the xworkq to have 
-access to the object's data. However, the guarantee that data updates are 
-conducted atomically does not suffice since there are cases where such as 
-eviction of an object, re-insertion and then eviction
+The consistency of the cached data is greatly secured using the xworkq as the 
+guard of parallel accesses to the object's data. However, the guarantee that 
+data updates are conducted serially does not suffice for the consistency 
+requirement.
 
-To make the above more clear, consid
+The problem is evident if you consider the eviction of an object with dirty 
+data. xcache does not operate on object level and thus is unaware of the 
+contents of the cache entry. Thus, cached must use the cache entry finalization 
+hook to increment the refcount of the object so that it can not be removed 
+until all data have been flushed to the blocker. Essentially, cached overrides 
+the xcache's book-keeping to maintain cache coherency.
 
+The propagation of the data to the blocker is solely cached's job. One might 
+consider that flushing the dirty data of an object would be sufficient to 
+propagate the changes to the blocker. However, consider the scenario when an 
+object is evicted and then subsequently reinserted, overwritten and evicted 
+again. The result would be two flush requests, for the same data, sent to the 
+blocker. Although the blocker guarantees that there will be no page-tearing, we 
+cannot be sure about the order on which the data will be written.
+
+To solve this problem, flush jobs must be deferred (using an xwaitq) if another 
+flush for the same object is in flight. 
 
 \subsection{Buckets}
 
