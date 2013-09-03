@@ -10,16 +10,48 @@ information for xcache, the main cached component. Next, section
 \ref{sec:cached-imp} presents the actual implementation of cached, showcasing 
 the structures and functions used.
 
-\section{Implementation of xcache}\label{sec:xcache:imp}
+\section{Implementation of xcache}\label{sec:xcache-imp}
 
-We begin with the implementation of xcache.  In this section, we describe how 
-we implemented the design concept of section \ref{sec:xcache-design}. The main 
-\xcache structure is the following:
+\subsection{xcache initialization}
+
+In order to use xcache, the peer must first initialize an xcache structure 
+using xcache\_init, which can be seen in Listing \ref{lst:xcache-init.h}.
+
+\ccode{\texttt{xcache\_init definition}}{xcache-init.h}
+
+xcache requests the following information from the peer:
+
+\begin{description}
+	\item[cache:] Simply, an allocated xcache struct
+	\item[xcache\_size:] The number of objects xcache will index
+	\item[ops:] The trigger functions for xcache's event hooks
+	\item[flags:] The flags blabla the following two things:
+		\begin{enumerate}
+			\item The LRU algorithm. For the cached implementation, we use the 
+				O(1) LRU, but xcache also allows to use two more LRU 
+				algorithms, a binary priority heap (O(log(N))) or an LRU array 
+				(O(N)).
+			\item The usage of the hash table for evicted entries. Although our 
+				implementation relies heavily on it, this does not account for 
+				all the other peers that use xcache.
+		\end{enumerate}
+	\item[priv:] A pointer (void *) to a structure that will be returned when 
+		an event hook is triggered. As most priv fields, it is irrelevant to 
+		the xcache struct and relevant only to the top caller. We initialize it 
+		with the cached struct.
+\end{description}
+
+The purpose of xcache\_init is to process the above data, populate the xcache 
+struct and create the necessary entities, such as the hash table, the cache 
+entries etc. On Listing \ref{lst:xcache-struct.h}, we can view the xcache 
+struct and its respective fields.
 
 \ccode{Main \xcache struct}{xcache-struct.h}
 
-Each of the above \xcache struct fields serves a design purpose.
-Let's see which fields help in what:
+Each of the above \xcache struct fields serves a design feature that has 
+already been discussed in Section \ref{sec:xcache-design}. In the following 
+sections, we will revisit these design features and present their 
+implementation.
 
 \subsection{Entry Preallocation}
 
