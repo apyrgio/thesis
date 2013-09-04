@@ -53,26 +53,58 @@ already been discussed in Section \ref{sec:xcache-design}. In the following
 sections, we will revisit these design features and present their 
 implementation.
 
-\subsection{Entry Preallocation}
+\subsection{Cache entry preallocation}
 
-The relevant fields for this purpose can be seen in the following code listing:
+When xcache is initialized, it preallocates the necessary cache entries. The 
+relevant fields of the xcache structure for this purpose can be seen in Listing 
+\ref{lst:xcache-prealloc.h}.
 
 \ccode{\xcache struct fields for preallocated entries}{xcache-prealloc.h}
 
-and the definition of the \texttt{xcache entry} struct which shows up in 
-\texttt{xcache} struct can be seen below:
+The \textbf{size} field is the number of entries. The \textbf{free\_nodes} is a 
+stack where all entry indexes are initially pushed and subsequently popped when 
+a new entry is inserted. Finally, \textbf{nodes} is the space allocated for the 
+cache entries and where the entry indexes point to.
+
+Moreover, the typical fields that are definition of the \texttt{xcache entry} 
+struct is shown in Listing \ref{lst:xcache-entry.h}.
 
 \ccode{\texttt{xcache entry} struct}{xcache-entry.h}
 
-Let's start by listing what \texttt{xcache entry} consists of. First of all, it 
-must have a name. Since we preallocate the entries and cannot know in runtime 
-their length, we must allocate as much space as possible. The \texttt{char 
-	name[XSEG\_MAX\_TARGETLEN + 1]} field, which is 256 characters long, is 
-long enough to hold the target's name. Also, as we have mentioned in Section 
-\ref{sec:entry-prealloc-design}, xcache must be agnostic of the cache contents.  
-To this end, we use the generic \texttt{void *priv} field as a pointer to the 
-actual entry content. The rest of the fields will be explained in the following 
-chapters.
+We will comment briefly on the relevant cache entry fields for this section, 
+which can be seen in Listing \ref{lst:xcache-entry-prealloc.h}. The rest of the 
+fields will be discussed in the following sections.
+
+\ccode{\texttt{xcache entry} fields, relevant for 
+	preallocation}{xcache-entry-prealloc.h}
+
+The description of the fields follows:
+
+\begin{description}
+	\item[ref] The reference count of the entry, initially set to zero.
+	\item[state] The state of the entry. It can either be ACTIVE or EVICTED and 
+		is initially set to the first.
+	\item[name] The name of the entry. Since we cannot know its length 
+		beforehand, we allocate as much space as possible by our segment, 
+		typically 256 characters. During initialization, the entry name is 
+		cleared out of junk values.
+	\item[h] The entry's index.
+	\item[priv] The private contents of the cache entry. On initialization, the 
+		cache node creation hook is triggered and cached initializes the 
+		private contents of cache entry with its data (more on the Section ?)
+\end{description}
+
+\begin{comment}
+The rest willwhaLet's start by listing what \texttt{xcache entry} 
+consists of.  First of all, it must have a name.  Since we preallocate 
+the entries and cannot know in runtime their length, we must allocate 
+as much space as possible. The \texttt{char name[XSEG\_MAX\_TARGETLEN + 
+	1]} field, which is 256 characters long, is long enough to hold the 
+target's name.  Also, as we have mentioned in Section 
+\ref{sec:entry-prealloc-design}, xcache must be agnostic of the cache 
+contents.  To this end, we use the generic \texttt{void *priv} field as 
+a pointer to the actual entry content.  The rest of the fields will be 
+explained in the following chapters.
 
 Let's continue now with the fields of Listing \ref{lst:xcache-prealloc.h}.  
 Since we preallocate the entries using \texttt{malloc}, they take up a 
@@ -82,25 +114,26 @@ to the free\_entries field in Section \ref{sec:get-req-archip} i.e. it is a
 stack where indexes to unused nodes are pushed. These indexes will be seen in 
 various code excerpts in this chapter and have a specific name, 
 \texttt{xcache\_handler}\footnote{\#define xcache\_handler uint64\_t}.
+\end{comment}
 
 \subsection{Entry Indexing}
 
-The relevant fields for this purpose can be seen in the following code listing:
+This is the core feature of xcache. In Listing \ref{lst:xcache-index.h}, we 
+present the fields of xcache struct that are relevant to the indexing task.
 
 \ccode{xcache struct fields for entry indexing}{xcache-index.h}
 
 As we have mentioned in Section \ref{sec:xcache-index-design}, we utilize two 
-hash tables, one for the cached entries and one for the former cached entries 
-(or evicted entries or removed entries). These hash tables can be accessed from 
-the \texttt{xcache struct} and are \texttt{*entries} and \texttt{*rm\_entries} 
-respectively.
+hash tables, one for the cached entries and one for the evicted entries. These 
+hash tables can be accessed from the \texttt{xcache struct} and are the 
+\texttt{*entries} and \texttt{*rm\_entries} respectively.
 
-These are the functions which are related to indexing and \xcache exposes to the 
-peer function:
+More importantly, these are the functions which are related to indexing and 
+\xcache exposes to the peer:
 
 \ccode{Indexing functions}{xcache-index.c}
 
-All of these function need a pointer to the \xcache struct. Here's a brief 
+All of these functions need a pointer to the \xcache struct. Here's a brief 
 description of them:
 
 \begin{description}
@@ -117,12 +150,15 @@ description of them:
 		Returns on failure: NoEntry.
 		Returns on success:
 		\begin{inparaenum}[\itshape a\upshape)]
-		\item the same handler or
-		\item another one, if this entry already exists in cache.
+		\item the same handler or,
+		\item if the same entry already exists in cache, the handler of that 
+			entry.
 		\end{inparaenum}
 		\textbf{Note:} It looks up first if the entry exist in 
 		\texttt{entries} or \texttt{rm\_entries}. The later case can 
 		lead to re-insertions.
+\begin{comment}
+	Probably not needed
 	\item[xcache\_remove:]
 		Takes the handler of an allocated entry as an argument and uses 
 		it to remove that entry.\\
@@ -130,14 +166,26 @@ description of them:
 		Returns on success: 0.
 		\textbf{Note:} Removes entries only from \texttt{entries} hash 
 		table.
-	\item[xcache\_invalidate:]
-		An \texttt{xcache\_remove} spin-off. Takes the name of the entry 
-		as an argument, looks it up and then removes it
-		Returns on failure: -1.
-		Returns on success: 0.
-		\textbf{Note:} Unlike remove, entries can either be on 
-		\texttt{entries} or \texttt{rm\_entries} hash table.
+\end{comment}
 \end{description}
+
+Moreover, we show in Listing \ref{lst:xcache-entry-index.h} the cache entry 
+struct fields related to indexing and explain how they are used by each 
+function.
+
+\ccode{xcache entry struct relevant indexing}{xcache-entry-index.h}
+
+The way each function handles the above xcache and xcache_entry fields follows: 
+
+\textbf{xcache\_index}
+
+(Re)inserts the entry to the entries hash table. Then it updates position the 
+entry to the head of tail of the LRU queue (or the head of the MRU queue, 
+depending on what's your standpoint) and updates the younger/older fields of 
+its neighbors. Moreover, if the entry was reinserted, it makes its state 
+ACTIVE.
+
+\textbf{xcache\_lookup}
 
 \subsection{Entry eviction}\label{xcache-evict-imp}
 
