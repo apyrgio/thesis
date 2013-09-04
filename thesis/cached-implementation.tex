@@ -19,26 +19,28 @@ using xcache\_init, which can be seen in Listing \ref{lst:xcache-init.h}.
 
 \ccode{\texttt{xcache\_init definition}}{xcache-init.h}
 
-xcache requests the following information from the peer:
+xcache\_init requests the following information from the peer:
 
 \begin{description}
 	\item[cache:] Simply, an allocated xcache struct
 	\item[xcache\_size:] The number of objects xcache will index
 	\item[ops:] The trigger functions for xcache's event hooks
-	\item[flags:] The flags blabla the following two things:
+	\item[flags:] Optional flags that tune the following two things:
 		\begin{enumerate}
-			\item The LRU algorithm. For the cached implementation, we use the 
-				O(1) LRU, but xcache also allows to use two more LRU 
-				algorithms, a binary priority heap (O(log(N))) or an LRU array 
-				(O(N)).
-			\item The usage of the hash table for evicted entries. Although our 
-				implementation relies heavily on it, this does not account for 
-				all the other peers that use xcache.
+			\item The LRU algorithm. For the cached implementation, 
+				we use the O(1) LRU, but xcache also allows to 
+				use two more LRU algorithms, a binary heap 
+				(O(log(N))) or an LRU array (O(N)).
+			\item The usage of the hash table for evicted entries.  
+				Although our cached implementation relies 
+				heavily on it, this does not account for all 
+				the other peers that use xcache and by default 
+				is turned off.
 		\end{enumerate}
 	\item[priv:] A pointer (void *) to a structure that will be returned when 
 		an event hook is triggered. As most priv fields, it is irrelevant to 
-		the xcache struct and relevant only to the top caller. We initialize it 
-		with the cached struct.
+		the xcache struct and relevant only to the top caller. We 
+		initialize it with the peer struct.
 \end{description}
 
 The purpose of xcache\_init is to process the above data, populate the xcache 
@@ -66,8 +68,8 @@ stack where all entry indexes are initially pushed and subsequently popped when
 a new entry is inserted. Finally, \textbf{nodes} is the space allocated for the 
 cache entries and where the entry indexes point to.
 
-Moreover, the typical fields that are definition of the \texttt{xcache entry} 
-struct is shown in Listing \ref{lst:xcache-entry.h}.
+Moreover, the definition of the \texttt{xcache entry} struct is shown in 
+Listing \ref{lst:xcache-entry.h}.
 
 \ccode{\texttt{xcache entry} struct}{xcache-entry.h}
 
@@ -95,28 +97,44 @@ The description of the fields follows:
 \end{description}
 
 \begin{comment}
-The rest willwhaLet's start by listing what \texttt{xcache entry} 
-consists of.  First of all, it must have a name.  Since we preallocate 
-the entries and cannot know in runtime their length, we must allocate 
-as much space as possible. The \texttt{char name[XSEG\_MAX\_TARGETLEN + 
-	1]} field, which is 256 characters long, is long enough to hold the 
-target's name.  Also, as we have mentioned in Section 
-\ref{sec:entry-prealloc-design}, xcache must be agnostic of the cache 
-contents.  To this end, we use the generic \texttt{void *priv} field as 
-a pointer to the actual entry content.  The rest of the fields will be 
-explained in the following chapters.
+	The rest willwhaLet's start by listing what \texttt{xcache entry} 
+	consists of.  First of all, it must have a name.  Since we preallocate 
+	the entries and cannot know in runtime their length, we must allocate 
+	as much space as possible. The \texttt{char name[XSEG\_MAX\_TARGETLEN + 
+		1]} field, which is 256 characters long, is long enough to hold the 
+	target's name.  Also, as we have mentioned in Section 
+	\ref{sec:entry-prealloc-design}, xcache must be agnostic of the cache 
+	contents.  To this end, we use the generic \texttt{void *priv} field as 
+	a pointer to the actual entry content.  The rest of the fields will be 
+	explained in the following chapters.
 
-Let's continue now with the fields of Listing \ref{lst:xcache-prealloc.h}.  
-Since we preallocate the entries using \texttt{malloc}, they take up a 
-contiguous space in memory.  The start of this space is the where the 
-\texttt{*nodes} field points to. The \texttt{free\_nodes} field works similarly 
-to the free\_entries field in Section \ref{sec:get-req-archip} i.e. it is a 
-stack where indexes to unused nodes are pushed. These indexes will be seen in 
-various code excerpts in this chapter and have a specific name, 
-\texttt{xcache\_handler}\footnote{\#define xcache\_handler uint64\_t}.
+	Let's continue now with the fields of Listing \ref{lst:xcache-prealloc.h}.  
+	Since we preallocate the entries using \texttt{malloc}, they take up a 
+	contiguous space in memory.  The start of this space is the where the 
+	\texttt{*nodes} field points to. The \texttt{free\_nodes} field works similarly 
+	to the free\_entries field in Section \ref{sec:get-req-archip} i.e. it is a 
+	stack where indexes to unused nodes are pushed. These indexes will be seen in 
+	various code excerpts in this chapter and have a specific name, 
+	\texttt{xcache\_handler}\footnote{\#define xcache\_handler uint64\_t}.
 \end{comment}
 
-\subsection{Entry Indexing}
+\subsection{Cache entry initialization}
+
+Before a peer can index a new entry, it must first allocate it from the cache 
+entry pool and then initialize it. xcache has a special function for this 
+purpose which can be seen in Listing \ref{lst:xcache-alloc-init.c}
+
+\ccode{Cache entry allocation/initialization function}{xcache-alloc-init.c}
+
+This function attempts to claim a cache entry from the \texttt{free\_nodes}.  
+Then it initializes it with the name given by the peer. Moreover, it triggers 
+the cache entry initialization hook which cached uses to further initialize the 
+entry.
+
+An added benefit of this function is that it doesn't need to acquire the cache 
+lock, so it does not slow down the indexing functions that rely on that look.
+
+\subsection{Cache entry indexing}
 
 This is the core feature of xcache. In Listing \ref{lst:xcache-index.h}, we 
 present the fields of xcache struct that are relevant to the indexing task.
@@ -128,13 +146,14 @@ hash tables, one for the cached entries and one for the evicted entries. These
 hash tables can be accessed from the \texttt{xcache struct} and are the 
 \texttt{*entries} and \texttt{*rm\_entries} respectively.
 
-More importantly, these are the functions which are related to indexing and 
-\xcache exposes to the peer:
+More importantly, in Listing \ref{lst:xcache-index.c} we can see the functions 
+that are related to indexing and \xcache exposes to the peer:
 
 \ccode{Indexing functions}{xcache-index.c}
 
-All of these functions need a pointer to the \xcache struct. Here's a brief 
-description of them:
+All of these functions need a pointer to the \xcache struct. Also, they need to 
+acquire the cache\_lock and insert specifically needs to acquire the rm\_lock 
+too, in order to check in the rm\_entries.  Here's a brief description of them:
 
 \begin{description}
 	\item[xcache\_lookup:]
@@ -147,71 +166,75 @@ description of them:
 	\item[xcache\_insert:]
 		Takes the handler of an allocated entry as an argument and uses 
 		it to index that entry.\\
-		Returns on failure: NoEntry.
+		Returns on failure: NoEntry.\\
 		Returns on success:
-		\begin{inparaenum}[\itshape a\upshape)]
+		\begin{inparaenum}[i)]
 		\item the same handler or,
 		\item if the same entry already exists in cache, the handler of that 
 			entry.
-		\end{inparaenum}
+		\end{inparaenum}\\
 		\textbf{Note:} It looks up first if the entry exist in 
 		\texttt{entries} or \texttt{rm\_entries}. The later case can 
 		lead to re-insertions.
-\begin{comment}
-	Probably not needed
-	\item[xcache\_remove:]
-		Takes the handler of an allocated entry as an argument and uses 
-		it to remove that entry.\\
-		Returns on failure: -1.
-		Returns on success: 0.
-		\textbf{Note:} Removes entries only from \texttt{entries} hash 
-		table.
-\end{comment}
+		\begin{comment}
+			Probably not needed
+		\item[xcache\_remove:]
+			Takes the handler of an allocated entry as an argument and uses 
+			it to remove that entry.\\
+			Returns on failure: -1.
+			Returns on success: 0.
+			\textbf{Note:} Removes entries only from \texttt{entries} hash 
+			table.
+		\end{comment}
 \end{description}
 
 Moreover, we show in Listing \ref{lst:xcache-entry-index.h} the cache entry 
-struct fields related to indexing and explain how they are used by each 
+struct fields related to indexing and comment on how they are used by each 
 function.
 
 \ccode{xcache entry struct relevant indexing}{xcache-entry-index.h}
 
-The way each function handles the above xcache and xcache_entry fields follows: 
+The commentary on the above fields follows:
 
-\textbf{xcache\_index}
-
-(Re)inserts the entry to the entries hash table. Then it updates position the 
-entry to the head of tail of the LRU queue (or the head of the MRU queue, 
-depending on what's your standpoint) and updates the younger/older fields of 
-its neighbors. Moreover, if the entry was reinserted, it makes its state 
-ACTIVE.
-
-\textbf{xcache\_lookup}
+\begin{description}
+	\item[ref:] The reference counter of an object is increased on lookups 
+		and inserts, since it is essentially referenced in these 
+		operations.
+	\item[state:] The state of an object is already ACTIVE for lookup 
+		operations (or else lookup will fail). For insertions and 
+		reinsertions, it is manually set to ACTIVE.
+	\item[older/younger]: These fields show the neighbors of the entry in 
+		the LRU queue. The LRU queue is sorted by reference time order, 
+		so the neighbors are essentially the entries that have been 
+		referenced right before and right after our entry.
+\end{description}
 
 \subsection{Entry eviction}\label{xcache-evict-imp}
 
-The relevant fields for this purpose can be seen in the following code listing:
+The relevant fields for this purpose can be seen in code listing 
+\ref{lst:xcache-evict.h}
 
 \ccode{\xcache struct fields for eviction}{xcache-evict.h}
 
 As we have mentioned in Section \ref{sec:xcache-evict-design}, we resort to 
-eviction when the cache is full and new entries can't be inserted. This entry is 
-the Least Recently Used entry. The doubly-linked list we maintain for this end 
-can be seen below:
+eviction when the cache is full and new entries can't be inserted. This entry 
+is the Least Recently Used entry. The code doubly-linked list that we maintain 
+for this end can be seen below:
 
 \ccode{Doubly-linked LRU list}{xcache-dlist.h}
 
-We have done so by using a doubly linked list that keeps the cache entries 
-sorted by access time.  The entries and using the hash table to jump to an 
-entry when we need to evict it.
+The last entry of the list (oldest) is usually the LRU. When an object is 
+referenced, it can be instantly transferred to the head of the list (MRU), 
+since we know its position via the hash table (alternatively, we would need to 
+search all entries, which would require O(N) time).
 
-%Hey, no timestamps!
+Another feature of this LRU queue is that it doesn't require timestamps, so we 
+can avoid the unnecessary system call.
 
-% Insert figure for O(1) LRU and hash table
+Finally, when a cache entry is evicted from the hash table, it triggers the 
+cache entry eviction hook.
 
-In a nutshell, our LRU implementation uses a doubly linked list and utilize the 
-hash table to jump to the element (instead of traversing the list linearly).
-This design allows us to do all of the following action in constant time:
-
+\begin{comment}
 \begin{itemize}
 	\item Insert a new entry to the LRU list
 	\item Evict the LRU entry
@@ -234,7 +257,7 @@ Lets explain these fields a bit:
 
 Finally, as we have explained in Section \ref{sec:xcache-evict-design}, the 
 eviction internals should normally not bother the user. However, if the user 
-wants to, \xcache provides the exposes the following functions:
+wants to, \xcache exposes the following functions:
 
 \begin{description}
 	\item[xcache\_evict\_lru:] The name says it all, it evicts the recently 
@@ -243,6 +266,7 @@ wants to, \xcache provides the exposes the following functions:
 		atomically take a peek on the Least Recently Used entry and also 
 		update its refcount.
 \end{description}
+\end{comment}
 
 \subsection{Concurrency control}\label{sec:conc-imp}
 
