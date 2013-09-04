@@ -2,15 +2,19 @@
 
 In the previous chapter, we have discussed in length the design of cached and 
 its components. In this chapter, we will present how the above design has been
-implemented. To aid us in this task, we will use code snippets from cached and 
+implemented. To aid us in this task, we will use code snippets from cached, and 
 xcache and we will comment where necessary.
 
-More specifically, Section \ref{sec:xcache-imp} provides implementation 
-information for xcache, the main cached component. Next, section 
-\ref{sec:cached-imp} presents the actual implementation of cached, showcasing 
-the structures and functions used.
+More specifically, Section \ref{sec:xcache-imp} presents the implementation 
+information of xcache, the main cached component. Next, section 
+\ref{sec:cached-imp} presents the implementation of cached, showcasing the 
+structures and functions used.
 
 \section{Implementation of xcache}\label{sec:xcache-imp}
+
+For this section, we will attempt to provide a top-down view of the xcache 
+implementation, starting from the functions that xcache exposes to peers and 
+moving on to the more intrinsic details, such as the concurrency control.
 
 \subsection{xcache initialization}
 
@@ -35,12 +39,12 @@ xcache\_init requests the following information from the peer:
 				Although our cached implementation relies 
 				heavily on it, this does not account for all 
 				the other peers that use xcache and by default 
-				is turned off.
+				is not used.
 		\end{enumerate}
-	\item[priv:] A pointer (void *) to a structure that will be returned when 
-		an event hook is triggered. As most priv fields, it is irrelevant to 
-		the xcache struct and relevant only to the top caller. We 
-		initialize it with the peer struct.
+	\item[priv:] A pointer (void *) to a structure that will be returned 
+		when an event hook is triggered. As most priv fields, it is 
+		irrelevant to the xcache struct and relevant only to the top 
+		caller. We initialize it with the peer struct.
 \end{description}
 
 The purpose of xcache\_init is to process the above data, populate the xcache 
@@ -50,9 +54,9 @@ struct and its respective fields.
 
 \ccode{Main \xcache struct}{xcache-struct.h}
 
-Each of the above \xcache struct fields serves a design feature that has 
-already been discussed in Section \ref{sec:xcache-design}. In the following 
-sections, we will revisit these design features and present their 
+Each of the above \xcache struct fields is used to implement a design feature 
+that has already been discussed in Section \ref{sec:xcache-design}. In the 
+following sections, we will revisit these design features and present their 
 implementation.
 
 \subsection{Cache entry preallocation}
@@ -126,9 +130,9 @@ purpose which can be seen in Listing \ref{lst:xcache-alloc-init.c}
 
 \ccode{Cache entry allocation/initialization function}{xcache-alloc-init.c}
 
-This function attempts to claim a cache entry from the \texttt{free\_nodes}.  
-Then it initializes it with the name given by the peer. Moreover, it triggers 
-the cache entry initialization hook which cached uses to further initialize the 
+This function attempts to claim a cache entry from \texttt{free\_nodes}. Then 
+it initializes it with the name given by the peer. Moreover, it triggers the 
+cache entry initialization hook which cached uses to further initialize the 
 entry.
 
 An added benefit of this function is that it doesn't need to acquire the cache 
@@ -151,9 +155,8 @@ that are related to indexing and \xcache exposes to the peer:
 
 \ccode{Indexing functions}{xcache-index.c}
 
-All of these functions need a pointer to the \xcache struct. Also, they need to 
-acquire the cache\_lock and insert specifically needs to acquire the rm\_lock 
-too, in order to check in the rm\_entries.  Here's a brief description of them:
+All of these functions need a pointer to the \xcache struct. Here's a brief 
+description of them:
 
 \begin{description}
 	\item[xcache\_lookup:]
@@ -310,8 +313,8 @@ Specifically, we have used:
 	\item the \texttt{rm\_lock}, which protects the hash table of evicted 
 		entries (\texttt{rm\_entries}) from concurrent accesses and is 
 		used during insertions, evictions and puts.
-	\item a lock in every entry, which is specifically when an entry is 
-		put.
+	\item a lock in every entry, which is specifically used when an entry 
+		is put.
 \end{enumerate}
 
 Of major importance is also the issue of deadlocking. More specifically, during 
@@ -393,7 +396,7 @@ for the \texttt{rm\_lock}.
 \subsection{Event hooks}
 
 The hooks that xcache provides to users are stored in an xcache\_ops struct 
-that can be seen in Listing \ref{lst:xcache-hooks-imp.h}.
+that can be seen in Listing \ref{lst:xcache-hooks.h}.
 
 \ccode{xcache\_ops struct}{xcache-hooks.h}
 

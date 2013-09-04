@@ -323,7 +323,7 @@ in order not to be freed amidst this process.
 This way, we can avoid waiting for an entry that has just been evicted to flush 
 its data. 
 
-\subsubsection{Event hooks}
+\subsubsection{Event hooks}\label{sec:xcache-hooks-design}
 
 Since xcache is created to provide core caching functionalities for other 
 peers, it must also notify them when it takes an implicit action that the peer 
