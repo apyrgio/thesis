@@ -217,9 +217,9 @@ The relevant fields for this purpose can be seen in code listing
 \ccode{\xcache struct fields for eviction}{xcache-evict.h}
 
 As we have mentioned in Section \ref{sec:xcache-evict-design}, we resort to 
-eviction when the cache is full and new entries can't be inserted. This entry 
-is the Least Recently Used entry. The code doubly-linked list that we maintain 
-for this end can be seen below:
+eviction when the cache is full and new entries can't be inserted. By xcache 
+policy, we evict the least recently used entry. The necessary fields for the 
+doubly-linked list that we maintain for this purpose can be seen below:
 
 \ccode{Doubly-linked LRU list}{xcache-dlist.h}
 
@@ -268,11 +268,72 @@ wants to, \xcache exposes the following functions:
 \end{description}
 \end{comment}
 
-\subsection{Concurrency control}\label{sec:conc-imp}
+\subsection{Concurrency control}\label{sec:xcache-conc-imp}
 
-\paragraph{Locking}\label{par:lock}
+Concurrency control is an extremely important aspect of xcache, if we want to 
+utilize an SMP system to its full potential. Although parts of the concurrency 
+control have already been discussed in previous sections, in this section, we 
+will provide an in-depth explanation of how xcache implements them.
 
-\paragraph{Reference counting}\label{par:refcount-imp}
+The relevant fields for concurrency control can be seen in Listing 
+\ref{lst:xcache-conc.h}, both for the xcache and xcache\_entry structs.
+
+\ccode{Concurrency control fields}{xcache-conc.h}
+
+There are three main techniques xcache uses for concurrentcy control. The first 
+one is the usage of locks, which is presented in Section 
+\ref{sec:xcache-lock-imp}.  The second one is reference counting, which is 
+presented in Section \ref{sec:xcache-refcount-imp}. Finally, the third one is a 
+more esoteric method that counters the ABA problem and is the tracking of 
+parallel puts to an entry, which is presented in Section 
+\ref{sec:xcache-parput-imp}.
+
+\subsubsection{Locking}\label{sec:xcache-lock-imp}
+
+With xcache, we have tried not to use a BKL
+\footnote{BKL stands for Big Kernel Lock and was a giant lock in kernel space 
+	that inhibited the performance of SMP systems and remained until the 
+	late stages of the 2.6 Linux kernel}
+type of lock, but instead use many smaller ones.
+
+Specifically, we have used:
+\begin{enumerate}
+	\item a lock that protects the cache entry pool from concurrent 
+		accesses. Since the only operation this lock protects is the 
+		push and pop of cache entry indexes, we expect that there will 
+		be no contention on it.
+	\item the \texttt{lock} lock, as seen in the xcache struct, which is 
+		our main lock as it protects the hash table of active entries 
+		(\texttt{entries}) from concurrent accesses. This lock is used 
+		during lookups, inserts and evictions, so it is the lock with 
+		the most contention.
+	\item the \texttt{rm\_lock}, which protects the hash table of evicted 
+		entries (\texttt{rm\_entries}) from concurrent accesses and is 
+		used during insertions, evictions and puts.
+	\item a lock in every entry, which is specifically when an entry is 
+		put.
+\end{enumerate}
+
+Of major importance is also the issue of deadlocking. More specifically, during 
+inserts or evictions, we need to have access on both hash tables. If a thread 
+acquired the lock of one hash table and another thread acquired simultaneously 
+the lock of the other, we would have a deadlock since both would need a lock 
+that the other thread has.
+
+To this end, xcache strictly acquires the locks in the following order: 
+\texttt{lock} --> \texttt{rm\_lock} --> entry lock. With this policy we are 
+sure that there will be no deadlocks.
+
+\subsubsection{Reference counting}\label{sec:xcache-refcount-imp}
+
+Each cache entry has a volatile uint64\_t field which is atomically get and 
+put. The type is volatile to inform the compiler that it might be changed by an 
+external process and therefore not cache it.
+
+Furthermore, the atomic gets and puts are executed using the GCC builtins which 
+are shown in Listing \ref{lst:xcache-atomic.c}.
+
+\ccode{Atomic operations of GCC}{xcache-atomic.c}
 
 The refcount model in xcache should be familiar to most people:
 
@@ -283,12 +344,12 @@ The refcount model in xcache should be familiar to most people:
 	\item Whenever a new lookup for this cache entry succeeds, the reference 
 		is increased by 1 (ref++)
 	\item When the request that has issued the lookup has finished with an 
-		entry, the reference is decreased by 1. (ref--)
+		which entry, the reference is decreased by 1. (ref--)
 	\item When a cache entry is evicted by cache, the its ref is decreased 
 		by 1. (ref--)
 \end{itemize}
 
-Some common refcount cases are:
+Moreover, some common refcount cases are:
 
 \begin{itemize}
 	\item active entry with pending jobs (ref > 1)
@@ -297,7 +358,8 @@ Some common refcount cases are:
 	\item evicted entry with no pending jobs (ref = 0)
 \end{itemize}
 
-\begin{table}[tbp]
+\begin{comment}
+\begin{table}
 	\centering
 	\begin{tabular}{ | l | l | }
 		\hline
@@ -310,26 +372,39 @@ Some common refcount cases are:
 	\caption{Reference counting of xcache}
 	\label{tab:refcount}
 \end{table}
+\end{comment}
 
-and, as always, the entry is freed only when its ref = 0.
+Unlike most refcount cases, however, the entry is not put when its refcount 
+drops to zero. The reason is that the entry can be reinserted at any time. In 
+the following section, we explain how we have handled that case
+
+\subsubsection{Entry put}
+
+The scenario of putting the entry has proved the most tricky one and deserves 
+its own section in the concurrency control implementation.
+
+For this scenario, we aimed to void the usage of our two biggest lock: 
+\texttt{lock} and \texttt{rm\_lock}. Avoiding the first one was easy since the 
+hash table of active entries was not used. However, the same did not hold true 
+for the \texttt{rm\_lock}.
+
+\fixme How much are we going to explain the ABA problem?
 
 \subsection{Event hooks}
 
-The hooks that xcache provides to users are:
+The hooks that xcache provides to users are stored in an xcache\_ops struct 
+that can be seen in Listing \ref{lst:xcache-hooks-imp.h}.
 
-\begin{itemize}
-	\item on\_ init: called on cache entry initialization.
-	\item on\_put: called when the last reference to the cache entry is put
-	\item on\_evict: called when a cache entry is evicted.
-	\item on\_node\_init: called on initial node preparation.
-	\item post\_evict: called after an eviction has occurred, with cache  
-		lock held.
-	\item on\_free: called when a cache entry is freed.
-	\item on\_finalize: called to hint the user that the cache entry's ref 
-		has dropped to zero.
-	\item on\_reinsert: called when a cache entry has been in cache
-\end{itemize}
+\ccode{xcache\_ops struct}{xcache-hooks.h}
 
+The design of these hooks has been presented on Section 
+\ref{sec:xcache-hooks-design}. The functions that are attached to each hook 
+return two values:
+\begin{inparaenum}
+\item the private field of xcache (the peer structure in our case) and
+\item the cache entry's private data (the object in our case) for which the 
+	hook was triggered.
+\end{inparaenum}
 
 \section{Implementation of cached}\label{sec:cached-imp}
 

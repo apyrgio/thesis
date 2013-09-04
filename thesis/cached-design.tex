@@ -382,7 +382,7 @@ removal of an entry:
 
 \fixme add figure and explanation
 
-\section{The xworkq xtype}\label{sec:xworkq-design}
+\subsection{The xworkq xtype}\label{sec:xworkq-design}
 
 The xworkq xtype is a useful abstraction for concurrency control. Its purpose 
 is to enqueue "jobs" (protected by a lock) and ensure that only one thread will 
@@ -412,7 +412,7 @@ accepted/received for an object, it is enqueued in the xworkq and we are thus
 ensured that only one thread at a time can have access to the object's data and 
 metadata.
 
-\section{The xwaitq xtype}\label{sec:xwaitq-design}
+\subsection{The xwaitq xtype}\label{sec:xwaitq-design}
 
 The xwaitq xtype bears some similarities to the xworkq xtype. Like xworkq, it 
 is also an abstraction where "jobs" are enqueued and dequeued later on to be 
