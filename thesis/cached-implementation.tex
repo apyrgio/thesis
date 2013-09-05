@@ -411,23 +411,83 @@ return two values:
 
 \section{Implementation of cached}\label{sec:cached-imp}
 
-The cached structure is the following:
+In this section, we will present the implementation of cached. Information 
+about the design of cached is provided in Section \ref{sec:cached-design}.  
+Similarly to xcache, we will begin by examining the top-level function and then 
+we present how blabla were solved.
+
+\subsection{Cached initialization}\label{sec:cached-init-imp}
+
+We have mentioned in the previous chapters that cached can be multi-threaded, 
+have different write policies, maximum number of objects, cache size etc. All 
+these variables are given from command-line and used during cached 
+initialization. The command-line arguments can be seen in Table \ref{tab:usage}
+
+\begin{table}
+	\centering
+	\begin{tabular}{ | l | l | }
+		\hline
+		Switch & Info \\ \hline \hline
+		-t & Number of threads \\ \hline
+		-mo & Max objects to cache \\ \hline
+		-ts & Total cache size \\ \hline
+		-os & Object size \\ \hline
+		-bs & Bucket size \\ \hline
+		-bp & Blocker port \\ \hline
+		-wcp & Write policy \\ \hline
+	\end{tabular}
+	\caption{Command line arguments of cached}
+	\label{tab:usage}
+\end{table}
+
+and the cached structure that is initialized is the following:
 
 \ccode{Main cached struct}{cached.h}
 
-We will briefly comment on the less important entries:
+Moreover, on cached initialization we also initialize xcache as well as the 
+general xworkqs and xwaitqs.
+
+Some of the above cached fields are the same with the command-line arguments 
+and are self explanatory. We will briefly comment on the less obvious fields, 
+which will be discussed in length in their respective sections.
 
 \begin{description}
-	\item[*cache:]
-		This is the connection between cached and xcache. The xcache struct is 
-		stored here.
-	\item[total\_size:]
-		T
+	\item[cache:]
+		The initialized xcache struct is stored here
+	\item[max\_req\_size:]
+		The maximum request size that can be sent to the blocker
+	\item[workq:]
+		A lockless xworkq where non-critical jobs from threads who are in a 
+		critical section are enqueued (More on Section ?)
+	\item[pending\_waitq:]
+		A waitq for jobs that need to allocate a cache entry to continue
+	\item[bucket\_waitq:]
+		A waitq for jobs that need to allocate a bucket to continue
+	\item[req\_waitq:]
+		A waitq for jobs that need to allocate a request to continue
+	\item[bucket\_data:]
+		This is a malloced space whose size is the total\_size of cache. This 
+		space is later split in buckets and its indexes are pushed on a stack
+	\item[bucket\_indexes:]
+		The stack where bucket indexes are pushed
 \end{description}
 
-and the cached entries are the following
+Furthermore, during the xcache initialization that takes place inside the 
+cached initialization, the cached node initialization hook is triggered and 
+cached can create its own entries, which are as many as the object size. The 
+cache entry struct (or "ce") can be seen in Listing \ref{lst:ce.h}.
 
-\ccode{Cahed entry struct}{ce.h}
+\ccode{Cached entry struct}{ce.h}
+
+The \textbf{status}, \textbf{bucket\_alloc\_status\_counters} and 
+\textbf{bucket\_data\_status\_counters} are the ce status and the counters for 
+the ce's bucket statuses respectively, which are explained thoroughly in 
+Section \ref{cached-states-design}. The \textbf{lock} and \textbf{workq} are 
+used for concurrency control over parallel access to the ce's data. Moreover, 
+the \textbf{pending\_waitq} is an xwaitq where all requests that can't be 
+completed due to the current state of ce are kept. Finally, the 
+\textbf{buckets} field is associated with our bucket pool.
+
 
 \section{Bucket pool}
 

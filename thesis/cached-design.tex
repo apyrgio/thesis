@@ -636,7 +636,7 @@ state of the request. Moreover, since the request may break internally in many
 others, we keep track of how many pending requests remain until the original 
 one can be completed.
 
-\subsection{Book-keeping}
+\subsection{Book-keeping}\label{sec:cached-states-design}
 
 In order to know when an object is in flushing state, when a bucket has been 
 allocated or when a bucket is being read, cached must employ some sort of 
