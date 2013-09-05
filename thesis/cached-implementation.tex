@@ -498,17 +498,6 @@ The explanation of the above fields follows:
 We have intentionally left out the bucket related fields that will be discussed 
 in length in Section \ref{cached-bucket-imp}.
 
-\begin{comment}
-The \textbf{status}, \textbf{bucket\_alloc\_status\_counters} and 
-\textbf{bucket\_data\_status\_counters} are the ce status and the counters for 
-the ce's bucket statuses respectively, which are explained thoroughly in 
-Section \ref{cached-states-design}. The \textbf{lock} and \textbf{workq} are 
-used for concurrency control over parallel access to the ce's data. Moreover, 
-the \textbf{pending\_waitq} is an xwaitq where all requests that can't be 
-completed due to the current state of ce are kept. Finally, the 
-\textbf{buckets} field is associated with our bucket pool.
-\end{comment}
-
 \subsection{Bucket pool}\label{sec:cached-bucket-imp}
 
 The initialization of the bucket pool is covered in Section 
@@ -584,3 +573,6 @@ the xcache handler for the object, so we can proceed immediately according to
 its operation type. The way the request is handled next is documented on 
 Section \ref{cached-flow-design}.
 
+\subsection{"ENOSPC" scenarios}
+
+\fixme add out of requests, out of buckets, out of cache entries
