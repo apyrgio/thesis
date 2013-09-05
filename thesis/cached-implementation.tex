@@ -413,8 +413,9 @@ return two values:
 
 In this section, we will present the implementation of cached. Information 
 about the design of cached is provided in Section \ref{sec:cached-design}.  
-Similarly to xcache, we will begin by examining the top-level function and then 
-we present how blabla were solved.
+Similarly to xcache, we will begin with the initialization process, we will 
+continuee with the request handling of cached and finish with presenting the 
+challenges we faced and the solutions we implemented.
 
 \subsection{Cached initialization}\label{sec:cached-init-imp}
 
@@ -440,7 +441,8 @@ initialization. The command-line arguments can be seen in Table \ref{tab:usage}
 	\label{tab:usage}
 \end{table}
 
-and the cached structure that is initialized is the following:
+and the cached structure that is initialized is presented in Listing 
+\ref{lst:cached.h}. 
 
 \ccode{Main cached struct}{cached.h}
 
@@ -474,11 +476,29 @@ which will be discussed in length in their respective sections.
 
 Furthermore, during the xcache initialization that takes place inside the 
 cached initialization, the cached node initialization hook is triggered and 
-cached can create its own entries, which are as many as the object size. The 
+cached can create its own entries, which are as many as the max objects. The 
 cache entry struct (or "ce") can be seen in Listing \ref{lst:ce.h}.
 
 \ccode{Cached entry struct}{ce.h}
 
+The explanation of the above fields follows:
+
+\begin{description}
+	\item[status:] The ce status, as seen in Section 
+		\ref{sec:cached-states-design}
+	\item[lock:] The lock for the ce's and its buckets' data
+	\item[workq:] The xworkq that is used for concurrency control over 
+		parallel access to the ce's and its buckets' data. It uses the 
+		aforementioned lock
+	\item[pending\_waitq:] The xwaitq that is used when a request cannot be 
+		executed due to the ce's state. It will allow job executions 
+		only when the ce is not in FLUSHING state.
+\end{description}
+
+We have intentionally left out the bucket related fields that will be discussed 
+in length in Section \ref{cached-bucket-imp}.
+
+\begin{comment}
 The \textbf{status}, \textbf{bucket\_alloc\_status\_counters} and 
 \textbf{bucket\_data\_status\_counters} are the ce status and the counters for 
 the ce's bucket statuses respectively, which are explained thoroughly in 
@@ -487,60 +507,80 @@ used for concurrency control over parallel access to the ce's data. Moreover,
 the \textbf{pending\_waitq} is an xwaitq where all requests that can't be 
 completed due to the current state of ce are kept. Finally, the 
 \textbf{buckets} field is associated with our bucket pool.
+\end{comment}
 
+\subsection{Bucket pool}\label{sec:cached-bucket-imp}
 
-\section{Bucket pool}
+The initialization of the bucket pool is covered in Section 
+\ref{sec:cached-init-imp}. In this section, we will explain how this bucket 
+pool is connected with the buckets of each ce.
 
-And the bucket implementation is the following:
+When the cache node initialization hook is triggered, the ce's buckets are 
+initialized. Essentially, this means we do (once only) the following:
 
-\ccode{Bucket implementation}{bucket.h}
+\begin{enumerate}
+	\item First, we calloc an array of struct buckets. The array has
+		\texttt{buckets\_per\_object} length, which is typically 1024 
+		(4MB objects / 4KB bucket size). The struct bucket is a very 
+		simple struct and is presented in Listing 
+		\ref{lst:bucket.h}.
+		
+		\ccode{Bucket implementation}{bucket.h}
 
-\subsection{Bucket/Object states}
+	\item Second, we calloc two more arrays, the  
+		\texttt{bucket\_alloc\_status\_counters} and the
+		\texttt{bucket\_data\_status\_counters}, whose length is the 
+		number of allocation states (2) and data states (5) 
+		respectively.
+	\item Third, we initialize each bucket's allocation state to FREE and 
+		data state to INVALID. The allocation and data state are stored 
+		in the \texttt{flags} section of struct bucket, which is 
+		actually a custom bit-field with support for variable field 
+		lengths.
+	\item Finally, we initialize all the counters to zero, besides the 
+		allocation counter for FREE buckets, which is set to 
+		\texttt{buckets\_per\_object} (1024), and the data counter for 
+		INVALID buckets, which is similarly to the same number.
+\end{enumerate}
 
-Every object has a state, which is set atomically by threads. The state list is
-the following:
+None of the above operations, however, interact with the bucket pool. This is 
+because we don't initially attach the bucket indexes to the ce's buckets.
 
-\begin{itemize}
-	\item READY: the object is ready to be used
-	\item FLUSHING: the object is flushing its dirty buckets
-	\item DELETING: there is a delete request that has been sent to the 
-		blocker for this object
-	\item INVALIDATED: the object has been deleted
-	\item FAILED: something went very wrong with this object
-\end{itemize}
+The way buckets are attached to the ce is analogous to the way a function maps 
+to its address space a large memory chunk that has previously allocated; the 
+chunk is internally divided to smaller chunks that are mapped to the function's 
+address space only when the function "touches" them.
 
-Also, object buckets have their own states too. These are divided in allocation 
-states:
+Similarly, when cached accepts a request for a target, the request's range is 
+translated to bucket range. If any of the buckets within that range are not 
+attached to the ce, the request is "trapped" and the needed buckets are claimed 
+from the bucket pool.
 
-\begin{itemize}
-	\item FREE: the bucket has not been touched or has been flushed
-	\item CLAIMED: the bucket has been claimed
-\end{itemize}
+Finally, the bucket claiming procedure is the following: we pop a bucket index 
+from the \texttt{bucket\_indexes} stack, translate it to the actual data 
+pointer and store it to the \texttt{data} field of the struct bucket. Later on, 
+when the bucket is released, we translate the data pointer back to the bucket 
+index and we push it to the bucket pool.
 
-and data states:
+\subsection{Request handling}
 
-\begin{itemize}
-	\item INVALID: the same as empty
-	\item LOADING: there is a pending read to blocker for this bucket
-	\item VALID: the bucket is clean and can be read
-	\item DIRTY: the bucket can be read but its contents have not been
-		written to the underlying storage
-	\item WRITING: there is a pending write to blocker for this bucket
-\end{itemize}
+Cached uses a custom loop to poll for requests. This loop follows the same 
+principles as the common peer's loop (see Section ?) with the addition of:
 
-Also, for cios we have the following:
+\begin{enumerate}
+	\item Checks for the state of the bucket pool. If the bucket pool has 
+		been depleted, we force flush the LRU entry to acquire its 
+		buckets.
+	\item Periodic signals to the cached's xworkq.
+\end{enumerate}
 
-\begin{itemize}
-	\item FAILED: at least one of the cio request(s) has failed
-	\item ACCEPTED: normal mode
-	\item READING: at least one of the cio request(s) is pending a read
-	\item WRITING: at least one of the cio request(s) is pending a write
-	\item SERVED: all requests have been served
-\end{itemize}
+When a request is accepted/received, it is forwarded to the appropriate handle 
+function based on its xcache operation type.
 
-
-Finally, for every object there are bucket state counters, which are increased/
-decreased when a bucket state is changed. These counters give us an O(1)
-glimpse to the bucket states of an object.
-
+More specifically, for accepted (new) requests, we index the request target 
+(object) and store its xcache handler on the request's cio and we proceed 
+according to its operation type. For received requests, the request's cio holds 
+the xcache handler for the object, so we can proceed immediately according to 
+its operation type. The way the request is handled next is documented on 
+Section \ref{cached-flow-design}.
 
