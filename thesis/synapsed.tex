@@ -5,7 +5,7 @@ seen that is heavily bounded by CPU. The implications of this, however,
 are bigger, if we consider that all the Archipelago is running in the host 
 machine, whose CPU's are already oversubscribed. This means that cached must 
 compete for CPU time against the running VMs, essentialy defeating the QoS 
-purpose it serves
+purpose it serves.
 
 On the other hand, on the RADOS nodes, the CPUs are not used to the full 
 potential. Thus, it would be interesting to check how well cached (and 
@@ -18,7 +18,10 @@ current situation from how it is in Figure ? to the following:
 To this end, we have created a network peer called synapsed (from 
 \textbf{synapse d}aemon) as a proof-of-concept, that should be able to receive 
 any type of requests and send them through the network to another Archipelago 
-segment.
+segment. We must note that this peer has not been created with performance in 
+mind but its main aim is to provide the functionality needed for our purposes.  
+As a consequence, we haven't used tools such as ZeroMQ or libevent that would 
+boost the performance of the implementation.
 
 More specifically, on Section...
 
@@ -34,21 +37,75 @@ We propose the following solution to this problem: Each of those two segments
 must have at least one synapsed peer. So, when one synapsed accepts an XSEG 
 request, it will translate it to a network request, send it to the synapsed 
 peer of the other segment which will finally translate it back to an XSEG 
-request.  Moreover, each synapsed peer will be attached to a peer of its 
-segment. Thus, the re-translated XSEG request will only be send to that target. 
+request.  Moreover, each synapsed peer must be attached to a peer of its 
+segment, which will serve as the request target when synapsed accepts request.  
 
 This means that synapsed does not actually connect two remote segments
 but bridge two remote peers over network.
 
-Moreover, an important issue is how the requests will be send over network. Due 
-to the above limitation, each synapsed will handle no more than one connection
+The way synapsed handles requests can be seen in Figure ?
 
+\fixme add figure
 
+The main difficulty is to make synapsed listen from its port and its request 
+queue simultaneously. We have tackled this problem in Section ?
 
+Moreover, synapsed sends requests using bare TCP sockers, without using. This 
+means that it handles the marshaling of requests, send/recv errors as well as 
+polling by itself.
 
-Thus, the synapsed needs the following arguments:
+Finally, synapsed has been created as a single-threaded peer.
 
-\begin{enumerate}
-	\item Its port where it will accept connections
-	\item Its target port where
+\section{Implementation of synapsed}
 
+In the following sectionσ we will
+
+\section{Synapsed initialization}
+
+Synapsed is a much simpler peer than cached and requires only the following 
+arguments.
+
+\begin{description}
+	\item[-hp] The port where it will listen for requests.
+	\item[-ra] The remote address of the segment. \textbf{NOTE:} it can 
+		point to the same segment, which means that synapsed provides a 
+		generic way to bridge two peers who reside in the same host but 
+		in a different segment.
+	\item[-rp] The remote port of the other synapsed.
+	\item[-txp] The XSEG port of the peer which synapsed will attach on
+\end{description}
+
+Having the above arguments, synapsed can create a socket and bing its port it.  
+
+\section{Request polling}
+
+Synapsed typically uses the common peer loop and Archipelago IPC methods to 
+check its XSEG ports for new requests. However, it simultaneously needs to 
+listen for new requests on its socket. Yet, there is no way for a process to 
+sleep both on its socket and while waiting for a signal.
+
+The solution seems obvious; synapsed should instead sleep while polling for 
+requests in its socket and, if a new request arrives at its XSEG port, its 
+polling will be interrupted. This is certainly the way to go, but there is one
+detail we must take into account: Sleeping like so is unsafe because a signal 
+may arrive right before we sleep and we will not take notice of it.
+
+Let's elaborate on it a bit: The Archipelago IPC needs to block the SIGIO 
+signal, so that sigtimedwait() can check the pending signals on sigset and 
+wakeup when it receives one. In the poll case though, if we sleep with the 
+SIGIO signal blocked, we will not wake up. On the other hand, if we unblocked 
+the SIGIO signal, we would also have problems.
+
+Consider the case where we receive that signal before we go to sleep. In order 
+to be notified that a signal has been sent so as not to sleep, we would need to 
+utilize a signal handler that would increment a global variable which would be 
+checked right before we go to sleep. This approach is not only racy (what 
+happens if SIGIO is received after this global variable is checked) but it is 
+also very slow.
+
+For this reason, we use the ppoll alternative, which accepts a signal mask as 
+an additional argument. Ppoll provides the guarantee that it will use this 
+signal mask during This way, ppoll can unblock the SIGIO signals while it 
+sleeps and wake updhis signal mask is used first to block signals, then handle 
+any signals that have managed to come in the meantime.  Ifsignals that can wake 
+up the process.  ppoll
