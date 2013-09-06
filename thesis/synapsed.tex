@@ -1,0 +1,54 @@
+\chapter{The Synapsed peer}
+
+On the previous sections, we have evaluated the design of cached and we have 
+seen that is heavily bounded by CPU. The implications of this, however,
+are bigger, if we consider that all the Archipelago is running in the host 
+machine, whose CPU's are already oversubscribed. This means that cached must 
+compete for CPU time against the running VMs, essentialy defeating the QoS 
+purpose it serves
+
+On the other hand, on the RADOS nodes, the CPUs are not used to the full 
+potential. Thus, it would be interesting to check how well cached (and 
+Archipelago in general) would behave, if the VM's data where send initially 
+over network and then handled by the vlmc. So what we mean is to turn the 
+current situation from how it is in Figure ? to the following:
+
+\fixme add figure for network
+
+To this end, we have created a network peer called synapsed (from 
+\textbf{synapse d}aemon) as a proof-of-concept, that should be able to receive 
+any type of requests and send them through the network to another Archipelago 
+segment.
+
+More specifically, on Section...
+
+\section{Design of synapsed}
+
+Given that currently Archipelago is not network-aware, peers from one segment 
+cannot know the ports of peers of another segment. Moreover, they cannot send a 
+request to the synapsed peer and simultaneously target a peer in another 
+segment. So, we are faced with the problem of what will be the limitations of 
+synapsed.
+
+We propose the following solution to this problem: Each of those two segments 
+must have at least one synapsed peer. So, when one synapsed accepts an XSEG 
+request, it will translate it to a network request, send it to the synapsed 
+peer of the other segment which will finally translate it back to an XSEG 
+request.  Moreover, each synapsed peer will be attached to a peer of its 
+segment. Thus, the re-translated XSEG request will only be send to that target. 
+
+This means that synapsed does not actually connect two remote segments
+but bridge two remote peers over network.
+
+Moreover, an important issue is how the requests will be send over network. Due 
+to the above limitation, each synapsed will handle no more than one connection
+
+
+
+
+Thus, the synapsed needs the following arguments:
+
+\begin{enumerate}
+	\item Its port where it will accept connections
+	\item Its target port where
+
