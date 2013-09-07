@@ -50,9 +50,9 @@ The way synapsed handles requests can be seen in Figure ?
 The main difficulty is to make synapsed listen from its port and its request 
 queue simultaneously. We have tackled this problem in Section ?
 
-Moreover, synapsed sends requests using bare TCP sockers, without using. This 
-means that it handles the marshaling of requests, send/recv errors as well as 
-polling by itself.
+Moreover, synapsed sends requests using the standard TCP protocol, without 
+using.  This means that it handles the marshaling of requests, send/recv errors 
+as well as polling by itself.
 
 Finally, synapsed has been created as a single-threaded peer.
 
@@ -82,30 +82,103 @@ Having the above arguments, synapsed can create a socket and bing its port it.
 Synapsed typically uses the common peer loop and Archipelago IPC methods to 
 check its XSEG ports for new requests. However, it simultaneously needs to 
 listen for new requests on its socket. Yet, there is no way for a process to 
-sleep both on its socket and while waiting for a signal.
+block on its socket *and* sleep using sigtimedwait.
 
-The solution seems obvious; synapsed should instead sleep while polling for 
+The solution seems obvious; synapsed should instead block while polling for 
 requests in its socket and, if a new request arrives at its XSEG port, its 
 polling will be interrupted. This is certainly the way to go, but there is one
 detail we must take into account: Sleeping like so is unsafe because a signal 
 may arrive right before we sleep and we will not take notice of it.
 
-Let's elaborate on it a bit: The Archipelago IPC needs to block the SIGIO 
-signal, so that sigtimedwait() can check the pending signals on sigset and 
-wakeup when it receives one. In the poll case though, if we sleep with the 
-SIGIO signal blocked, we will not wake up. On the other hand, if we unblocked 
-the SIGIO signal, we would also have problems.
+Let's elaborate on it a bit: When a peer is initialized, it masks the SIGIO 
+signal. Using sigtimedwait, it can check fast and without races if a signal has 
+been enqueued, and then it can sleep. This is not the case with poll() though, 
+since if we sleep with the SIGIO signal blocked, we will not wake up. On the 
+other hand, if we unblock the SIGIO signal, we have a new set of problems.
 
-Consider the case where we receive that signal before we go to sleep. In order 
-to be notified that a signal has been sent so as not to sleep, we would need to 
+Consider the case where we receive a signal before we go to sleep. In order to 
+be notified that a signal has been sent so as not to sleep, we would need to 
 utilize a signal handler that would increment a global variable which would be 
 checked right before we go to sleep. This approach is not only racy (what 
 happens if SIGIO is received after this global variable is checked) but it is 
 also very slow.
 
 For this reason, we use the ppoll alternative, which accepts a signal mask as 
-an additional argument. Ppoll provides the guarantee that it will use this 
-signal mask during This way, ppoll can unblock the SIGIO signals while it 
-sleeps and wake updhis signal mask is used first to block signals, then handle 
-any signals that have managed to come in the meantime.  Ifsignals that can wake 
-up the process.  ppoll
+an additional argument. Ppoll provides the guarantee that it will atomically 
+\begin{inparaenum}[i.]
+\item replace the old signal mask of the process with the one provided,
+\item check if there are pending signals and
+\item return if there are pending signals or block until a request has been 
+	received.
+\end{inparaenum}
+
+Solving the issue of waiting for XSEG requests while blocking on a socket is 
+only part of the problem. We also have to solve its counterpart, which means we 
+need to find a quick way to iterate the XSEG ports of synapsed for new 
+requests, while listening for new requests on its socket.
+
+We have countered this problem by checking alternately the ports of synapsed 
+and doing a poll with zero timeout, which returns immediately.
+
+The request polling scheme that synapsed uses is summed up in Figure ?
+
+\subsection{Marshalling}
+
+The XSEG request cannot be sent as is, since its data and target name are 
+stored in two different buffers. Moreover, since these buffers can have 
+variable length, the synapsed peer that reads from its socket needs a way to 
+know when it has finished reading all the necessary data.
+
+This is a common problem in computer science and its solution is to serialize 
+(or "marshal") the object that must be transfered. The marshaling method we 
+have chosen is the following:
+
+\begin{enumerate}
+	\item We send at the start of every transaction a fixed-length header, 
+		whose size is known to all synapsed peers, and who will have the 
+		information about the length of the rest of the buffers. The header is 
+		presented on Listing \ref{lst:synapsed-header.h}
+
+		\ccode{Synapsed header}{synapsed-header.h}
+
+		The header is simply the necessary fields of the original request that 
+		the remote synapsed peer needs to know. The most important fields are 
+		\textbf{datalen} and \textbf{targetlen} which indicate the length of 
+		the data and target buffers respectively.
+	\item Once the header has been sent and the remote peer has the information 
+		that it needs, it allocates a new XSEG request from its segment and 
+		fills it with the information provided by the header.
+	\item Finally, the remote peer reads the rest two buffers and stores them 
+		in the XSEG request it has previously allocated.
+\end{enumerate}
+
+Marshaling however is usually not so simple. There are three caveats that one 
+must take into account before attempting to serialize manually an object. They 
+derive from the often overlooked fact that the host and the remote machine are 
+not architecturally the same, which can lead to:
+
+\begin{enumerate}
+	\item \textbf{Different endianness}. This means that the two machines have 
+		completely different byte order. This is commonly solved by converting 
+		all of the data to network byte order (big endian) and then convert 
+		them to the native endianess of the machine.
+	\item \textbf{Different type representation}. Even if two architectures 
+		have the same endianness, it is possible that they represent the same 
+		types with different number of bytes. This is most common with 32-bit 
+		and 64-bit architectures which, for example, use 4 bytes and 8 bytes 
+		respectively to represent an int.
+	\item \textbf{Padding}. Due to data alignment issues, the compiler may need 
+		to pad the fields of a struct. The padding is depended on the machine's 
+		architecture but also on the compiler that is used (\fixme is this 
+		true?).  A common solution is to "pack" the structure, i.e. to enforce 
+		that the structure will have no padding.
+\end{enumerate}
+
+For synapsed, the first two caveats do not affect us, since the machines that 
+are used are both 64-bit, little endian machines. The third caveat may also not 
+affect us, but just to make sure, we have packed our header structures using 
+the gcc pragma directive:
+
+\ccode{GCC pragma pack directive}{synapsed-pack.h}
+
+
