@@ -181,4 +181,16 @@ the gcc pragma directive:
 
 \ccode{GCC pragma pack directive}{synapsed-pack.h}
 
+\section{Send/Receive}
 
+As we have mentioned in the previous chapter, in order to send the data from 
+one synapsed peer to the other, we must marshal them first and then unmarshal 
+them. This commonly requires to merge all buffers into one and send that one.  
+
+In synapsed however, we have chosen a different appoach; we have employed the 
+\texttt{readv}/\textbf{writev} functions, that allow us to do vectored I/O on 
+these buffers.
+
+More specifically, we blabla
+
+\section{Evaluation of what ?}
