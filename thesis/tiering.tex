@@ -80,23 +80,49 @@ the last K references to an entry can be more optimal.
 There have been many block device tiers that have been built
 
 
-\subsubsection{Dm-cache/Flashcache/Bcache}
+\subsubsection{Bcache}
 
 Bcache has been designed by Kent Overstreet since 2011 and has been included in 
-the Linux kernel since the May of 2013.
+the Linux kernel (3.10) since the May of 2013.
 
-Bcache allows to use one or more fast mediums as a cache for slower ones. The 
-prerequisite is that both mediums must be block devices. Bcache targets the SSD  
-as the fast medium and has been built around it:
+Bcache allows one to use one or more fast mediums as a cache for slower ones.  
+Typically, the slow medium is a RAID array of hard disks and the fast medium 
+are SSD drives. Bcache has been specifically built for SSDs and has the 
+following characteristics:
 
 \begin{enumerate}
-	\item It goes to great lengths to ensure that data are written in erase 
-		block size granularity.
-	\item It
+	\item The data are written sequentially and in erase block size 
+		granularity, in order to avoid the costly read-erase-modify-write 
+		cycle.
+	\item It takes special care to mitigate wear-leveling by touching equally 
+		all SSD cells
+	\item It honors TRIM requests and uses them as hints for its garbage 
+		collection.
 \end{enumerate}
 
-has been designed with the SSD in mind, and is stacked block device driver that 
-has a block device as its backend, which is commonly a συστάδα of hard disks
+On to the technical part, bcache is a kernel driver that needs intrusive 
+changes to the backing device, rendering previous data unreadable. On a 
+nutshell, bcache edits the superblock of both the cache and backing devices in 
+order to use them. Then, it exposes to the users a virtual block device, which 
+can be formatted to any filesystem. This virtual device's request function 
+actually points to the cache device and, when the cache device has reached its 
+full utilization, it will flush dirty data to the backing device.
+
+The most striking bcache feature is that it uses a custom built B+tree as an 
+index, which has the added benefit that dirty data can be coalesced and flushed 
+sequentially to the slower spinning medium. This provides a considerable 
+performance speed-up for hard disks since. Some of other noteworthy features of 
+bcache are the following:
+
+\begin{enumerate}
+	\item It can operate in three modes, write-through, write-back and 
+		write-around, which can be switched on/off arbitrarily during normal 
+		usage or when the fast medium is congested.
+	\item It utilizes a journal log of outstanding writes so that the data are 
+		safe, even when an unclean shutdown occurs.
+	\item It can bypass sequential IO and send it directly to the backing 
+		device, since this workload is tailored for spinning disks.
+\end{enumerate}
 
 \subsection{Key-value store}
 
