@@ -1,4 +1,4 @@
-\chapter{The Synapsed peer}
+\chapter{The synapsed peer}
 
 On the previous sections, we have evaluated the design of cached and we have 
 seen that is heavily bounded by CPU. The implications of this, however,
@@ -58,9 +58,9 @@ Finally, synapsed has been created as a single-threaded peer.
 
 \section{Implementation of synapsed}
 
-In the following sectionσ we will
+In the following sections we will
 
-\section{Synapsed initialization}
+\subsection{Synapsed initialization}
 
 Synapsed is a much simpler peer than cached and requires only the following 
 arguments.
@@ -77,7 +77,7 @@ arguments.
 
 Having the above arguments, synapsed can create a socket and bing its port it.  
 
-\section{Request polling}
+\subsection{Request polling}
 
 Synapsed typically uses the common peer loop and Archipelago IPC methods to 
 check its XSEG ports for new requests. However, it simultaneously needs to 
@@ -181,7 +181,7 @@ the gcc pragma directive:
 
 \ccode{GCC pragma pack directive}{synapsed-pack.h}
 
-\section{Send/Receive}
+\subsection{Send/Receive}
 
 As we have mentioned in the previous chapter, in order to send the data from 
 one synapsed peer to the other, we must marshal them first and then unmarshal 
@@ -193,4 +193,4 @@ these buffers.
 
 More specifically, we blabla
 
-\section{Evaluation of what ?}
+\section{Evaluation of synapsed}

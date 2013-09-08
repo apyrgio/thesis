@@ -1,9 +1,9 @@
 \chapter{Tiered Storage}\label{ch:tiering}
 
 In this chapter we will discuss the challenges of today's data storage and how 
-tiering can help in mitigating costs and increasing performance. Moreover, we 
-present some current solutions for storage tiering and we evaluate if they can 
-be used in Archipelago.
+tiered storage helps in mitigating costs and increasing performance. Moreover, 
+we present the current solutions for tiered storage and we evaluate if they can 
+be used in conjunction with Archipelago.
 
 \section{Theoretical Background or What is Tiered Storage}
 
@@ -73,13 +73,40 @@ the last K references to an entry can be more optimal.
 
 
 
-\section{Existing storage tiers}
+\section{Comparison between existing methodologies}
 
-\subsection{Bcache}
+\subsection{Block-devices}
 
-\subsection{Memcached}
+There have been many block device tiers that have been built
 
-\subsection{Blabla}
+
+\subsubsection{Dm-cache/Flashcache/Bcache}
+
+Bcache has been designed by Kent Overstreet since 2011 and has been included in 
+the Linux kernel since the May of 2013.
+
+Bcache allows to use one or more fast mediums as a cache for slower ones. The 
+prerequisite is that both mediums must be block devices. Bcache targets the SSD  
+as the fast medium and has been built around it:
+
+\begin{enumerate}
+	\item It goes to great lengths to ensure that data are written in erase 
+		block size granularity.
+	\item It
+\end{enumerate}
+
+has been designed with the SSD in mind, and is stacked block device driver that 
+has a block device as its backend, which is commonly a συστάδα of hard disks
+
+\subsection{Key-value store}
+
+\subsubsection{Memcached}
+
+\subsection{NoSQL Databases}
+
+\subsubsection{Couchbase}
+
+\subsubsection{Redis}
 
 \subsection{Summary}
 
