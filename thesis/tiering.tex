@@ -82,6 +82,8 @@ There have been many block device tiers that have been built
 
 \subsubsection{Bcache}
 
+\paragraph{Overview}
+
 Bcache has been designed by Kent Overstreet since 2011 and has been included in 
 the Linux kernel (3.10) since the May of 2013.
 
@@ -100,13 +102,17 @@ following characteristics:
 		collection.
 \end{enumerate}
 
-On to the technical part, bcache is a kernel driver that needs intrusive 
-changes to the backing device, rendering previous data unreadable. On a 
-nutshell, bcache edits the superblock of both the cache and backing devices in 
-order to use them. Then, it exposes to the users a virtual block device, which 
-can be formatted to any filesystem. This virtual device's request function 
-actually points to the cache device and, when the cache device has reached its 
-full utilization, it will flush dirty data to the backing device.
+\paragraph{Installation}
+
+Bcache is a kernel driver that needs a patched kernel and intrusive changes to 
+the backing device, rendering previous data unreadable. On a nutshell, bcache 
+edits the superblock of both the cache and backing devices in order to use 
+them.  Then, it exposes to the users a virtual block device, which can be 
+formatted to any filesystem.  This virtual device's request function actually 
+points to the cache device and, when the cache device has reached its full 
+utilization, it will flush dirty data to the backing device.
+
+\paragraph{Features and Limitations}
 
 The most striking bcache feature is that it uses a custom built B+tree as an 
 index, which has the added benefit that dirty data can be coalesced and flushed 
@@ -115,6 +121,7 @@ performance speed-up for hard disks since. Some of other noteworthy features of
 bcache are the following:
 
 \begin{enumerate}
+	\item It can be used to cache more than one devices
 	\item It can operate in three modes, write-through, write-back and 
 		write-around, which can be switched on/off arbitrarily during normal 
 		usage or when the fast medium is congested.
@@ -124,9 +131,91 @@ bcache are the following:
 		device, since this workload is tailored for spinning disks.
 \end{enumerate}
 
+\subsubsection{Flashcache}
+
+\paragraph{Overview}
+
+Flashcache has been designed by Facebook and has been open-sourced in the April 
+of 2010. It is a kernel module that is officially supported for kernels between  
+2.6.18 and 2.6.38 and is based on the Linux Device Mapper, which is used to map 
+a block device onto another.
+
+\paragraph{Installation}
+
+Flashcache's installation is not system-intrusive, in the sense that it needs 
+only to compile the module against the kernel's source, modprobe it and then 
+map the cache device upon the backing device, without making any changes to the 
+latter.
+
+\paragraph{Features and Limitations}
+
+Flashcache uses a set-associative hash table for indexing. It has three modes 
+of operation, writethrough, writeback and writearound, and some basic 
+performance tuning options such eviction strategies and dirty data threshold.  
+Also, it has the following limitations:
+
+\begin{enumerate}
+	\item It does not provide atomic write operations, which can lead to 
+		page-tearing.
+	\item It does not support the TRΙΜ command.
+\end{enumerate}
+
+\subsubsection{EnhanceIO}
+
+\paragraph{Overview}
+
+EnhanceIO has been developed by STEC Corp. and has been open-sourced in the 
+December of 2012. It is a fork of Flashcache which does not use the Linux 
+Device Mapper and has some major re-writes in parts of the code such as the 
+write-back caching policy.
+
+\paragraph{Installation}
+
+The installation method is similar to the Flashcache's method. The source code 
+is compiled again the kernel's source, which produces a module that can be 
+modprobed. After that, the utilities provided can be used to map the cache 
+device on the backing device.
+
+\paragraph{Features and Limitations}
+
+Similarly to Flashcache, EnhanceIO uses a set-associative hash table for 
+indexing. It also has improvements upon the original Flashcache implementation 
+in the following areas:
+
+\begin{enumerate}
+	\item The page-tearing problems have been solved.
+	\item Dirty data flushing using background threads.
+\end{enumerate}
+
+\subsubsection{DM-cache}
+
 \subsection{Key-value store}
 
 \subsubsection{Memcached}
+
+\paragraph{Overview}
+
+Memcached is a distributed memory caching system that is being widely employed 
+by large sites such as Youtube, Facebook, Twitter, Wikipedia. It has been 
+created in 2003 by Brad Fitzpatrick while working in LiveJournal and to date 
+there have been numerous forks of the code, including Twitter's twemcache and 
+fatcache, Facebook's implementation etc.
+
+When memcached came into existence, many social sites, with LiveJournal amongst 
+them, experienced the following problem:
+
+User pages would often have queries that would be executed many times per 
+second or would span across the database due to a big SELECT, but whose nature 
+would be less critical. Queries such as "Who are my friends and who are 
+online?", "What are the latest news in my feed?" etc. would cripple the 
+database by adding a lot of load to it.
+
+To tackle this problem memcached utilizes the unused memory of any of the 
+site's servers to store these types of querier. Sites such as Facebook 
+experience 95\% cache hits only from their dedicated memcached servers.
+
+\paragraph{Installation}
+
 
 \subsection{NoSQL Databases}
 
