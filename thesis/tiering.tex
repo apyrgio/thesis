@@ -198,30 +198,95 @@ in the following areas:
 Memcached is a distributed memory caching system that is being widely employed 
 by large sites such as Youtube, Facebook, Twitter, Wikipedia. It has been 
 created in 2003 by Brad Fitzpatrick while working in LiveJournal and to date 
-there have been numerous forks of the code, including Twitter's twemcache and 
-fatcache, Facebook's implementation etc.
+there have been numerous forks of the code, most notably including Twitter's 
+twemcache and fatcache, Facebook's implementation etc.
 
-When memcached came into existence, many social sites, with LiveJournal amongst 
-them, experienced the following problem:
+When memcached came into existence, many social sites like LiveJournal were 
+experiencing the following problem:
 
-User pages would often have queries that would be executed many times per 
-second or would span across the database due to a big SELECT, but whose nature 
-would be less critical. Queries such as "Who are my friends and who are 
-online?", "What are the latest news in my feed?" etc. would cripple the 
-database by adding a lot of load to it.
+User pages would often have queries that would be executed hundreds of times 
+per second or would span across the database due to a big SELECT, but whose 
+nature would be less critical or would not change rapidly. Queries such as "Who 
+are my friends and who of them are online?", "What are the latest news in my 
+feed?" etc. which could be easily cached, crippled instead the database by 
+adding a lot of load to it.
 
-To tackle this problem memcached utilizes the unused memory of any of the 
-site's servers to store these types of querier. Sites such as Facebook 
-experience 95\% cache hits only from their dedicated memcached servers.
+To tackle this problem, administrator can instruct memcached to utilize the 
+unused RAM of the site's servers to cache these kinds of queries. Ten years 
+later, memcached has become the defacto scale-out solution, and has use cases 
+such as Facebook's whose dedicated memcached servers serve the 95\% of their 
+queries (\fixme add presentation)
 
-\paragraph{Installation}
+\paragraph{Installation/Usage}
 
+Memcached adheres to the client server model, with N clients connecting to M 
+servers. Memcached, which is a user space daemon, runs on every server and
+listens for requests typically on port 11211. The installation is very easy 
+since there are packages for most known distros. Once memcached has been 
+installed, the administration needs to specify only the port and several 
+performance options such as cache size and number of threads.
+
+The clients on the other hand communicate with the memcached servers using 
+native libraries. There are libraries that are written for most programming 
+languages such as C, PHP, Python, Haskell etc. The clients can then specify 
+which queries - or keys in general - want to be cached and the actual caching 
+is done in runtime.
+
+\paragraph{Features/Limitations}
+
+Architecturally, memcached tries to do everything in O(1) time. Each memcached 
+server consists of a hash table that indexes the keys and their data. Since the 
+data size can vary from 1 byte to 1MB, they are organized in SLABs in order to 
+prevent memory fragmentation.  Moreover, each memcached must be able to handle 
+tens of thousands connections from clients, so it relies in libevent to do the 
+asynchronous polling.
+
+What's more interesting about memcached is that its main strength is actually 
+its biggest limitation. Memcached has no persistence and in fact, data can be 
+evicted in numerous ways:
+
+\begin{enumerate}
+	\item Cached data have an expiration time after which they are 
+		garbage-collected.
+	\item Data can be evicted before their expiration time, if the cache has 
+		become full.
+	\item When memcached is out of SLAB pages, it must evict one in order to 
+		regain space. This leads to the eviction of more than one keys.
+	\item When adding or removing memcached servers, the Ketama algorithm that 
+		maps keys to servers will assign a portion of the existing keys to 
+		other servers. This change in mapping, however, will not actually move 
+		the existing keys to these servers and the data are essentially 
+		invalidated.
+\end{enumerate}
+
+To sum up, the lack of persistence means that memcached will never hit the disk 
+bottleneck due to flushes and will always be very fast, as long as the cache 
+hit rate is high. On the other hand, its unreliable nature means that it is not 
+a general purpose software and only specific workloads will be benefited from 
+it.
 
 \subsection{NoSQL Databases}
 
 \subsubsection{Couchbase}
 
-\subsubsection{Redis}
+\paragraph{Overview}
+
+Couchbase, which has been under active development since the January of 2012, 
+is actually the product of the merge of two independent projects, CouchDB and 
+Memebase, with CouchDB continuing as an Apache funded program. Couchbase aims 
+to combine the scalability of memcached with the persistence of a database such 
+as CouchDB. 
+
+\paragraph{Installation/Usage}
+
+Moreover, it tries to add some more features such as replication
+to be alive as a projects.
+
+\subsection{Honorary mentions}
+
+\subsubsection{Repcached}
+
+\subsubsection{Ramcloud}
 
 \subsection{Summary}
 
