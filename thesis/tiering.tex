@@ -1,29 +1,117 @@
-\chapter{Tiered Storage}\label{ch:tiering}
+\chapter{The Holy Triad: Scalability, Tiering and Caching}\label{ch:tiering}
 
-In this chapter we will discuss the challenges of today's data storage and how 
-tiered storage helps in mitigating costs and increasing performance. Moreover, 
-we present the current solutions for tiered storage and we evaluate if they can 
-be used in conjunction with Archipelago.
+In this chapter we will discuss the challenges of today's data storage and will 
+attempt to explain the role of scalability - a word that is being repeated like 
+mantra in cloud circles - tiering and caching in mitigating costs and 
+increasing performance.  Moreover, we present the current solutions for tiered 
+storage and we evaluate if they can be used in conjunction with Archipelago.
 
-\section{Theoretical Background or What is Tiered Storage?}
+\section{What is scalability?}
 
-1. Gap between performance of RAM and disk.
-2. Tiered storage is a concept that has been taken as an analogy from 
-hierarchical storage of computers.
+Scalability is a term that has different meaning for different contexts. For 
+example, good scalablity in multi-threading context can mean that the program's 
+performance increases linearly with the number of threads.
 
-Techniques employed by vendors: scaling up or scaling out
-Caching has been used very much
-3. Large vendors use storage layers (Tiers) such as memcached servers, ssds, 
-hard drives etc.
-4. Coherency is important as well as how the changes are propagated downwards
+We approach this subject from the storage service's perspective, which is an 
+integral part of a cloud service. In this context, scalability means the 
+ability of the storage service to handle the increase of I/O requests in a way 
+that each independent user does not experience any latency.
 
-Tiered storage is a term that has different meaning for different contexts. We 
-will approach this subject from the storage service perspective, which is an 
-integral part of a cloud service.
+\section{What is tiering?}
 
-Tiered storage is a strategy that most medium or larger deployments use in 
-order to bridge the performance gap between RAM and magnetic disks, which can 
-be seen in Table \ref{tab:gap}
+Tiering is the organization of different storage types in levels (or tiers) 
+depending on their performance.  The storage types usually differ in one of the 
+following attributes: capacity, price or performance.  Tiered storage is 
+analogous to the computer architecture model of memory hierarchy, which can be 
+seen in Figure \ref{fig:mem-hier.pdf}.
+
+\diagram{Computer Memory Hierarchy}{mem-hier.pdf}
+
+Tiered storage is based on the same principles as memory hierarchy, in the 
+sense that its objective is to keep data in the higher tiers, based on their 
+frequency of reference.
+
+\section{What is caching?}
+
+In the context of I/O requests, caching is the addition of a fast medium in a 
+data path, whose purpose is to transparently store the data that are intended 
+for the slower medium of this data path. The benefits from caching is that 
+later accesses to the same data will be faster than fetching them from the 
+slower medium.
+
+Caching is extensively used in computer architecture, as is evident from Figure 
+\ref{fig:mem-hier.pdf}. Besides the memory hierarchy model, it is a widely 
+employed concept in storage services where fast mediums are used as a journal 
+for slower ones, essentially caching the data, or where dedicated servers are 
+used to cache data, like in memcached's case (see more in Section 
+\ref{sec:memcached-triad}).
+
+\subsection{Caching policies}
+
+Do we even care?
+
+\begin{itemize}
+	\item Write-through:
+		This policy bla bla bla
+	\item Write-back:
+		This policy blu blu blu
+\end{itemize}
+
+\subsection{Caching limitations}
+
+Given that fast mediums like RAM and SSD drives are always more expensive than 
+slower mediums, caches always have smaller capacity than the mediums they 
+cache. So, when a cache reaches its maximum capacity, it must evict one of its 
+entries. 
+
+And the big question arises: which entry?
+
+This is a very old and well documented problem that still troubles the research 
+community. It was first faced when creating hardware caches (the L1, L2 CPU 
+caches we are familiar with). In 1966, Lazlo Belady proved that the best 
+strategy is to evict the entry that is going to be used more later on in the 
+future\cite{Belady}.  However, the clairvoyance needed for this strategy is a 
+little difficult to implement, so we use one of the following, well-known 
+strategies:
+
+% Mention ehcache approach: 
+% http://ehcache.org/documentation/apis/cache-eviction-algorithms
+%
+% Also look at the following papers
+%L. Belady, “A Study of Replacement Algorithms for a
+%Virtual-Storage Computer,” IBM Systems Journal, vol.5,
+%no.2, pp.78-101, 1966.
+\begin{itemize}
+	\item \textbf{Random:} Evict a randomly chosen entry. This strategy, 
+		although it seems simplistic at first, is sometimes chosen due 
+		to the ease and speed of each. It is preferred in random 
+		workloads where getting fast free space for an entry is more 
+		important than the entry that will be evicted.
+	\item \textbf{FIFO (First-In-First-Out):} Evict the entry that was 
+		inserted first. This is also a very simplistic approach as well 
+		as easy and fast.  Interestingly, although it would seem to 
+		produce better results than Random eviction, it is rarely used 
+		though, since it assumes that cache entries are used only once, 
+		which is not common in real-life situations.
+	\item \textbf{LRU (Least-Recently-Used)}
+		Evict the entry that has
+	\item \textbf{LFU (Least-Frequently-Used)}
+\end{itemize}
+
+Choosing the LRU strategy is usually a no-brainer. Not only does it 
+\textit{seem} more optimal than the other algorithms, but it has also been 
+proven, using a Bayesian statistic model, that no other algorithm that tracks 
+the last K references to an entry can be more optimal.
+%Also, check out this paper:
+%An optimality proof of the LRU-K page replacement algorithm
+%that proves that no algorithm that keeps track of the K most recent references 
+%for a page can be more optimal than LRU.
+
+\section{Current situation}
+
+Caching is necessary in most medium or larger deployments, in order to bridge 
+the performance gap between RAM and magnetic disks, which can be seen in Table 
+\ref{tab:gap}
 
 \begin{table}
 	\centering
@@ -31,7 +119,7 @@ be seen in Table \ref{tab:gap}
 		\hline
 		Medium & Access time (ns) \\ \hline \hline
 		CPU registers and cache & < 10 \\ \hline
-		RAM & < 10\textsuperscript{2}  \\hline
+		RAM & < 10\textsuperscript{2}  \\ \hline
 		SSD & < 10\textsuperscript{5} \\ \hline
 		Hard Disk & < 10\textsuperscript{7} \\ \hline
 	\end{tabular}
@@ -39,8 +127,8 @@ be seen in Table \ref{tab:gap}
 	\label{tab:gap}
 \end{table}
 
-It is easy to see that when data are not  in RAM the performance penalty is 
-x10,000.
+For a computer which uses only hard-drives, it is easy to see that when data 
+are not in RAM, the performance penalty is x10,000.
 
 Usually, when a small deployment makes its first steps, it doesn't use SSDs due 
 to management and hardware costs and since its an investment that is actually 
@@ -61,69 +149,13 @@ mitigate the cost of cache misses.
 This is the turning point of medium deployments and where tiered storage helps
 
 
-\subsection{Caching}
+\section{How to scale?}
 
-In caching, there are usually the following two policies:
+There are two methods of scaling, horizontal (scaling out) and vertical 
+(scaling up). The horizontal scaling method requires that the service is a 
+distributed one, i.e. that there are more than one storage nodes and the 
+software can handle the addition 
 
-\begin{itemize}
-	\item Write-through:
-		This policy bla bla bla
-	\item Write-back:
-		This policy blu blu blu
-\end{itemize}
-
-\subsubsection{Eviction}
-
-Caching generally means that you project a large address space of a slow medium 
-to the smaller address space of a faster medium. That means that not everything 
-can be cached as there is no 1:1 mapping. So, when a cache reaches its maximum 
-capacity, it must evict one of its entries
-
-And the big question now arises: which entry?
-
-This is a very old and well documented problem that still troubles the research 
-community. It was first faced when creating hardware caches (the L1, L2 CPU 
-caches we are familiar with). In 1966, Lazlo Belady proved that the best 
-strategy is to evict the entry that is going to be used more later on in the 
-future\cite{Belady}.  However, the clairvoyance needed for this strategy was a 
-little difficult to implement, so we had to resort to one of the following, 
-well-known strategies:
-
-% Mention ehcache approach: 
-% http://ehcache.org/documentation/apis/cache-eviction-algorithms
-%
-% Also look at the following papers
-%L. Belady, “A Study of Replacement Algorithms for a
-%Virtual-Storage Computer,” IBM Systems Journal, vol.5,
-%no.2, pp.78-101, 1966.
-\begin{itemize}
-	\item \textbf{Random:} Simply, a randomly chosen entry is evicted. This 
-		strategy, although it seems simplistic at first, is sometimes chosen 
-		due to the ease and speed of each. It is preferred in random workloads 
-		where getting fast free space for an entry is more important than the 
-		entry that will be evicted.
-	\item \textbf{FIFO (First-In-First-Out):} The entry that was first inserted 
-		will also be the first to evict. This is also a very simplistic 
-		approach as well as easy and fast. Interestingly, although it would 
-		seem to produce better results than Random eviction, it is rarely used 
-		though, since it assumes that cache entries are used only once, which 
-		is not common in real-life situations.
-	\item \textbf{LRU (Least-Recently-Used)}
-	\item \textbf{LFU (Least-Frequently-Used)}
-\end{itemize}
-
-Choosing the LRU strategy is usually a no-brainer. Not only does it 
-\textit{seem} more optimal than the other algorithms, but it has also been 
-proven, using a Bayesian statistic model, that no other algorithm that tracks 
-the last K references to an entry can be more optimal.
-%Also, check out this paper:
-%An optimality proof of the LRU-K page replacement algorithm
-%that proves that no algorithm that keeps track of the K most recent references 
-%for a page can be more optimal than LRU.
-
-
-
-\section{Comparison between existing methodologies}
 
 \subsection{Block-devices}
 
@@ -241,7 +273,7 @@ in the following areas:
 
 \subsection{Key-value store}
 
-\subsubsection{Memcached}
+\subsubsection{Memcached}\label{sec:memcached-triad}
 
 \paragraph{Overview}
 

@@ -152,8 +152,8 @@ Let's see now the bandwidth performance of our peers. The write performance can
 be seen in Figure \ref{fig:bw-write-comp-lie.pdf} while the read performance 
 can be seen in Figure \ref{fig:bw-read-comp-lie.pdf}.
 
-\diagram{bw-write-comp-lie.pdf}{Comparison of bandwidth performance for writes}
-\diagram{bw-read-comp-lie.pdf}{Comparison of bandwidth performance for reads}
+\diagram{Comparison of bandwidth performance for writes}{bw-write-comp-lie.pdf}
+\diagram{Comparison of bandwidth performance for reads}{bw-read-comp-lie.pdf}
 
 Before we proceed with the interpretation of the diagram results, we will 
 briefly comment on the diagram structure. Due to the fact that the performance 
@@ -242,8 +242,8 @@ Let's proceed now to the latency results. The write performance can be seen in
 Figure \ref{fig:lat-write-comp-lie.pdf} while the read performance can be seen 
 in Figure \ref{fig:lat-read-comp-lie.pdf}.
 
-\diagram{lat-write-comp-lie.pdf}{Comparison of latency performance for writes}
-\diagram{lat-read-comp-lie.pdf}{Comparison of latency performance for reads}
+\diagram{Comparison of latency performance for writes}{lat-write-comp-lie.pdf}
+\diagram{Comparison of latency performance for reads}{lat-read-comp-lie.pdf}
 
 We will measure the speedup of the write and read performance of cached. It is 
 bla-bla for writes and bla-bla for reads.
@@ -269,7 +269,7 @@ cache size and the maximum objects. These parameters have been decoupled in our
 implementation and we expect different results for each combination. We have 
 chosen to measures cache sizes that start from the 1/64th of the workload's 
 size and reach up to the 1/8th of the workload's size. The maximum objects are 
-chosed differently (oversubscriptions on cache size etc.) they start from a 1/1 
+chosen differently (oversubscriptions on cache size etc.) they start from a 1/1 
 and reach up to 8/1.
 
 In Figure \ref{fig:bw-write-comp-truth.pdf} and Figure 
@@ -283,9 +283,9 @@ and \ref{fig:bw-read-comp-lie.pdf}, there is a vast drop in the performance.
 Writes specifically cannot outperform the sosd. On the other hand, reads are 
 generally faster than sosd, about 1.5x.
 
-\diagram{bw-write-comp-truth.pdf}{Comparison of bandwidth performance for 
-	writes}
-\diagram{bw-read-comp-truth.pdf}{Comparison of bandwidth performance for reads}
+\diagram{Comparison of bandwidth performance for writes} 
+{bw-write-comp-truth.pdf}
+\diagram{Comparison of bandwidth performance for reads}{bw-read-comp-truth.pdf}
 
 \textbf{Why adding more objects makes us slower?}
 
@@ -294,9 +294,9 @@ generally faster than sosd, about 1.5x.
 We will accompany the above diagrams with latency results. You can see them 
 below:
 
-\diagram{lat-write-comp-truth.pdf}{Comparison of latency performance for 
-	writes}
-\diagram{lat-read-comp-truth.pdf}{Comparison of latency performance for reads}
+\diagram{Comparison of latency performance for writes}
+{lat-write-comp-truth.pdf}
+\diagram{Comparison of latency performance for reads}{lat-read-comp-truth.pdf}
 
 
 \section{Performance evaluation of cached parameters}
@@ -332,8 +332,8 @@ The bandwidth results can be seen in Figure \ref{fig:bw-write-threads.pdf}
 whereas the latency results can be seen in Figure 
 \ref{fig:lat-write-threads.pdf}.
 
-\diagram{bw-write-threads.pdf}{Bandwidth performance per number of threads}
-\diagram{lat-write-threads.pdf}{Latency performance per number of threads}
+\diagram{Bandwidth performance per number of threads}{bw-write-threads.pdf}
+\diagram{Latency performance per number of threads}{lat-write-threads.pdf}
 
 From these results, we derive the following conclusions:
 
@@ -372,7 +372,7 @@ major point in these results is that we can see that write latency, either of
 cold or warm cache, remains practically the same as the number of objects 
 increases.
 
-\diagram{cold1.pdf}{Latency performance of cold/warm cache for variable sizes}
+\diagram{Latency performance of cold/warm cache for variable sizes}{cold1.pdf}
 
 As a side note, we observe a constant decrease in latency as the number of 
 objects increase this is not something that should be attributed to our 
