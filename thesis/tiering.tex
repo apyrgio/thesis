@@ -5,11 +5,61 @@ tiered storage helps in mitigating costs and increasing performance. Moreover,
 we present the current solutions for tiered storage and we evaluate if they can 
 be used in conjunction with Archipelago.
 
-\section{Theoretical Background or What is Tiered Storage}
+\section{Theoretical Background or What is Tiered Storage?}
 
-From the genesis of the PC in ? every component was pushed to its limits to 
-become as fast as possible. Take for example the CPU chip. The CPU clock is 
-blabal and speed of light means 10cm. Has the same happened with disk
+1. Gap between performance of RAM and disk.
+2. Tiered storage is a concept that has been taken as an analogy from 
+hierarchical storage of computers.
+
+Techniques employed by vendors: scaling up or scaling out
+Caching has been used very much
+3. Large vendors use storage layers (Tiers) such as memcached servers, ssds, 
+hard drives etc.
+4. Coherency is important as well as how the changes are propagated downwards
+
+Tiered storage is a term that has different meaning for different contexts. We 
+will approach this subject from the storage service perspective, which is an 
+integral part of a cloud service.
+
+Tiered storage is a strategy that most medium or larger deployments use in 
+order to bridge the performance gap between RAM and magnetic disks, which can 
+be seen in Table \ref{tab:gap}
+
+\begin{table}
+	\centering
+	\begin{tabular}{ | l | l | }
+		\hline
+		Medium & Access time (ns) \\ \hline \hline
+		CPU registers and cache & < 10 \\ \hline
+		RAM & < 10\textsuperscript{2}  \\hline
+		SSD & < 10\textsuperscript{5} \\ \hline
+		Hard Disk & < 10\textsuperscript{7} \\ \hline
+	\end{tabular}
+	\caption{Access times of storage mediums}
+	\label{tab:gap}
+\end{table}
+
+It is easy to see that when data are not  in RAM the performance penalty is 
+x10,000.
+
+Usually, when a small deployment makes its first steps, it doesn't use SSDs due 
+to management and hardware costs and since its an investment that is actually 
+needed when the deployment has proved that it will attract traffic. Instead, 
+the most common setup is an array of RAID-protected commodity hard disks or 
+fast SAS drives.
+
+When the storage needs start to increase and more users use that service, the 
+OS caching system of the storage nodes will soon prove ineffective and the 
+randomness in the requested data will skyrocket the access times. Soon, the 
+infrastructure's access times will in the spectrum of many milliseconds.
+
+At this point, the administrators are faced with the decision of buying or not 
+battery-backed array controllers with volatile storage on-board to improve 
+speeds but sooner or later, the quality of hardware will not be able to 
+mitigate the cost of cache misses.
+
+This is the turning point of medium deployments and where tiered storage helps
+
 
 \subsection{Caching}
 
