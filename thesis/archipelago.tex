@@ -1,0 +1,120 @@
+\chapter{Archipelago}\label{ch:theory}
+
+In this chapter we introduce the all-mighty Archipelago. Pray ye of little 
+faith, for the savior has come, and it has come buckets (cached buckets)
+
+\section{Introduction of Archipelago}
+
+Archipelago consists of the following:
+
+1. XSEG
+2.
+3.
+
+\section{XSEG}
+
+XSEG is the segment on which the IPC...
+
+There are some XSEG stuff such as:
+
+1. Drivers
+2. Libraries
+3. Xtypes
+4. Peers
+
+\subsection{Drivers}
+
+\subsection{Libraries}
+
+\subsection{Xtypes}\label{sec:arch-xtypes}
+
+The rationale behind xtypes is:
+
+\begin{itemize}
+	\item Abstraction(?) layers: Creating inner abstractions layers for 
+		software is not a new concept but it's very easy to miss, 
+		especially when you start small and end up big.
+		
+		In a nutshell, when writing code for a new software (in our case 
+		a peer for Archipelago but this can apply to most software that 
+		surpass the 1000 LOC\footnote[1]
+		{Lines Of Code}
+		mark) it is wrong practice to create from scratch a monolithic 
+		implementation with indistinguishable parts. There is a main 
+		reason for this:
+		
+		Monolithic implementations usually derive from lack of code 
+		architecture and planning. Although it is feasible for a 
+		programmer to create fully-functional code that meets the 
+		necessary requirements, albeit with a lot more effort and 
+		concentration, this approach will backfire when the programmer 
+		needs to add new features. Since there is no explicit code 
+		architecture and the fragile inner correlations are between 
+		lines of code and not separate entities, stored precariously in 
+		the developer's mind, the result will eventually be constant 
+		code refactorization.
+		
+		One might think that new features happen once in a while in the 
+		development cycle but that would be wrong.  This happens more 
+		often than you might think and is actually the common case in 
+		iteration and test-driven development.
+
+		The right practice instead is to...
+	\item Re-usability:...
+	\item User-space / Kernel-space agnosticity: (I doubt that such a word 
+		even exists...)
+\end{itemize}	
+
+\subsection{Peers}\label{sec:arch-peer}
+
+Peers are Archipelago components that are responsible for accepting, processing 
+and sending of the I/O requests. They are essential for the modular nature of 
+Archipelago since each of them can be considered as a separate entity. They do 
+their own logging, signal handling and processing.
+
+The main Archipelago peers can be seen in Figure ?. As we can see from this 
+figure, peers are processes that are attached to an XSEG segment. In the 
+previous chaptr, we have mentioned that XSEG segments facilitate the IPC between 
+different Archipelago components by offering a shared space where process can 
+read and write to very fast. This however barely scratches the surface of IPC in 
+Archipelago. In the following section, we will discuss more in-length the 
+details behind Archipelago IPC
+
+\subsection{Archipelago IPC}\label{sec:arch-ipc}
+
+Fist of all, we must clarify that in Archipelago, IPC is done strictly between 
+peers in the \textbf{same} memory segment. The reason is that we have crafted 
+our own methods for IPC and the processes that need it must attain to a certain 
+architecture, which is the peer architecture.
+
+The entrance point for IPC is the peer port. When a peer is registered in the 
+segment, it attaches itself to a port range. Peer ports are completely different 
+to common ports (which are these ports?). When a peer wants to send a request to 
+another peer, it must first "get" the registered port on the segment. The xseg 
+port is a structure that holds the necessary information as to where to send the 
+request. Every port has three different queues; reply, request, free queue.
+
+Request queues are typically a stack that can be addressed from different peers 
+in the same segment. For this reason, they are designed as xtypes. For speed 
+resons, they are pre-allocated to a certain length and re-allocated on-line, if 
+there is need
+
+Also, ports are designed to be considered as paths. That is, when a request is 
+sent from one port to another...
+
+\section{Request flow example}
+
+We have bench xseg which works like so:
+
+\begin{enumerate}
+	\item Get request
+	\item Prepare request
+	\item Create chunk
+	\item Allocate peer request
+	\item Set request (xhash)
+	\item Submit request
+\end{enumerate}
+
+\subsection{Get request}\label{sec:get-req-archip}
+
+Explain here about xq or in xtypes?
