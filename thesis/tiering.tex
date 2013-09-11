@@ -9,7 +9,7 @@ storage and we evaluate if they can be used in conjunction with Archipelago.
 \section{What is scalability?}
 
 Scalability is a term that has different meaning for different contexts. For 
-example, good scalablity in multi-threading context can mean that the program's 
+example, scalability in multi-threading context can mean that the program's 
 performance increases linearly with the number of threads.
 
 We approach this subject from the storage service's perspective, which is an 
@@ -17,19 +17,56 @@ integral part of a cloud service. In this context, scalability means the
 ability of the storage service to handle the increase of I/O requests in a way 
 that each independent user does not experience any latency.
 
+There are two methods of scaling, horizontal (scaling out) and vertical 
+(scaling up).
+
+The horizontal scaling method applies to distributed services.  It relies on 
+the principle that adding more nodes to a system will mitigate the high load of 
+the other nodes.
+
+The vertical scaling method applies to all types of systems and refers to the 
+addition of more resources such as better hardware, more RAM etc. to a node of 
+the system.
+
+The rule of thumb about these methods is that scaling up is the simpler way to 
+go, albeit its performance cannot be increased much due to hardware 
+limitations.  On the other hand, scaling out is far more complex and requires a 
+robust method of managing many nodes as well as their failures, but it may have 
+lower costs (if nodes are made of commodity hardware), and has theoretically no 
+limitations in performance gain (especially in share-nothing architectures).
+
 \section{What is tiering?}
 
 Tiering is the organization of different storage types in levels (or tiers) 
-depending on their performance.  The storage types usually differ in one of the 
-following attributes: capacity, price or performance.  Tiered storage is 
-analogous to the computer architecture model of memory hierarchy, which can be 
-seen in Figure \ref{fig:mem-hier.pdf}.
+depending on their performance.  These storage types usually differ in one of 
+the following attributes: capacity, price or performance.  Tiers such as SSD 
+arrays or caches are necessary in most medium or larger deployments, in order 
+to bridge the performance gap between RAM and magnetic disks, which can be seen 
+in Table \ref{tab:gap}. To understand the need for tiering, consider the fact 
+that when data do not reside in RAM and SSDs are not used, the performance 
+penalty is x10,000 times the access time of RAM.
+
+\begin{table}
+	\centering
+	\begin{tabular}{ | l | l | }
+		\hline
+		Medium & Access time (ns) \\ \hline \hline
+		CPU registers and cache & < 10 \\ \hline
+		RAM & < 10\textsuperscript{2}  \\ \hline
+		SSD & < 10\textsuperscript{5} \\ \hline
+		Hard Disk & < 10\textsuperscript{7} \\ \hline
+	\end{tabular}
+	\caption{Access times of storage mediums}
+	\label{tab:gap}
+\end{table}
+
+Tiered storage is analogous to the computer architecture model of memory 
+hierarchy, which can be seen in Figure \ref{fig:mem-hier.pdf}. Tiered storage 
+is based on the same principles as memory hierarchy, in the sense that its 
+objective is to keep "hot" data, i.e. data that are requested frequently, in 
+the higher tiers.
 
 \diagram{Computer Memory Hierarchy}{mem-hier.pdf}
-
-Tiered storage is based on the same principles as memory hierarchy, in the 
-sense that its objective is to keep data in the higher tiers, based on their 
-frequency of reference.
 
 \section{What is caching?}
 
@@ -41,7 +78,7 @@ slower medium.
 
 Caching is extensively used in computer architecture, as is evident from Figure 
 \ref{fig:mem-hier.pdf}. Besides the memory hierarchy model, it is a widely 
-employed concept in storage services where fast mediums are used as a journal 
+employed concept in storage services where fast mediums are used as journals 
 for slower ones, essentially caching the data, or where dedicated servers are 
 used to cache data, like in memcached's case (see more in Section 
 \ref{sec:memcached-triad}).
@@ -59,19 +96,17 @@ Do we even care?
 
 \subsection{Caching limitations}
 
-Given that fast mediums like RAM and SSD drives are always more expensive than 
-slower mediums, caches always have smaller capacity than the mediums they 
-cache. So, when a cache reaches its maximum capacity, it must evict one of its 
-entries. 
-
-And the big question arises: which entry?
+Fast mediums like RAM and SSD drives are always more expensive than slower 
+mediums, such as hard disks. Likewise, caches always have smaller capacity than 
+the mediums they cache. So, when a cache reaches its maximum capacity, it must 
+evict one of its entries. However, which entry is the one that must be evicted?
 
 This is a very old and well documented problem that still troubles the research 
 community. It was first faced when creating hardware caches (the L1, L2 CPU 
 caches we are familiar with). In 1966, Lazlo Belady proved that the best 
 strategy is to evict the entry that is going to be used more later on in the 
 future\cite{Belady}.  However, the clairvoyance needed for this strategy is a 
-little difficult to implement, so we use one of the following, well-known 
+little difficult to implement, so we resort to one of the following, well-known 
 strategies:
 
 % Mention ehcache approach: 
@@ -83,88 +118,73 @@ strategies:
 %no.2, pp.78-101, 1966.
 \begin{itemize}
 	\item \textbf{Random:} Evict a randomly chosen entry. This strategy, 
-		although it seems simplistic at first, is sometimes chosen due 
-		to the ease and speed of each. It is preferred in random 
-		workloads where getting fast free space for an entry is more 
-		important than the entry that will be evicted.
-	\item \textbf{FIFO (First-In-First-Out):} Evict the entry that was 
-		inserted first. This is also a very simplistic approach as well 
-		as easy and fast.  Interestingly, although it would seem to 
-		produce better results than Random eviction, it is rarely used 
-		though, since it assumes that cache entries are used only once, 
-		which is not common in real-life situations.
+		although it seems simplistic at first, is sometimes chosen due to the 
+		ease and speed of its implementation. It is preferred in random 
+		workloads where freeing quickly space for an entry is more important 
+		than the entry that will be evicted.
+	\item \textbf{FIFO (First-In-First-Out):} Evict the entry that was inserted 
+		first. This is also a very simplistic approach as well as easy and 
+		fast.  Interestingly, although it would seem to produce better results 
+		than Random eviction, it is rarely used since it assumes that cache 
+		entries are used only once, which is not common in real-life 
+		situations.
 	\item \textbf{LRU (Least-Recently-Used)}
-		Evict the entry that has
+		Evict the entry that has been less recently used. This is the most 
+		common eviction strategy and there has been a paper that uses a 
+		Bayesian statistic model to prove its optimality (\fixme add paper). It 
+		is not however simple to implement since there needs to be some sort of 
+		tracking of the time of reference for each entry.
 	\item \textbf{LFU (Least-Frequently-Used)}
+		Evict that entry that has been less frequently used. There have been 
+		many derivatives of this algorithm that also use parts of the LRU 
+		algorithm which have promising results, but this algorithm itself is
+		not commonly used. The reason is because it overestimates the frequency 
+		of references to an item and it performs poorly in cases when an item 
+		is frequently accessed and then is not used at all.
 \end{itemize}
 
-Choosing the LRU strategy is usually a no-brainer. Not only does it 
-\textit{seem} more optimal than the other algorithms, but it has also been 
-proven, using a Bayesian statistic model, that no other algorithm that tracks 
-the last K references to an entry can be more optimal.
 %Also, check out this paper:
 %An optimality proof of the LRU-K page replacement algorithm
 %that proves that no algorithm that keeps track of the K most recent references 
 %for a page can be more optimal than LRU.
 
-\section{Current situation}
-
-Caching is necessary in most medium or larger deployments, in order to bridge 
-the performance gap between RAM and magnetic disks, which can be seen in Table 
-\ref{tab:gap}
-
-\begin{table}
-	\centering
-	\begin{tabular}{ | l | l | }
-		\hline
-		Medium & Access time (ns) \\ \hline \hline
-		CPU registers and cache & < 10 \\ \hline
-		RAM & < 10\textsuperscript{2}  \\ \hline
-		SSD & < 10\textsuperscript{5} \\ \hline
-		Hard Disk & < 10\textsuperscript{7} \\ \hline
-	\end{tabular}
-	\caption{Access times of storage mediums}
-	\label{tab:gap}
-\end{table}
-
-For a computer which uses only hard-drives, it is easy to see that when data 
-are not in RAM, the performance penalty is x10,000.
+\section{Common use-case}
 
 Usually, when a small deployment makes its first steps, it doesn't use SSDs due 
-to management and hardware costs and since its an investment that is actually 
+to management/hardware costs and since its an investment that is actually 
 needed when the deployment has proved that it will attract traffic. Instead, 
 the most common setup is an array of RAID-protected commodity hard disks or 
 fast SAS drives.
 
-When the storage needs start to increase and more users use that service, the 
-OS caching system of the storage nodes will soon prove ineffective and the 
-randomness in the requested data will skyrocket the access times. Soon, the 
-infrastructure's access times will in the spectrum of many milliseconds.
+When the storage needs start to increase and more users use the service, the OS 
+caching system of the storage nodes will soon prove ineffective and the 
+randomness in the requested data will skyrocket the access times.
 
-At this point, the administrators are faced with the decision of buying or not 
-battery-backed array controllers with volatile storage on-board to improve 
-speeds but sooner or later, the quality of hardware will not be able to 
-mitigate the cost of cache misses.
+At this point, the administrators must take one (or more, if the budget allows 
+it) of the following decisions:
 
-This is the turning point of medium deployments and where tiered storage helps
+\begin{enumerate}
+	\item Add more storage nodes in order to lower the load on the existing 
+		ones (horizontal scaling).
+	\item Buy battery-backed array controllers with volatile memory on-board, 
+		to improve access times (vertical scaling).
+	\item Put time-critical storage operations, such as journaling, in higher 
+		tiers (tiering)
+	\item Add RAM or SSD caches in write-back mode that will ACK the requests 
+		before they reach the slower mediums (caching).
+\end{enumerate}
 
+The employment of one of the aforementioned techniques (scaling, tiering, 
+caching) is of paramount importance for the future of the service.
 
-\section{How to scale?}
+\section{Caching Solutions}
 
-There are two methods of scaling, horizontal (scaling out) and vertical 
-(scaling up). The horizontal scaling method requires that the service is a 
-distributed one, i.e. that there are more than one storage nodes and the 
-software can handle the addition 
+For the thesis purpose, we have evaluated a numerous of caching solutions. The 
+results of our evaluations are presented below:
 
+\subsection{Bcache}
 
-\subsection{Block-devices}
-
-There have been many block device tiers that have been built
-
-
-\subsubsection{Bcache}
-
-\paragraph{Overview}
+\subsubsection{Overview}
 
 Bcache has been designed by Kent Overstreet since 2011 and has been included in 
 the Linux kernel (3.10) since the May of 2013.
@@ -184,7 +204,7 @@ following characteristics:
 		collection.
 \end{enumerate}
 
-\paragraph{Installation}
+\subsubsection{Installation and usage}
 
 Bcache is a kernel driver that needs a patched kernel and intrusive changes to 
 the backing device, rendering previous data unreadable. On a nutshell, bcache 
@@ -194,7 +214,7 @@ formatted to any filesystem.  This virtual device's request function actually
 points to the cache device and, when the cache device has reached its full 
 utilization, it will flush dirty data to the backing device.
 
-\paragraph{Features and Limitations}
+\subsubsection{Features and limitations}
 
 The most striking bcache feature is that it uses a custom built B+tree as an 
 index, which has the added benefit that dirty data can be coalesced and flushed 
@@ -213,26 +233,26 @@ bcache are the following:
 		device, since this workload is tailored for spinning disks.
 \end{enumerate}
 
-\subsubsection{Flashcache}
+\subsection{Flashcache}
 
-\paragraph{Overview}
+\subsubsection{Overview}
 
 Flashcache has been designed by Facebook and has been open-sourced in the April 
 of 2010. It is a kernel module that is officially supported for kernels between  
 2.6.18 and 2.6.38 and is based on the Linux Device Mapper, which is used to map 
 a block device onto another.
 
-\paragraph{Installation}
+\subsubsection{Installation and Usage}
 
 Flashcache's installation is not system-intrusive, in the sense that it needs 
 only to compile the module against the kernel's source, modprobe it and then 
 map the cache device upon the backing device, without making any changes to the 
 latter.
 
-\paragraph{Features and Limitations}
+\subsubsection{Features and limitations}
 
 Flashcache uses a set-associative hash table for indexing. It has three modes 
-of operation, writethrough, writeback and writearound, and some basic 
+of operation, write-through, write-back and write-around, and some basic 
 performance tuning options such eviction strategies and dirty data threshold.  
 Also, it has the following limitations:
 
@@ -242,23 +262,23 @@ Also, it has the following limitations:
 	\item It does not support the TRΙΜ command.
 \end{enumerate}
 
-\subsubsection{EnhanceIO}
+\subsection{EnhanceIO}
 
-\paragraph{Overview}
+\subsubsection{Overview}
 
 EnhanceIO has been developed by STEC Corp. and has been open-sourced in the 
 December of 2012. It is a fork of Flashcache which does not use the Linux 
 Device Mapper and has some major re-writes in parts of the code such as the 
 write-back caching policy.
 
-\paragraph{Installation}
+\subsubsection{Installation and Usage}
 
 The installation method is similar to the Flashcache's method. The source code 
 is compiled again the kernel's source, which produces a module that can be 
 modprobed. After that, the utilities provided can be used to map the cache 
 device on the backing device.
 
-\paragraph{Features and Limitations}
+\subsubsection{Features and Limitations}
 
 Similarly to Flashcache, EnhanceIO uses a set-associative hash table for 
 indexing. It also has improvements upon the original Flashcache implementation 
@@ -269,13 +289,9 @@ in the following areas:
 	\item Dirty data flushing using background threads.
 \end{enumerate}
 
-\subsubsection{DM-cache}
+\subsection{Memcached}\label{sec:memcached-triad}
 
-\subsection{Key-value store}
-
-\subsubsection{Memcached}\label{sec:memcached-triad}
-
-\paragraph{Overview}
+\subsubsection{Overview}
 
 Memcached is a distributed memory caching system that is being widely employed 
 by large sites such as Youtube, Facebook, Twitter, Wikipedia. It has been 
@@ -299,7 +315,7 @@ later, memcached has become the defacto scale-out solution, and has use cases
 such as Facebook's whose dedicated memcached servers serve the 95\% of their 
 queries (\fixme add presentation)
 
-\paragraph{Installation/Usage}
+\subsubsection{Installation and usage}
 
 Memcached adheres to the client server model, with N clients connecting to M 
 servers. Memcached, which is a user space daemon, runs on every server and
@@ -314,7 +330,7 @@ languages such as C, PHP, Python, Haskell etc. The clients can then specify
 which queries - or keys in general - want to be cached and the actual caching 
 is done in runtime.
 
-\paragraph{Features/Limitations}
+\subsubsection{Features and limitations}
 
 Architecturally, memcached tries to do everything in O(1) time. Each memcached 
 server consists of a hash table that indexes the keys and their data. Since the 
@@ -347,32 +363,139 @@ hit rate is high. On the other hand, its unreliable nature means that it is not
 a general purpose software and only specific workloads will be benefited from 
 it.
 
-\subsection{NoSQL Databases}
+\subsection{Couchbase Server}
 
-\subsubsection{Couchbase}
+\subsubsection{Overview}
 
-\paragraph{Overview}
+Couchbase server, a NoSQL database which has been under active development by 
+Couchbase Inc.  since the January of 2012, is actually the product of the merge 
+of two independent projects, CouchDB and Memebase, with CouchDB continuing as 
+an Apache funded program.  Couchbase aims to combine the scalability of 
+memcached with the persistence of a database such as CouchDB. 
 
-Couchbase, which has been under active development since the January of 2012, 
-is actually the product of the merge of two independent projects, CouchDB and 
-Memebase, with CouchDB continuing as an Apache funded program. Couchbase aims 
-to combine the scalability of memcached with the persistence of a database such 
-as CouchDB. 
+\subsubsection{Installation and usage}
 
-\paragraph{Installation/Usage}
+Couchbase provides two versions, a community edition, that lacks the latest bug 
+fixes, and an enterprise edition. The community edition has an open-source 
+license and can be installed easily in all major distributions from the 
+official packages.
 
-Moreover, it tries to add some more features such as replication
-to be alive as a projects.
+Once Couchbase Server has been installed, it can be configured through a 
+dedicated web console or the command-line or the REST API. Its configuration 
+has to do with the amount of RAM it will use and most importantly the cluster 
+that it will join. Clusters are a deviation from the classic memcached 
+architecture. They are logical groups of servers (or nodes) that are used for 
+replication and failover reasons.
+
+Like memcached, the communication with the servers is done through client 
+libraries. These libraries are written for many different programming languages 
+such as C, Python, Java, PHP, Ruby etc.
+
+\subsubsection{Features and Limitations}
+
+Couchbase Server adds the following important features to memcached feature 
+list:
+
+\begin{enumerate}
+	\item It can provide persistence for the data.
+	\item It uses data replication, which is one of the persistence guarantees.  
+	\item It re-balances the data on resizes, so that they are evenly 
+		distributed across the database.
+\end{enumerate}
 
 \subsection{Honorary mentions}
 
 \subsubsection{Repcached}
 
+Repcached is a memcached 1.2 fork that aims to provide asynchronous data 
+replication. It didn't catch up however for the following reasons:
+
+\begin{enumerate}
+	\item The added data replica merely slims the margins of losing the data 
+		but not erases them.
+	\item It is based in memcached 1.2, which has been released four years ago.  
+		Since then, there have been numerous performance improvements.
+	\item The synchronization cost of replication was high.
+\end{enumerate}
+
 \subsubsection{Ramcloud}
 
-\subsection{Summary}
+RAMCloud (\fixme add paper) is a project that is being directed by John 
+Ousterhout at Stanford University. RAMCloud is not a caching system per se, but 
+a storage system that uses RAM as its primary storage and hard disks for 
+failover scenarions. To be able to stay persistent even after a node crashes, 
+it also maintains data replicas and requires Infiband connection between nodes 
+to migrate the data quickly to other nodes.
+
+RAMCloud states that it, or a system with similar design, will be the primary 
+storage system of services such as AWS or Microsoft's Azure. For the time 
+being, RAMCloud is under heavy development and its requirements are way of the 
+budget of most deployment.
 
 
+\subsection{Evaluation}
 
+The above solutions fall into two broad categories; block store and key-value 
+store. Both of these categories can be used in Archipelago, since there are 
+peers that use block store semantics, e.g.  when xsegbd receives a request, and 
+peers that use key-value store semantics, e.g.  when vlmc has translated a 
+block request to object request.
 
+We will start our evaluation with the block store methodologies first. These 
+methods have in common that they are kernel modules which cache requests that 
+are targeted to a single (or more) slow block device. So, we can use them in 
+this way:
 
+\begin{enumerate}
+	\item Add SSDs to the host machine where the VMs are running.
+	\item Partition the SSDs so that there is one partition for each volume 
+		that is running in this host.
+	\item Install the kernel module and when a VM is created, run the necessary 
+		commands to map a partition of the SSD to the virtual block device of 
+		the VM.
+	\item Use the block device that the kernel module exposes and pass it to 
+		the hypervisor.
+\end{enumerate}
+
+The main issue with this approach (and host caching in general) is this. When 
+the host crashes, Ganeti attempts to restart the VM in another host. This is 
+possible since the instance's attributes are known by Ganeti and its storage is 
+either in DRBD slave or in RADOS. However, if we cache in writeback mode, the 
+VM will not be able to start or worse, it will be in inconsistent state with 
+whatever implications this may have.
+
+Even if we ignored the above, there other issues too, such as:
+
+\begin{enumerate}
+	\item If a user process segfaults, it can be restarted promptly, without 
+		interrupting the rest of the VMs. If however the kernel segfaults, the 
+		host will go down.
+	\item Flashcache has page tearing issues, which we want to avoid.
+	\item Bcache is for newer kernels and to date it still has some bugs.
+	\item Having a fixed partition for each volume does not scale, since for 
+		each VM with high activity, there can be 10 other stale VMs that 
+		practically eat up cache space.
+\end{enumerate}
+
+We will continue with the second category, the key-value store solutions. The 
+programs that fall in this category have two important advantages:
+
+\begin{enumerate}
+	\item They are distributed by nature and try to eliminate any SPOF
+		\footnote{Single Point of Failure}, in the same way that RADOS does.
+	\item They can utilize the extra RAM of a node, which is plenty in the 
+		RADOS nodes.
+\end{enumerate}
+
+However, there are also some fundamental problems with them:
+
+\begin{enumerate}
+	\item Memcached has no concept of persistence. Not only that, it basically 
+		relies on the fact that has no persistence that hacking our way through 
+		that issue would create a different software.
+	\item Couchbase Server has no way to use RADOS as its backing device and 
+		has its own concept of replication.
+\end{enumerate}
+
+For this reason, we have decided to roll out our own implementation, which is 
+presented in the following chapter.
