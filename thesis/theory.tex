@@ -1,6 +1,24 @@
 \chapter{Necessary theoretical background}\label{ch:theory}
 
-\section{Necessary theoretical background}
+In this typically boring section, we will explain the basic system facilities 
+and programming concepts that are used by our implementation and Archipelago in 
+general. More specifically, in Section ?...
+
+\subsection{Interprocess Communication - IPC}
+
+Interprocess Communication is a concept that predates the SMP
+\footnote{Symmetric multiprocessing}
+systems that we all use nowadays and is a set of methods that an OS uses to 
+allow processes to communicate with each other. Although most applications are 
+independent from each other. %page 37
+
+Below we can see some IPC methods:
+
+\begin{enumerate}
+	\item mmap()
+	\item Semaphores
+	\item Sockets
+\end{enumerate}
 
 \subsection{Multi-threaded programming}
 
@@ -26,16 +44,6 @@ Three concepts for locking:
 	\item Lock overhead
 	\item Lock contention
 	\item Deadlocking
-\end{enumerate}
-
-\subsection{Typical IPC}
-
-Below we can see some IPC methods:
-
-\begin{enumerate}
-	\item mmap()
-	\item Semaphores
-	\item Sockets
 \end{enumerate}
 
 \section{Archipelago}
