@@ -6,12 +6,12 @@ faith, for the savior has come, and it has come buckets (cached buckets)
 \section{Overview}
 
 Archipelago is the Volume Service of the Synnefo cloud software. It is 
-responsible for creating Copy-on-Write, snapshotable volumes for VMs.  
+responsible for creating Copy-on-Write, snapshottable volumes for VMs.  
 Archipelago can be considered as a storage layer (see Figure 
-\ref{fig:archipelago-overview}) that is positioned between the VM's block 
+\ref{fig:archipelago_overview_a.pdf}) that is positioned between the VM's block 
 device, and the underlying storage.
 
-\diagram{Archipelago overview}{archipelago-overview.png}
+\diagram{Archipelago overview}{archipelago_overview_a.pdf}
 
 Archipelago has the following objectives:
 
@@ -20,15 +20,40 @@ Archipelago has the following objectives:
 	\item Snapshot VM volumes and use them as system images with, again, zero 
 		data movement.
 	\item Allow VM migrations between Archipelago nodes with no restrictions.
-	\item Be agnostic to the actual storage used
+	\item Be agnostic to the actual storage used.
 \end{itemize}
 	
+In Figure \ref{fig:new_sxima.pdf}, we present the components of Archipelago.  
+These components, which are called peers in the Archipelago dialect, and their 
+functionalities are briefly explained below:
 
-Archipelago consists of the following components:
+\diagram{Archipelago components}{new_sxima.pdf}
 
-1. XSEG
-2.
-3.
+\begin{description}
+	\item[XSEG Block Device (xsegbd)]
+		xsegbd is a kernel module that exposes a block device.  This block 
+		device is the VM's volume, as far as Ganeti and KVM are concerned, and 
+		is the entry point to the Archipelago layer.
+	\item[VoLuMe Composer Daemon (vlmcd)]
+		vlmcd accepts requests from the various xsegbd devices and translates 
+		them to object requests.
+	\item[Mapper Daemon (mapperd)]
+		mapperd is responsible for the mapping of volumes to objects. This 
+		means that it must tackle a broad set of tasks such as knowing the 
+		objects that a volume consists of, cloning and snapshotting volumes and 
+		creating new ones
+	\item[File Blocker Daemon (blockerd)]
+		blockerd is not a specific entity but a family of drivers, each of 
+		which is written for a specific storage type. File blockers have a 
+		single purpose, to read/write objects from/to the storage. Currently, 
+		there are file blockers for NFS and the RADOS object storage.
+\end{description}
+	
+Besides the Archipelago peers, there is an important component that facilitates 
+the communication between them. This component is XSEG and is the core of 
+Archipelago. It provides a shared memory segment upon which peers can share 
+data using zero copy methods, as well as a custom communication method, common 
+for all peers and independent from their domain (userspace or kernelspace).
 
 \section{XSEG}
 
