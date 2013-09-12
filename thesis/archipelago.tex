@@ -3,9 +3,28 @@
 In this chapter we introduce the all-mighty Archipelago. Pray ye of little 
 faith, for the savior has come, and it has come buckets (cached buckets)
 
-\section{Introduction of Archipelago}
+\section{Overview}
 
-Archipelago consists of the following:
+Archipelago is the Volume Service of the Synnefo cloud software. It is 
+responsible for creating Copy-on-Write, snapshotable volumes for VMs.  
+Archipelago can be considered as a storage layer (see Figure 
+\ref{fig:archipelago-overview}) that is positioned between the VM's block 
+device, and the underlying storage.
+
+\diagram{Archipelago overview}{archipelago-overview.png}
+
+Archipelago has the following objectives:
+
+\begin{itemize}
+	\item Thinly provision volumes to VMs with zero data movement.
+	\item Snapshot VM volumes and use them as system images with, again, zero 
+		data movement.
+	\item Allow VM migrations between Archipelago nodes with no restrictions.
+	\item Be agnostic to the actual storage used
+\end{itemize}
+	
+
+Archipelago consists of the following components:
 
 1. XSEG
 2.

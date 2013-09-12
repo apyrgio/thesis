@@ -470,6 +470,10 @@ Even if we ignored the above, there other issues too, such as:
 	\item If a user process segfaults, it can be restarted promptly, without 
 		interrupting the rest of the VMs. If however the kernel segfaults, the 
 		host will go down.
+	\item Caching at xsegbd level does not take advantage of the fact that 
+		large parts of a VM's volume are shared between other volumes due to 
+		Copy-on-Write. This means there will be lost space in the SSD for data 
+		that are actually duplicate.
 	\item Flashcache has page tearing issues, which we want to avoid.
 	\item Bcache is for newer kernels and to date it still has some bugs.
 	\item Having a fixed partition for each volume does not scale, since for 
