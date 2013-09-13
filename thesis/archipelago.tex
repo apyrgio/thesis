@@ -58,16 +58,17 @@ for all peers and independent from their domain (userspace or kernelspace).
 \section{XSEG design}
 
 The shared memory segment provides, besides a common IPC, the following to the 
-peers that join it.
+peers that join it:
 
 \begin{enumerate}
 	\item A fast way to synchronize and/or have access to each other's data 
-		using relative pointers (XSEG pointers) to the start of the segment.
-	\item A custom memory allocation mechanism that returns to the processes 
-		data from the segment, taking into accout the memory fragmentation 
-		issues.
+		using relative pointers (XSEG pointers) to the start of the 
+		segment.
+	\item A custom memory allocation mechanism that allocates data from the 
+		segment, taking into account the memory fragmentation issues.
 	\item Structures such as hash tables and stacks, that can be used and 
 		accessed from different processes.
+	\item An indication for the memory that is used by Archipelago.
 \end{enumerate}
 
 To achieve the above, XSEG utilizes several components that fall under the 
@@ -75,18 +76,24 @@ following main categories:
 
 \begin{description}
 	\item[Drivers] \hfill \\
-		Drivers implement the common communication and memory allocation 
-		protocol for every peer type (userspace/kernelspace, 
+		Drivers implement the common communication and memory 
+		allocation protocol for every peer type (userspace/kernelspace, 
 		single-threaded/multi-threaded).
 	\item[Libraries] \hfill \\
-		Libraries are linked with peers and allow them to use xtypes (see 
-		below) as well as useful generic functions, such as logging.
-	\item[Xtypes]
-		Xtypes are data structures such as hash tables, queues, stacks whose 
-		data reside in the segment and can be used concurrently by all peers.
-	\item[Peers]
-		Peers, which have been discussed above, are the components that are 
-		responsible for accepting, processing and sending I/O requests.
+		Libraries (or libxseg to be exact) are linked with peers and 
+		allow them to use xtypes (see below) as well as useful generic 
+		functions, such as logging.
+	\item[Xtypes] \hfill \\
+		Xtypes are data structures such as hash tables, queues, stacks 
+		etc. whose data reside in the segment and can be used 
+		concurrently by all peers. In fact, it is a rule in Archipelago 
+		that if a structure must be accessed by more that one peers, it 
+		must be designed as an XSEG type that will provide zero-copy 
+		guarantees and integration with the segment.
+	\item[Peers] \hfill \\
+		Peers, which have been discussed above, are the components that 
+		are responsible for accepting, processing and sending I/O 
+		requests.
 \end{description}
 
 \begin{comment}
@@ -152,18 +159,56 @@ details behind Archipelago IPC
 
 \section{Archipelago IPC}\label{sec:arch-ipc}
 
-An important part of the shared segment that hasn't been discussed above and 
-was left intentionally until this section is the XSEG ports that reside one the 
-segment.
+An important part of the shared segment that was intentionally skipped in the 
+previous section is its ports.
 
-When XSEG is being initialized, it creates a number (defined by the 
-administrator) of custom ports. These ports are similar to the network ports in 
-the sense that peers bind them and listen for requests through them. Each port 
-has essentially two XSEG queues:
+When XSEG is being initialized, it reserves space in the segment for a number 
+of custom ports.  These ports are similar to network ports, in the sense that 
+peers bind them and can listen for requests through them. Each port has 
+essentially two queues:
 \begin{inparaenum}[i)]
-\item request queue
-\item reply queue
+\item a request queue, where new requests are accepted, and
+\item a reply queue, where replies to requests are received.
 \end{inparaenum}
+XSEG requests do not differ drastically from common requests and typically have 
+a target, offset, size and a buffer to store the data. Targets can either be 
+objects or volumes, depending on the peer context.
+
+Another important aspect of the Archipelago IPC, is the mechanism with which 
+peers poll for new requests, which is seen in the following section.
+
+\subsection{Polling}
+
+The polling process is the following:
+
+\begin{enumerate}
+	\item On peer initialization, the SIGIO signal is blocked and the PID 
+		of the peer is masked from other peers.
+	\item On the request loop, the peer checks its ports, without blocking
+		and for a limited amount of cycles.
+	\item On the last cycle, it unmasks its PID and check its ports one 
+		last time.
+	\item If there are no enqueued requests, it uses sigtimedwait to sleep 
+		for 10s. sigtimedwait is a function that allows to wait 
+		synchronously for pending signals, which is generally faster 
+		than invoking a signal handler.
+	\item If the 10s expire, the peer masks again its PID and goes to step 
+		2.
+\end{enumerate}
+
+\begin{comment}
+To understand what requests are in XSEG context, we present some parts of the 
+xseg\_request structure:
+
+\begin{description}
+	\item[source port:] The port from
+\end{description}
+
+in particular have basically the following structure:
+
+For instance, queues are  allocated in the segment, both queues and request are 
+custom-built entities for XSEG
+The interesting part of this process is
 
 
 Fist of all, we must clarify that in Archipelago, IPC is done strictly between 
@@ -202,3 +247,4 @@ We have bench xseg which works like so:
 \subsection{Get request}\label{sec:get-req-archip}
 
 Explain here about xq or in xtypes?
+\end{comment}
