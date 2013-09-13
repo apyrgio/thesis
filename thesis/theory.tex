@@ -79,12 +79,86 @@ described in in Section \ref{sec:poll-archip}.
 
 \subsection{Sockets}
 
-Explain them
+Socket are a bidirectional means of sending data between processes. The 
+processes can be in the same host but most commonly, they are in remote hosts 
+and the data are sent over the network. Furthermore, from all the IPC methods 
+that we have described above, sockets are the only method that enables remote 
+communication. 
 
+There are many socket implementations for different purposes, which are divided 
+in several communication domains, most of which are rather obscure. The three 
+communication domains, however, that are supported by most UNIX and UNIX-like 
+operating systems are:
 
-\subsection{Message queues}
+\begin{itemize}
+	\item \textit{IPv4} domain, which allows communication between 
+		processes over the Internet Protocol version 4 network.
+	\item \textit{IPv6} domain, which allows communication between 
+		processes over the Internet Protocol version 6 network.
+	\item \textit{UNIX} domain, which allows communication between 
+		processes in the same host
+\end{itemize}
 
-Not sure about it, check if it is the same with request queues
+The above three communication domains are further divided in two types, based 
+on the transport layer protocol that they use.
+
+\begin{itemize}
+	\item \textit{Stream sockets}, which use the Transmission Control 
+		Protocol (TCP) or Stream Control Transmission Protocol (SCTP),
+	\item \textit{Datagram sockets}, which use the User Datagram Protocol 
+		(UDP),
+\end{itemize}
+
+The TCP/UDP protocols are only one layer out of the four layers that the TCP/IP 
+protocol suite defines, and we will explain them in detail in the following 
+sections. Although a thorough explanation of the TCP/IP protocol is out of the 
+scope of this thesis and is not needed to understand the following sections, we 
+will mention some of its most important aspects for the sake of completeness.
+
+The TCP/IP protocol suite is the basis for the World Wide Internet and the most 
+used form of networking. It specifies all the stages of the data processing 
+that need to happen in various levels and entities, such as operating systems, 
+network cards, routers etc. in order to connect two machines over the network.  
+For this reason, the data that are sent are encapsulated in layers, which can 
+be seen in Figure \ref{fig:data-encapsulation.pdf}.
+
+\diagram{Data encapsulation for a UDP packet}{data-encapsulation.pdf}
+
+We now continue with an presentation of TCP and UDP protocols.
+
+\subsubsection{TCP}
+
+The Transmission Control Protocol is connection-oriented, i.e. it provides 
+unique connection between two sockets, and has the following key features:
+
+\begin{description}
+	\item[Reliability] The data will arrive to the receiver with no packet 
+		loss, or they will not arrive at all. In the latter case, the 
+		receiver may receive sparious packets but it will not 
+		acknowledge them until it has received all of them.
+	\item[Ordered transfer] The data will arrive in the same order that 
+		they were sent.
+	\item[Error-checking] The data are checksummed to allow the receiving 
+		end to check if there was any data corruption.
+	\item[Rate-limiting] When the receiver accepts packets with slower rate 
+		than the sender, the sender will adjust its rate to ensure 
+		packet delivery and less congestion.
+	\item[Byte-stream] The data that are sent do not have a boundary.
+\end{description}
+
+\subsubsection{TCP}
+
+The User Datagram Protocol on the other hand has far less restrictions than 
+TCP. First, it is connectionless, meaning that the socket can receive requests 
+from anyone. Second, it provides no guarantees about the delivery of the 
+messages. Third, the messages can arrive in other order than the one they were 
+sent. Fourth, there is no rate-limiting, meaning that the congestion control 
+must be handled in the application level. Finally, it sends datagrams instead 
+of bytes, which have definite boundaries.
+
+Although there might seem that there is no reason for one to choose the 
+unreliable UDP protocol, the lack of the TCP overhead makes it an ideal choice 
+for applications that value speed over packet loss.
 
 \subsection{Shared memory}
 
