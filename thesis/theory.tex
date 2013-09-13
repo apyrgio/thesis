@@ -17,19 +17,78 @@ The full list of Linux's IPC methods is presented below:
 \begin{itemize}
 	\item \textbf{Signals:} they are sent to a process to notify it that an 
 		event has occurred.
-	\item \textbf{Pipes:} one-way channel that transfers information from one 
-		process to the other.
+	\item \textbf{Pipes:} one-way channel that transfers information from 
+		one process to the other.
 	\item \textbf{Sockets:} bidirectional channels that can transfer 
-		information between two or more processes either locally or remotely 
-		through the network.
-	\item \textbf{Message queues:} asynchronous communication protocol that is 
-		used to exchange data packets between processes.
-	\item \textbf{Semaphores:} Special purpose pipes that are used mainly for 
-		process syncronization.
+		information between two or more processes either locally or 
+		remotely through the network.
+	\item \textbf{Message queues:} asynchronous communication protocol that 
+		is used to exchange data packets between processes.
+	\item \textbf{Semaphores:} Special purpose pipes that are used mainly 
+		for process synchronization.
 	\item \textbf{Shared memory:} a memory space that can be accessed and 
 		edited by more than one process.
 \end{itemize}
 
+We will concentrate on the following IPC methods:
+\begin{inparaenum}[i)]
+\item signals,
+\item sockets,
+\item message queues and
+\item shared memory,
+\end{inparaenum}
+since these are the methods that Archipelago and our implementation have used.
+
+\subsection{Signals}
+
+Signals are notifications that are sent to processes and can be considered as 
+software interrupts. The signals' purpose is to interrupt the execution of the 
+processes and inform it that an event has occurred.
+
+Given that there more than one events and exceptions that can occur in a 
+system, there are also various signals that correspond to each one of these
+events. For more information about the signals that Linux supports as well as 
+the conditions on which they are raised, the reader is prompted to consult the 
+man pages for signal(7) or read the POSIX.1-1990, SUSv2 and POSIX.1-2001 
+standards.
+  
+Moreover, the above standards dictate the standard behavior of a process when a 
+signal is received. The standard actions that a process can take fall roughly 
+in the following categories:
+
+\begin{enumerate}
+	\item ignore the signal,
+	\item pause its execution,
+	\item restart its execution or
+	\item stop its execution and/or dump its core
+\end{enumerate}
+
+However, a process is not limited to this set of actions. It can instead do one 
+of the following things, regardless of the signal that has been raised and its 
+severity:
+
+\begin{itemize}
+	\item ignore the signal
+	\item install a custom signal handler function, which essentially 
+		passes the signal handling task to the process.
+\end{itemize}
+
+Finally, the process can block the signal, by setting the SIG\_BLOCK flag for 
+this signal in the process's signal mask. This is used in Archipelago and is 
+described in in Section \ref{sec:poll-archip}.
+
+\subsection{Sockets}
+
+Explain them
+
+
+\subsection{Message queues}
+
+Not sure about it, check if it is the same with request queues
+
+\subsection{Shared memory}
+
+Explain a mmap()s and say about relative pointers
 
 \section{Multi-threaded programming}
 
@@ -43,9 +102,7 @@ Multi-threading programming is good and is bad and here are some challenges:
 	\item Challenge 3
 \end{enumerate}
 
-\subsubsection{Concurrency control}
-
-\paragraph{Locking}
+\section{Concurrency control}
 
 % Taken from wikipedia
 
@@ -56,3 +113,11 @@ Three concepts for locking:
 	\item Lock contention
 	\item Deadlocking
 \end{enumerate}
+
+\section{Page cache}
+
+Maybe say how linux handles cachiong?
+
+\section{Networking}
+
+Explain TCP/UDP, sockets, polling
