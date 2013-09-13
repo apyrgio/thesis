@@ -30,19 +30,19 @@ functionalities are briefly explained below:
 \diagram{Archipelago components}{new_sxima.pdf}
 
 \begin{description}
-	\item[XSEG Block Device (xsegbd)]
+	\item[XSEG Block Device (xsegbd)] \hfill \\
 		xsegbd is a kernel module that exposes a block device.  This block 
 		device is the VM's volume, as far as Ganeti and KVM are concerned, and 
 		is the entry point to the Archipelago layer.
-	\item[VoLuMe Composer Daemon (vlmcd)]
+	\item[VoLuMe Composer Daemon (vlmcd)] \hfill \\
 		vlmcd accepts requests from the various xsegbd devices and translates 
 		them to object requests.
-	\item[Mapper Daemon (mapperd)]
+	\item[Mapper Daemon (mapperd)] \hfill \\
 		mapperd is responsible for the mapping of volumes to objects. This 
 		means that it must tackle a broad set of tasks such as knowing the 
 		objects that a volume consists of, cloning and snapshotting volumes and 
 		creating new ones
-	\item[File Blocker Daemon (blockerd)]
+	\item[File Blocker Daemon (blockerd)] \hfill \\
 		blockerd is not a specific entity but a family of drivers, each of 
 		which is written for a specific storage type. File blockers have a 
 		single purpose, to read/write objects from/to the storage. Currently, 
@@ -55,17 +55,41 @@ Archipelago. It provides a shared memory segment upon which peers can share
 data using zero copy methods, as well as a custom communication method, common 
 for all peers and independent from their domain (userspace or kernelspace).
 
-\section{XSEG}
+\section{XSEG design}
 
-XSEG is the segment on which the IPC...
+The shared memory segment provides, besides a common IPC, the following to the 
+peers that join it.
 
-There are some XSEG stuff such as:
+\begin{enumerate}
+	\item A fast way to synchronize and/or have access to each other's data 
+		using relative pointers (XSEG pointers) to the start of the segment.
+	\item A custom memory allocation mechanism that returns to the processes 
+		data from the segment, taking into accout the memory fragmentation 
+		issues.
+	\item Structures such as hash tables and stacks, that can be used and 
+		accessed from different processes.
+\end{enumerate}
 
-1. Drivers
-2. Libraries
-3. Xtypes
-4. Peers
+To achieve the above, XSEG utilizes several components that fall under the 
+following main categories:
 
+\begin{description}
+	\item[Drivers] \hfill \\
+		Drivers implement the common communication and memory allocation 
+		protocol for every peer type (userspace/kernelspace, 
+		single-threaded/multi-threaded).
+	\item[Libraries] \hfill \\
+		Libraries are linked with peers and allow them to use xtypes (see 
+		below) as well as useful generic functions, such as logging.
+	\item[Xtypes]
+		Xtypes are data structures such as hash tables, queues, stacks whose 
+		data reside in the segment and can be used concurrently by all peers.
+	\item[Peers]
+		Peers, which have been discussed above, are the components that are 
+		responsible for accepting, processing and sending I/O requests.
+\end{description}
+
+\begin{comment}
 \subsection{Drivers}
 
 \subsection{Libraries}
@@ -124,7 +148,23 @@ read and write to very fast. This however barely scratches the surface of IPC in
 Archipelago. In the following section, we will discuss more in-length the 
 details behind Archipelago IPC
 
-\subsection{Archipelago IPC}\label{sec:arch-ipc}
+\end{comment}
+
+\section{Archipelago IPC}\label{sec:arch-ipc}
+
+An important part of the shared segment that hasn't been discussed above and 
+was left intentionally until this section is the XSEG ports that reside one the 
+segment.
+
+When XSEG is being initialized, it creates a number (defined by the 
+administrator) of custom ports. These ports are similar to the network ports in 
+the sense that peers bind them and listen for requests through them. Each port 
+has essentially two XSEG queues:
+\begin{inparaenum}[i)]
+\item request queue
+\item reply queue
+\end{inparaenum}
+
 
 Fist of all, we must clarify that in Archipelago, IPC is done strictly between 
 peers in the \textbf{same} memory segment. The reason is that we have crafted 
