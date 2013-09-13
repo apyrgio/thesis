@@ -162,7 +162,40 @@ for applications that value speed over packet loss.
 
 \subsection{Shared memory}
 
-Explain a mmap()s and say about relative pointers
+When two or more processes share the same memory segment, they can exchange 
+data by placing it in a region of the segment. The data then becomes instantly 
+visible to the other processes too, since their page-table entries for this 
+segment point to the same RAM pages.
+
+The way shared memory is created is analogous to a disk file creation:
+
+\begin{enumerate}
+	\item The process uses \texttt{shm\_open()}, instead of a regular 
+		\texttt{open()}, in order to create a new file in /dev/shm or 
+		open an existing one.
+	\item Then, in both cases, it can use \texttt{ftruncate()}, which 
+		resizes the file to the desirable size.
+\end{enumerate}
+
+At this point, the process is allowed to seek into the file and write to it. In 
+the shared memory case however, it can also use \texttt{mmap()}, to map this 
+file to its address space. There are two types on mapping:
+
+\begin{itemize}
+	\item \textit{Private mapping}, in which case the mapping contents will 
+		not be visible to other processes that have mapped the same 
+		file and
+	\item \textit{Shared mapping}, in which case the mapping contents will 
+		be visible to all processes that map this file and changes to 
+		the mapping will be propagated to the file.
+\end{itemize}
+
+Finally, an issue with mappings is that the start of the shared memory is not 
+always mapped in the same virtual address for all processes. For this reason, 
+when processes want to share data, they should not pass direct pointers to the 
+data, but relative pointers (i.e. offset) from the start of the segment, which 
+is common for all processes and they can translate it to the correct direct 
+pointers.
 
 \section{Multi-threaded programming}
 
