@@ -333,8 +333,8 @@ Each cache entry has a volatile uint64\_t field which is atomically get and
 put. The type is volatile to inform the compiler that it might be changed by an 
 external process and therefore not cache it.
 
-Furthermore, the atomic gets and puts are executed using the GCC builtins which 
-are shown in Listing \ref{lst:xcache-atomic.c}.
+Furthermore, the atomic gets and puts are executed using the GCC 
+builtins\cite{gcc-atomic} which are shown in Listing \ref{lst:xcache-atomic.c}.
 
 \ccode{Atomic operations of GCC}{xcache-atomic.c}
 

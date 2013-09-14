@@ -4,13 +4,43 @@ In this typically boring section, we will explain the basic system facilities
 and programming concepts that are used by our implementation and Archipelago in 
 general. More specifically, in Section ?...
 
+\section{Multithreading}
+
+Mutlithreading is a programming concept that has been the subject of research 
+long before the emerge of SMP
+\footnote{Symmetric multiprocessing}
+systems. More specifically, temporal multithreading has been introduced in the 
+1950s whereas Simultaneous Multithreading (SMT), which is the current 
+invocation of multithreading, was first researched by IBM in 1968\cite{mt}.
+
+Threads and process, which are involved in multitasking, have some fundamental 
+differences:
+
+\begin{itemize}
+	\item Threads are always parts of a process, whereas processes are 
+		independent from each other and may only have a parent-child connection 
+		between them.
+	\item Forked processes have their own address space and resources, which 
+		are inherited with CoW semantics. Threads, on the other hand, usually 
+		share the same memory and resources with the other threads in the same 
+		process.
+	\item
+	
+\end{itemize}
+
+
+\begin{enumerate}
+	\item Concurrency control
+	\item Challenge 2
+	\item Challenge 3
+\end{enumerate}
+
 \section{Interprocess Communication - IPC}
 
-Interprocess Communication is a concept that predates the SMP
-\footnote{Symmetric multiprocessing}
-systems that we all use nowadays. It is a set of methods that an OS uses to 
-allow processes and threads to communicate with each other. Archipelago for 
-example, uses extensively IPC methods to synchronize its different components.
+Interprocess Communication is a concept that predates the SMP systems that we 
+all use nowadays. It is a set of methods that an OS uses to allow processes and 
+threads to communicate with each other. Archipelago for example, uses 
+extensively IPC methods to synchronize its different components.
 
 The full list of Linux's IPC methods is presented below:
 
@@ -146,7 +176,7 @@ unique connection between two sockets, and has the following key features:
 	\item[Byte-stream] The data that are sent do not have a boundary.
 \end{description}
 
-\subsubsection{TCP}
+\subsubsection{UDP}
 
 The User Datagram Protocol on the other hand has far less restrictions than 
 TCP. First, it is connectionless, meaning that the socket can receive requests 
@@ -192,22 +222,10 @@ file to its address space. There are two types on mapping:
 
 Finally, an issue with mappings is that the start of the shared memory is not 
 always mapped in the same virtual address for all processes. For this reason, 
-when processes want to share data, they should not pass direct pointers to the 
-data, but relative pointers (i.e. offset) from the start of the segment, which 
-is common for all processes and they can translate it to the correct direct 
+when processes want to share data, they should not pass direct pointers to 
+them, but relative pointers (i.e. offsets) from the start of the segment, which 
+are common for all processes and can be translated to the correct direct 
 pointers.
-
-\section{Multi-threaded programming}
-
-% http://accu.org/index.php/journals/1634
-
-Multi-threading programming is good and is bad and here are some challenges:
-
-\begin{enumerate}
-	\item Concurrency control
-	\item Challenge 2
-	\item Challenge 3
-\end{enumerate}
 
 \section{Concurrency control}
 
