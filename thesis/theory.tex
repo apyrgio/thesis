@@ -262,19 +262,63 @@ pointers.
 
 \section{Concurrency control\label{sec:conc-theory}}
 
-% Taken from wikipedia
+Concurrency control is the set of methods that a program uses to ensure that 
+concurrent accesses to the same data will leave them in a consistent state.
 
-Three concepts for locking:
+There are several techniques that are used for concurrency control and are 
+listed below:
 
-\begin{enumerate}
-	\item Lock overhead
-	\item Lock contention
-	\item Deadlocking
-\end{enumerate}
+\begin{itemize}
+	\item \textit{Spinlocks}, which are locks that protect a critical segment.  
+		Typically, a thread acquires a lock at the start of the critical 
+		segment and releases it at the end of it. Threads that are waiting for 
+		the lock essentially "spin", i.e. they busy-loop until the lock is 
+		released.
+	\item \textit{Mutexes}, which are locks that protect a critical segment in 
+		the same fashion as spinlocks. Their difference from spinlocks, however 
+		is that if a thread cannot get the lock, it will block instead of 
+		busy-loop.
+	\item \textit{Semaphores}, which are also an IPC method. In concurrency 
+		control context, they are pipes that restrict the number of 
+		simultaneous accesses to a resource or a critical segment. When the 
+		number of times is one (1), they essentially degenerate to mutexes, 
+		with the main difference that they can also be used by processes,
+		besides threads.
+	\item \textit{Atomic operations}, which are hardware-assisted operations 
+		whose purpose is to atomically update a value as fast as possible and 
+		atomically. The atomicity is usually achieved with implicit hardware 
+		locks on the bus or cache-line. Atomic operations come in many flavors 
+		such as "add-and-fetch", "compare-and-swap" etc.
+\end{itemize}
 
-\section{Page cache}
+Concurrency control - and locking in particular - have three important caveats 
+that the programmer needs to know before he/she decides on the techniques that 
+will be used:
 
-Maybe say how linux handles cachiong?
+\begin{description}
+	\item[Lock overhead]
+		Lock overhead is the overhead that the locking mechanism introduces.  
+		For example, semaphores are a mechanism with big overhead, since they 
+		must be read and written to using system calls. If the critical segment 
+		they protect is simply the update of a variable, then the programmer is 
+		probably better off using a spinlock or atomic operations.
+	\item[Lock contention]
+		Lock contention can be considered as the "design overhead" of 
+		concurrency control, and has to do with the coarseness of the lock.  
+		There is contention for a lock when it is requested by many threads, to 
+		the point that the waiting time is longer than the execution time.
+		This has a big performance impact to implementation, which usually 
+		needs to be redesigned in order to break such locks into smaller ones.
+	\item[Deadlocks]
+		Deadlock is a situation in a multi-lock scenario where each process in 
+		a group of processes needs to acquire a lock which is held by another 
+		process in the same group. Since no process can continue, the operation 
+		of the group is essentially stalled.
+		As a rule of thumb, the circular dependency of the locks can break if 
+		the locks are acquired in a predefined order. This however is only 
+		possible in less complex scenarios and in general, a more well-though 
+		design is required.
+\end{description}
 
 \section{Networking}
 
