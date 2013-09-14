@@ -7,35 +7,68 @@ general. More specifically, in Section ?...
 \section{Multithreading}
 
 Mutlithreading is a programming concept that has been the subject of research 
-long before the emerge of SMP
-\footnote{Symmetric multiprocessing}
-systems. More specifically, temporal multithreading has been introduced in the 
-1950s whereas Simultaneous Multithreading (SMT), which is the current 
-invocation of multithreading, was first researched by IBM in 1968\cite{mt}.
+long before the emerge of SMP systems
+\footnote{Symmetric multiprocessing systems, commonly systems with multiple 
+	processors}
+. More specifically, temporal multithreading has been introduced in the 1950s 
+whereas Simultaneous Multithreading (SMT), which is the current invocation of 
+multithreading programming, was first researched by IBM in 1968\cite{mt}.
 
-Threads and process, which are involved in multitasking, have some fundamental 
-differences:
+Before threads, programs could take advantage of SMP systems using forked 
+processes that would communicate with each other. The introduction of threads 
+did not render this practice obsolete, but instead provided an alternative 
+technique to speed up applications.
+
+Threads and process also have some fundamental differences, which are shown in 
+the following list:
 
 \begin{itemize}
 	\item Threads are always parts of a process, whereas processes are 
 		independent from each other and may only have a parent-child connection 
 		between them.
 	\item Forked processes have their own address space and resources, which 
-		are inherited with CoW semantics. Threads, on the other hand, usually 
-		share the same memory and resources with the other threads in the same 
-		process.
-	\item
-	
+		are inherited by the parent process with CoW semantics.  Multiple 
+		threads, on the other hand, usually share the same memory and resources 
+		with the other threads in the same process.
 \end{itemize}
 
+From the above differences, we can see that there are no clear advantages of a 
+multithreaded approach over a multiprocess one. To better demonstrate our 
+point, we will present the advantages and disadvantages of multithreading 
+programming in the following lists:
 
-\begin{enumerate}
-	\item Concurrency control
-	\item Challenge 2
-	\item Challenge 3
-\end{enumerate}
+The advantages are:
 
-\section{Interprocess Communication - IPC}
+\begin{itemize}
+	\item Context switching is generally faster between threads, due to the 
+		fact that the TLB
+		\footnote{Translation Lookaside Buffer, a hardware cache that speeds up 
+			the translation of virtual addresses to physical RAΜ pages.}
+		cache does not need to be flushed
+	\item Sharing data between threads is easier, due to the fact that they use 
+		the same memory by default (however, this is also a disadvantage, as we 
+		will explain below)
+\end{itemize}
+
+Whereas the disadvantages are:
+
+\begin{itemize}
+	\item Processes are more isolated that threads, which means that there is 
+		no need to ensure that functions are thread-safe. Moreover, the whole 
+		process can come to a halt, when one of the threads encounters an 
+		error.
+	\item Processes can update their structures independently and then lazily 
+		inform the other processes about these changes. Threads on the other 
+		hand need to be careful and employ some form of costly concurrency 
+		control.
+\end{itemize}
+
+Regardless of the chosen method, at some point the programmer will have face 
+two of the biggest challenges of multithreading/multiprocess programming;
+interprocess communication, which is discussed in Section \ref{sec:ipc-theory}, 
+and concurrency control, which is discussed in Section \ref{sec:conc-theory}.
+
+\section{Interprocess Communication - IPC}\label{sec:ipc-theory}
 
 Interprocess Communication is a concept that predates the SMP systems that we 
 all use nowadays. It is a set of methods that an OS uses to allow processes and 
@@ -227,7 +260,7 @@ them, but relative pointers (i.e. offsets) from the start of the segment, which
 are common for all processes and can be translated to the correct direct 
 pointers.
 
-\section{Concurrency control}
+\section{Concurrency control\label{sec:conc-theory}}
 
 % Taken from wikipedia
 
