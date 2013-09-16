@@ -48,23 +48,22 @@ The advantages are:
 		to the fact that the TLB
 		\footnote{Translation Lookaside Buffer, a hardware cache that speeds up 
 			the translation of virtual addresses to physical RAΜ pages.}
-		cache does not need to be flushed.
-	\item Sharing data between threads is easier, due to the fact that they use 
-		the same memory by default (however, this is also a 
-		disadvantage, as we will explain below).
+		cache does not need to be flushed. The TLB cache misses are 
+		expensive and are avoided as much as possible\cite{tlb}.
+	\item Sharing data between threads is easier, due to the fact that they 
+		use the same memory by default.
 \end{itemize}
 
 Whereas the disadvantages are:
 
 \begin{itemize}
-	\item (\fixme Reword this) Processes are more isolated than threads, 
-		which means that we do not need to worry if our functions are 
-		thread-safe.  Moreover, the whole process can come to a halt, 
-		when one of the threads encounters an error.
-	\item Processes can update their structures independently and then lazily 
-		inform the other processes about these changes. Threads on the other 
-		hand need to be careful and employ some form of costly 
-		concurrency control when updating a shared structure.
+	\item Processes are more isolated than threads, which means they are 
+		guarded against two things:
+		\begin{inparaenum}[i)]
+		\item thread-unsafe functions and
+		\item data corruptions, which if they happen to one thread they 
+			bring the whole process to a halt.
+		\end{inparaenum}
 \end{itemize}
 
 Regardless of the chosen method, at some point the programmer will have face 
@@ -81,28 +80,27 @@ IPC methods to synchronize its different components.
 
 The full list of Linux's IPC methods is presented below:
 
-\fixme Change this list to italic
 \begin{itemize}
-	\item \textit{Signals,} they are sent to a process to notify it that an 
-		event has occurred.
-	\item \textit{Pipes:} one-way channel that transfers information from 
-		one process to another.
-	\item \textit{Sockets:} bidirectional channels that can transfer 
-		information between two or more processes either locally or 
-		remotely through the network.
-	\item \textit{Message queues:} asynchronous communication protocol that 
-		is used to exchange data packets between processes.
-	\item \textit{Semaphores:} Special purpose pipes that are used mainly 
-		for process synchronization.
-	\item \textit{Shared memory:} a memory space that can be accessed and 
-		edited by more than one process.
+	\item \textit{Signals,} which are sent to a process to notify it that 
+		an event has occurred.
+	\item \textit{Pipes,} which are a one-way channel that transfers 
+		information from one process to another.
+	\item \textit{Sockets,} which are bidirectional channels that can 
+		transfer information between two or more processes either 
+		locally or remotely through the network.
+	\item \textit{Message queues,} which is an asynchronous communication 
+		protocol that is used to exchange data packets between 
+		processes.
+	\item \textit{Semaphores,} which are abstract data types that are used 
+		mainly for controlling accesses on a same resource.
+	\item \textit{Shared memory,} which is a memory space that can be 
+		accessed and edited by more than one process.
 \end{itemize}
 
 We will concentrate on the following IPC methods:
 \begin{inparaenum}[i)]
 \item signals,
-\item sockets,
-\item message queues and
+\item sockets and
 \item shared memory,
 \end{inparaenum}
 since these are the methods that Archipelago and our implementation use.
@@ -127,32 +125,29 @@ in the following categories:
 \begin{itemize}
 	\item ignore the signal,
 	\item pause its execution,
-	\item restart its execution or
+	\item resume its execution or
 	\item stop its execution and/or dump its core
 \end{itemize}
 
-However, a process is not limited to this set of actions. It can instead do one 
-of the following things, regardless of the signal that has been raised and its 
-severity:
+Finally, a process is not limited to this set of actions. It can instead do one 
+of the following things for each signal, with the exception of SIGKILL and 
+SIGSTOP signals:
 
 \begin{itemize}
 	\item ignore the signal
+	\item block the signal, which is part of the Archipelago IPC and its 
+		usage is described in Section ?
 	\item install a custom signal handler function, which essentially 
 		passes the signal handling task to the process.
 \end{itemize}
 
-Finally, the process can block the signal, by setting the SIG\_BLOCK flag for 
-this signal in the process's signal mask. Signal blocking is part of the 
-Archipelago IPC and its usage is thoroughly described in Section 
-\ref{sec:poll-archip}.
-
 \subsection{Sockets}
 
-Socket are a bidirectional means of sending data between processes. The 
-processes can be in the same host but most commonly, they are in remote hosts 
-and the data are sent over the network. Furthermore, from all the IPC methods 
-that we have described above, sockets are the only method that enables remote 
-communication. 
+Sockets are a bidirectional means \fixme(is it means or mean ?) of sending data 
+between processes.  The processes can be in the same host but most commonly, 
+they are in remote hosts and the data are sent over the network. Furthermore, 
+from all the IPC methods that we have described above, sockets are the only 
+method that enables remote communication. 
 
 There are many socket implementations for different purposes, which are divided 
 in several communication domains, most of which are rather obscure. The three 
@@ -179,15 +174,14 @@ on the transport layer protocol that they use.
 \end{itemize}
 
 The TCP/UDP protocols are only one layer out of the four layers that the TCP/IP 
-protocol suite defines, and we will explain them in detail in the following 
+protocol stack defines, and we will explain them in detail in the following 
 sections. Although a thorough explanation of the TCP/IP protocol is out of the 
 scope of this thesis and is not needed to understand the following sections, we 
-will mention some of its most important aspects for the sake of completeness.  
-\fixme eithe explain its aspects or plainly explain what it is.
+will provide a brief explanation of it for the sake of completeness.  
 
-The TCP/IP protocol suite is the basis for the World Wide Internet and the most 
-used form of networking. It specifies all the stages of the data processing 
-that need to happen in various levels and entities, such as operating systems, 
+The TCP/IP protocol stack is the basis for the World Wide Web and the most used 
+form of networking. It specifies all the stages of the data processing that 
+need to happen in various levels and entities, such as operating systems, 
 network cards, routers etc. in order to connect two machines over the network.  
 For this reason, the data that are sent are encapsulated in layers, which can 
 be seen in Figure \ref{fig:data-encapsulation.pdf}.
@@ -236,21 +230,11 @@ for applications that value speed over packet loss.
 When two or more processes share the same memory segment, they can exchange 
 data by placing it in a region of the segment. The data then becomes instantly 
 visible to the other processes too, since their page-table entries for this 
-segment point to the same RAM pages.
+segment point to the same physical RAM pages.
 
-The way shared memory is created is analogous to a disk file creation:
-
-\begin{enumerate}
-	\item The process uses \texttt{shm\_open()}, instead of a regular 
-		\texttt{open()}, in order to create a new file in /dev/shm or 
-		open an existing one.
-	\item Then, in both cases, it can use \texttt{ftruncate()}, which 
-		resizes the file to the desirable size.
-\end{enumerate}
-
-At this point, the process is allowed to seek into the file and write to it. In 
-the shared memory case however, it can also use \texttt{mmap()}, to map this 
-file to its address space. There are two types on mapping:
+A popular way of mapping shared memory to a process's address space, which is 
+also used in Archipelago, is with POSIX \texttt{mmap()}. There are two mapping 
+types of mapping:
 
 \begin{itemize}
 	\item \textit{Private mapping}, in which case the mapping contents will 
@@ -258,7 +242,7 @@ file to its address space. There are two types on mapping:
 		file and
 	\item \textit{Shared mapping}, in which case the mapping contents will 
 		be visible to all processes that map this file and changes to 
-		the mapping will be propagated to the file.
+		the mapping will be propagated to the shared memory.
 \end{itemize}
 
 Finally, an issue with mappings is that the start of the shared memory is not 
@@ -287,16 +271,17 @@ listed below:
 		is that if a thread cannot get the lock, it will block instead of 
 		busy-loop.
 	\item \textit{Semaphores}, which are also an IPC method. In concurrency 
-		control context, they are pipes that restrict the number of 
-		simultaneous accesses to a resource or a critical segment. When the 
-		number of times is one (1), they essentially degenerate to mutexes, 
-		with the main difference that they can also be used by processes,
-		besides threads.
-	\item \textit{Atomic operations}, which are hardware-assisted operations 
-		whose purpose is to atomically update a value as fast as possible and 
-		atomically. The atomicity is usually achieved with implicit hardware 
-		locks on the bus or cache-line. Atomic operations come in many flavors 
-		such as "add-and-fetch", "compare-and-swap" etc.
+		control context, they are abstract data types that restrict the 
+		number of simultaneous accesses to a resource or a critical 
+		segment.  When the number of times is one (1), they essentially 
+		degenerate to mutexes, with the main difference that they have 
+		no concept of an owner.
+	\item \textit{Atomic operations}, which are hardware-assisted 
+		operations whose purpose is to atomically update a value as 
+		fast as possible. The atomicity is usually achieved with 
+		implicit hardware locks on the bus or cache-line.  Atomic 
+		operations come in many flavors such as "add-and-fetch", 
+		"compare-and-swap" etc.
 \end{itemize}
 
 Concurrency control - and locking in particular - have three important caveats 
@@ -312,14 +297,16 @@ will be used:
 		update of a variable, then the programmer is probably better 
 		off using a spinlock or atomic operations.
 	\item[Lock contention] \hfill \\
-		Lock contention can be considered as the "design overhead" of 
-		concurrency control, and has to do with the coarseness of the 
-		lock.  There is contention for a lock when it is requested by 
-		many threads, to the point that the waiting time is longer than 
-		the execution time.
-		This has a big performance impact to the implementation, which 
-		usually needs to be redesigned in order to break such locks 
-		into smaller ones.
+		Lock contention can be considered as the overhead of the 
+		coarseness of the lock. There is contention for a lock when it 
+		is requested by many threads, to the point that the waiting 
+		time is longer than the execution time.
+		This has a big performance impact to the implementation, since 
+		threads may consume their scheduled time spinning until they 
+		acquire a lock, or sleeping while they could do something more 
+		useful.
+		The solution to this problem is commonly to redesign the 
+		locking scheme in order to break such locks into smaller ones.
 	\item[Deadlocks] \hfill \\
 		Deadlock is a situation in a multi-lock scenario where each 
 		process in a group of processes needs to acquire a lock which 
