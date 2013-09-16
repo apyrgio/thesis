@@ -1,5 +1,8 @@
 \chapter{Necessary theoretical background}\label{ch:theory}
 
+\fixme Make this section about the concepts that will be discussed, as well as 
+point to the appropriate chapters.
+
 In this typically boring section, we will explain the basic system facilities 
 and programming concepts that are used by our implementation and Archipelago in 
 general. More specifically, in Section ?...
@@ -12,15 +15,16 @@ long before the emerge of SMP systems
 	processors}
 . More specifically, temporal multithreading has been introduced in the 1950s 
 whereas Simultaneous Multithreading (SMT), which is the current invocation of 
-multithreading programming, was first researched by IBM in 1968\cite{mt}.
+multithreading programming, was first researched by IBM in 1968\cite{mt}.i 
+\todo Add what is temporal mt and simultaneous mt
 
-Before threads, programs could take advantage of SMP systems using forked 
-processes that would communicate with each other. The introduction of threads 
-did not render this practice obsolete, but instead provided an alternative 
-technique to speed up applications.
+Before threads, programs could utilize the concurrency of SMP systems using 
+forked processes that would communicate with each other. The introduction of 
+threads did not render this practice obsolete, but instead provided an 
+alternative technique to speed up applications.
 
-Threads and process also have some fundamental differences, which are shown in 
-the following list:
+Threads and process have some fundamental differences, which are shown in the 
+following list:
 
 \begin{itemize}
 	\item Threads are always parts of a process, whereas processes are 
@@ -40,27 +44,27 @@ programming in the following lists:
 The advantages are:
 
 \begin{itemize}
-	\item Context switching is generally faster between threads, due to the 
-		fact that the TLB
+	\item Context switching is generally faster between threads, mostly due 
+		to the fact that the TLB
 		\footnote{Translation Lookaside Buffer, a hardware cache that speeds up 
 			the translation of virtual addresses to physical RAΜ pages.}
-		cache does not need to be flushed
+		cache does not need to be flushed.
 	\item Sharing data between threads is easier, due to the fact that they use 
-		the same memory by default (however, this is also a disadvantage, as we 
-		will explain below)
+		the same memory by default (however, this is also a 
+		disadvantage, as we will explain below).
 \end{itemize}
 
 Whereas the disadvantages are:
 
 \begin{itemize}
-	\item Processes are more isolated that threads, which means that there is 
-		no need to ensure that functions are thread-safe. Moreover, the whole 
-		process can come to a halt, when one of the threads encounters an 
-		error.
+	\item (\fixme Reword this) Processes are more isolated than threads, 
+		which means that we do not need to worry if our functions are 
+		thread-safe.  Moreover, the whole process can come to a halt, 
+		when one of the threads encounters an error.
 	\item Processes can update their structures independently and then lazily 
 		inform the other processes about these changes. Threads on the other 
-		hand need to be careful and employ some form of costly concurrency 
-		control.
+		hand need to be careful and employ some form of costly 
+		concurrency control when updating a shared structure.
 \end{itemize}
 
 Regardless of the chosen method, at some point the programmer will have face 
@@ -72,24 +76,25 @@ and concurrency control, which is discussed in Section \ref{sec:conc-theory}.
 
 Interprocess Communication is a concept that predates the SMP systems that we 
 all use nowadays. It is a set of methods that an OS uses to allow processes and 
-threads to communicate with each other. Archipelago for example, uses 
-extensively IPC methods to synchronize its different components.
+threads to communicate with each other. Archipelago for example, uses various 
+IPC methods to synchronize its different components.
 
 The full list of Linux's IPC methods is presented below:
 
+\fixme Change this list to italic
 \begin{itemize}
-	\item \textbf{Signals:} they are sent to a process to notify it that an 
+	\item \textit{Signals,} they are sent to a process to notify it that an 
 		event has occurred.
-	\item \textbf{Pipes:} one-way channel that transfers information from 
-		one process to the other.
-	\item \textbf{Sockets:} bidirectional channels that can transfer 
+	\item \textit{Pipes:} one-way channel that transfers information from 
+		one process to another.
+	\item \textit{Sockets:} bidirectional channels that can transfer 
 		information between two or more processes either locally or 
 		remotely through the network.
-	\item \textbf{Message queues:} asynchronous communication protocol that 
+	\item \textit{Message queues:} asynchronous communication protocol that 
 		is used to exchange data packets between processes.
-	\item \textbf{Semaphores:} Special purpose pipes that are used mainly 
+	\item \textit{Semaphores:} Special purpose pipes that are used mainly 
 		for process synchronization.
-	\item \textbf{Shared memory:} a memory space that can be accessed and 
+	\item \textit{Shared memory:} a memory space that can be accessed and 
 		edited by more than one process.
 \end{itemize}
 
@@ -100,31 +105,31 @@ We will concentrate on the following IPC methods:
 \item message queues and
 \item shared memory,
 \end{inparaenum}
-since these are the methods that Archipelago and our implementation have used.
+since these are the methods that Archipelago and our implementation use.
 
 \subsection{Signals}
 
 Signals are notifications that are sent to processes and can be considered as 
-software interrupts. The signals' purpose is to interrupt the execution of the 
-processes and inform it that an event has occurred.
+software interrupts. The signal's purpose is to interrupt the execution of a
+process and inform it that an event has occurred.
 
 Given that there more than one events and exceptions that can occur in a 
-system, there are also various signals that correspond to each one of these
+system, there are also various signals that match to each one of these
 events. For more information about the signals that Linux supports as well as 
 the conditions on which they are raised, the reader is prompted to consult the 
 man pages for signal(7) or read the POSIX.1-1990, SUSv2 and POSIX.1-2001 
 standards.
   
 Moreover, the above standards dictate the standard behavior of a process when a 
-signal is received. The standard actions that a process can take fall roughly 
+signal is received. The standard actions that a process can take, fall roughly 
 in the following categories:
 
-\begin{enumerate}
+\begin{itemize}
 	\item ignore the signal,
 	\item pause its execution,
 	\item restart its execution or
 	\item stop its execution and/or dump its core
-\end{enumerate}
+\end{itemize}
 
 However, a process is not limited to this set of actions. It can instead do one 
 of the following things, regardless of the signal that has been raised and its 
@@ -137,8 +142,9 @@ severity:
 \end{itemize}
 
 Finally, the process can block the signal, by setting the SIG\_BLOCK flag for 
-this signal in the process's signal mask. This is used in Archipelago and is 
-described in in Section \ref{sec:poll-archip}.
+this signal in the process's signal mask. Signal blocking is part of the 
+Archipelago IPC and its usage is thoroughly described in Section 
+\ref{sec:poll-archip}.
 
 \subsection{Sockets}
 
@@ -176,7 +182,8 @@ The TCP/UDP protocols are only one layer out of the four layers that the TCP/IP
 protocol suite defines, and we will explain them in detail in the following 
 sections. Although a thorough explanation of the TCP/IP protocol is out of the 
 scope of this thesis and is not needed to understand the following sections, we 
-will mention some of its most important aspects for the sake of completeness.
+will mention some of its most important aspects for the sake of completeness.  
+\fixme eithe explain its aspects or plainly explain what it is.
 
 The TCP/IP protocol suite is the basis for the World Wide Internet and the most 
 used form of networking. It specifies all the stages of the data processing 
@@ -195,10 +202,10 @@ The Transmission Control Protocol is connection-oriented, i.e. it provides
 unique connection between two sockets, and has the following key features:
 
 \begin{description}
-	\item[Reliability] The data will arrive to the receiver with no packet 
-		loss, or they will not arrive at all. In the latter case, the 
-		receiver may receive sparious packets but it will not 
-		acknowledge them until it has received all of them.
+	\item[Reliability] The data will arrive to the receiver as a whole, or 
+		they will not arrive at all. In the latter case, the receiver 
+		may receive sparious packets but it will not acknowledge them 
+		until it has received all of them.
 	\item[Ordered transfer] The data will arrive in the same order that 
 		they were sent.
 	\item[Error-checking] The data are checksummed to allow the receiving 
@@ -211,6 +218,7 @@ unique connection between two sockets, and has the following key features:
 
 \subsubsection{UDP}
 
+\fixme Make this a list
 The User Datagram Protocol on the other hand has far less restrictions than 
 TCP. First, it is connectionless, meaning that the socket can receive requests 
 from anyone. Second, it provides no guarantees about the delivery of the 
@@ -296,30 +304,36 @@ that the programmer needs to know before he/she decides on the techniques that
 will be used:
 
 \begin{description}
-	\item[Lock overhead]
-		Lock overhead is the overhead that the locking mechanism introduces.  
-		For example, semaphores are a mechanism with big overhead, since they 
-		must be read and written to using system calls. If the critical segment 
-		they protect is simply the update of a variable, then the programmer is 
-		probably better off using a spinlock or atomic operations.
-	\item[Lock contention]
+	\item[Lock overhead] \hfill \\
+		Lock overhead is the overhead that the locking mechanism 
+		introduces.  For example, semaphores are a mechanism with big 
+		overhead, since they must be read and written to using system 
+		calls. If the critical segment they protect is simply the 
+		update of a variable, then the programmer is probably better 
+		off using a spinlock or atomic operations.
+	\item[Lock contention] \hfill \\
 		Lock contention can be considered as the "design overhead" of 
-		concurrency control, and has to do with the coarseness of the lock.  
-		There is contention for a lock when it is requested by many threads, to 
-		the point that the waiting time is longer than the execution time.
-		This has a big performance impact to implementation, which usually 
-		needs to be redesigned in order to break such locks into smaller ones.
-	\item[Deadlocks]
-		Deadlock is a situation in a multi-lock scenario where each process in 
-		a group of processes needs to acquire a lock which is held by another 
-		process in the same group. Since no process can continue, the operation 
-		of the group is essentially stalled.
-		As a rule of thumb, the circular dependency of the locks can break if 
-		the locks are acquired in a predefined order. This however is only 
-		possible in less complex scenarios and in general, a more well-though 
-		design is required.
+		concurrency control, and has to do with the coarseness of the 
+		lock.  There is contention for a lock when it is requested by 
+		many threads, to the point that the waiting time is longer than 
+		the execution time.
+		This has a big performance impact to the implementation, which 
+		usually needs to be redesigned in order to break such locks 
+		into smaller ones.
+	\item[Deadlocks] \hfill \\
+		Deadlock is a situation in a multi-lock scenario where each 
+		process in a group of processes needs to acquire a lock which 
+		is held by another process in the same group. Since no process 
+		can continue, the operation of the group is essentially 
+		stalled.
+		As a rule of thumb, the circular dependency of the locks can 
+		break if the locks are acquired in a predefined order. This 
+		however is only possible in less complex scenarios and in 
+		general, a more well-thought design is required.
 \end{description}
 
-\section{Networking}
+\todo Add networking and explain how we write to/from sockets, how we connect 
+to sockets, what is polling, what is marshaling
 
-Explain TCP/UDP, sockets, polling
+\todo Add section that explains the various indexing mechanisms, amongst which 
+the hash tables and b-trees
