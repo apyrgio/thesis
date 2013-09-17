@@ -24,41 +24,50 @@ Archipelago has the following objectives:
 
 \section{Architecture}
 
-Archipelago's architecture is modular. It consists of 
+Archipelago has a modular architecture, which allows it to categorize its 
+operations and assign them to distinct components. The IPC between these 
+components, which are called \textbf{peers} in the Archipelago dialect, is 
+facilitated by XSEG.
 
+XSEG can be considered as the kernel of Archipelago and is a custom mechanism 
+that:
+\begin{inparaenum}[i)]
+\item defines a common communication protocol for all peers, regardless of 
+	their type (userspace/kernelspace, singlethreaded/multithreaded) and
+\item builds a shared memory segment, where peers can share data using 
+	zero-copy techniques.
+\end{inparaenum}
+The above are provided to the peers by the \texttt{libxseg} library.
 
-In Figure \ref{fig:new_sxima.pdf}, we present the components of Archipelago.  
-These components, which are called peers in the Archipelago dialect, and their 
-functionalities are briefly explained below:
+In Figure \ref{fig:new_sxima.pdf}, we present the architecture of Archipelago.  
+Moreover, we show the Archipelago peers, the communication channels between 
+them and we briefly explain the operations that they are responsible for.
 
 \diagram{Archipelago components}{new_sxima.pdf}
 
 \begin{description}
 	\item[XSEG Block Device (xsegbd)] \hfill \\
-		xsegbd is a kernel module that exposes a block device.  This block 
-		device is the VM's volume, as far as Ganeti and KVM are concerned, and 
-		is the entry point to the Archipelago layer.
+		xsegbd is a kernel module that exposes a VM's volume as a block 
+		device. This block device provides the entry point for the 
+		requests that enter the Archipelago layer.
 	\item[VoLuMe Composer Daemon (vlmcd)] \hfill \\
-		vlmcd accepts requests from the various xsegbd devices and translates 
-		them to object requests.
+		vlmcd accepts requests from the various xsegbd devices and 
+		translates them to object requests, with the help of mapperd.
 	\item[Mapper Daemon (mapperd)] \hfill \\
-		mapperd is responsible for the mapping of volumes to objects. This 
-		means that it must tackle a broad set of tasks such as knowing the 
-		objects that a volume consists of, cloning and snapshotting volumes and 
-		creating new ones
+		mapperd is responsible for the mapping of volumes to objects.  
+		This means that it must tackle a broad set of tasks such as 
+		knowing the objects that a volume consists of, cloning and 
+		snapshotting volumes and creating new ones.
 	\item[File Blocker Daemon (blockerd)] \hfill \\
-		blockerd is not a specific entity but a family of drivers, each of 
-		which is written for a specific storage type. File blockers have a 
-		single purpose, to read/write objects from/to the storage. Currently, 
-		there are file blockers for NFS and the RADOS object storage.
+		blockerd is not a specific entity but a family of drivers, each 
+		of which is written for a specific storage type. File blockers 
+		have a single purpose, to read/write objects from/to the 
+		storage. Currently, there are file blockers for NFS and the 
+		RADOS object storage.
 \end{description}
-	
-Besides the Archipelago peers, there is an important component that facilitates 
-the communication between them. This component is XSEG and is the core of 
-Archipelago. It provides a shared memory segment upon which peers can share 
-data using zero copy methods, as well as a custom communication method, common 
-for all peers and independent from their domain (userspace or kernelspace).
 
+
+\begin{comment}
 \section{XSEG design}
 
 The shared memory segment provides, besides a common IPC, the following to the 
@@ -100,7 +109,6 @@ following main categories:
 		requests.
 \end{description}
 
-\begin{comment}
 \subsection{Drivers}
 
 \subsection{Libraries}
@@ -159,8 +167,6 @@ read and write to very fast. This however barely scratches the surface of IPC in
 Archipelago. In the following section, we will discuss more in-length the 
 details behind Archipelago IPC
 
-\end{comment}
-
 \section{Archipelago IPC}\label{sec:arch-ipc}
 
 An important part of the shared segment that was intentionally skipped in the 
@@ -200,7 +206,6 @@ The polling process is the following:
 		2.
 \end{enumerate}
 
-\begin{comment}
 To understand what requests are in XSEG context, we present some parts of the 
 xseg\_request structure:
 
@@ -252,3 +257,14 @@ We have bench xseg which works like so:
 
 Explain here about xq or in xtypes?
 \end{comment}
+
+\todo Add how a request is handled by archipelago (e.g. it goes to xsegbd, then 
+vlmcd, then mapperd, etc.)
+
+\todo Add a generic description of how Archipelago handles the polling of 
+requests (e.g. it binds ports, it waits for requests in them until it gets 
+signalled. It uses polling for a certain number of cycles to solve bursts etc.
+
+\todo Add RADOS definition, cite philipgian and explain that sosd is used 
+for...
+
