@@ -1,41 +1,52 @@
-\chapter{The Holy Triad: Scalability, Tiering and Caching}\label{ch:tiering}
+\chapter{Scalability, Tiering and Caching}\label{ch:triad}
 
-In this chapter we will discuss the challenges of today's data storage and will 
-attempt to explain the role of scalability - a word that is being repeated like 
-mantra in cloud circles - tiering and caching in mitigating costs and 
-increasing performance.  Moreover, we present the current solutions for tiered 
-storage and we evaluate if they can be used in conjunction with Archipelago.
+In this chapter, we will discuss the challenges of today's data storage and 
+will attempt to explain the role of scalability, tiering and caching in 
+mitigating costs and increasing performance.  Moreover, we present the current 
+solutions for boosting performance and we evaluate if they can be used in 
+conjunction with Archipelago.
 
-\section{What is scalability?}
+The structure of this chapter is the following. Sections 
+\ref{sec:scalability-triad}, \ref{sec:tiering-triad} and 
+\ref{sec:caching-triad} explain what scalability, tiering and caching mean 
+respectively. Section \ref{sec:real-life-triad} attempts to exhibit the need 
+for these techniques by providing a typical real-life scenario in which they 
+can be used.  Finally, Section \ref{sec:solutions-triad} lists and evaluates 
+some of the 3rd party, open-source solutions that employ the aforementioned 
+techniques.
 
-Scalability is a term that has different meaning for different contexts. For 
-example, scalability in multi-threading context can mean that the program's 
-performance increases linearly with the number of threads.
+\section{What is scalability?}\label{sec:scalability-triad}
 
-We approach this subject from the storage service's perspective, which is an 
-integral part of a cloud service. In this context, scalability means the 
-ability of the storage service to handle the increase of I/O requests in a way 
-that each independent user does not experience any latency.
+Scalability, in storage service context, is the ability of the service to 
+achieve two specific things:
+\begin{enumerate}
+	\item accommodate the growth of load in a manner that does not impact 
+		the quality of the service and
+	\item utilize the addition of new resources to their full extend, in 
+		order to improve its performance.
+\end{enumerate}
 
 There are two methods of scaling, horizontal (scaling out) and vertical 
-(scaling up).
+(scaling up), which are explained below:
 
-The horizontal scaling method applies to distributed services.  It relies on 
-the principle that adding more nodes to a system will mitigate the high load of 
-the other nodes.
+\begin{itemize}
+	\item \textit{Horizontal scaling} applies to distributed services. It 
+		relies on the principle that adding more nodes to a system will 
+		mitigate the high load of the other nodes.
+	\item \textit{Vertical scaling} applies to all types of systems and 
+		refers to the addition of more resources such as better 
+		hardware, more RAM etc. to a node of the system.
+\end{itemize}
 
-The vertical scaling method applies to all types of systems and refers to the 
-addition of more resources such as better hardware, more RAM etc. to a node of 
-the system.
+The rule of thumb about these methods is that scaling up is the simpler 
+solution for a service, albeit its performance cannot be increased much due to 
+hardware limitations.  On the other hand, scaling out is far more complex and 
+requires a robust method of managing many nodes as well as their failures, but 
+it may have lower costs (if nodes are made of commodity hardware), and has 
+theoretically no limitations in performance gain (especially in share-nothing 
+architectures).
 
-The rule of thumb about these methods is that scaling up is the simpler way to 
-go, albeit its performance cannot be increased much due to hardware 
-limitations.  On the other hand, scaling out is far more complex and requires a 
-robust method of managing many nodes as well as their failures, but it may have 
-lower costs (if nodes are made of commodity hardware), and has theoretically no 
-limitations in performance gain (especially in share-nothing architectures).
-
-\section{What is tiering?}
+\section{What is tiering?}\label{sec:tiering-triad}
 
 Tiering is the organization of different storage types in levels (or tiers) 
 depending on their performance.  These storage types usually differ in one of 
@@ -68,7 +79,7 @@ the higher tiers.
 
 \diagram{Computer Memory Hierarchy}{mem-hier.pdf}
 
-\section{What is caching?}
+\section{What is caching?}\label{sec:scalability-triad}
 
 In the context of I/O requests, caching is the addition of a fast medium in a 
 data path, whose purpose is to transparently store the data that are intended 
@@ -83,23 +94,50 @@ for slower ones, essentially caching the data, or where dedicated servers are
 used to cache data, like in memcached's case (see more in Section 
 \ref{sec:memcached-triad}).
 
-\subsection{Caching policies}
+\subsection{Write policies}
 
-Do we even care?
+Cache write policies dictate the behavior of the cache when it receives a write 
+request. There are two main write policies:
 
-\begin{itemize}
-	\item Write-through:
-		This policy bla bla bla
-	\item Write-back:
-		This policy blu blu blu
-\end{itemize}
+\begin{description}
+	\item[Write-through] \hfill \\
+		The write is acknowledged only when the data are written both 
+		on the cache and on the slower medium.
+	\item[Write-back] \hfill \\
+		The write is acknowledged when data are written in cache. The 
+		slower medium is later updated with the correct data, when they 
+		need to be flushed or replaced by new ones.
+\end{description}
+
+Moreover, there are also policies that affect the behavior of a cache in write 
+miss schenarios:
+
+\begin{description}
+	\item[Write allocate] \hfill \\
+		Cache loads the corresponding data block from the slower medium
+		and the data are written to it.
+	\item[No-write allocate] \hfill \\
+		The write request bypasses the cache and writes directly to the 
+		slower medium.
+\end{description}
+
+Although the above policies can be combined as we wish, there are two main 
+combinations that make more sense:
+\begin{inparaenum}[i)]
+\item write-back with write-allocate, so that writes are cached to benefit from 
+	subsequent reads and
+\item write-through with no-write allocate, because the extra load of write 
+	allocate will not benefit us, since we write directly to the slower 
+	medium.
+\end{inparaenum}
 
 \subsection{Caching limitations}
 
-Fast mediums like RAM and SSD drives are always more expensive than slower 
-mediums, such as hard disks. Likewise, caches always have smaller capacity than 
-the mediums they cache. So, when a cache reaches its maximum capacity, it must 
-evict one of its entries. However, which entry is the one that must be evicted?
+Fast mediums like RAM and SSD drives cost more dollars/GB than slower mediums, 
+such as hard disks \fixme prove it. For this reason, caches always have smaller 
+capacity than the mediums they cache. So, when a cache reaches its maximum 
+capacity, it must evict one of its entries. However, which entry is the one 
+that must be evicted?
 
 This is a very old and well documented problem that still troubles the research 
 community. It was first faced when creating hardware caches (the L1, L2 CPU 
@@ -118,29 +156,32 @@ strategies:
 %no.2, pp.78-101, 1966.
 \begin{itemize}
 	\item \textbf{Random:} Evict a randomly chosen entry. This strategy, 
-		although it seems simplistic at first, is sometimes chosen due to the 
-		ease and speed of its implementation. It is preferred in random 
-		workloads where freeing quickly space for an entry is more important 
-		than the entry that will be evicted.
-	\item \textbf{FIFO (First-In-First-Out):} Evict the entry that was inserted 
-		first. This is also a very simplistic approach as well as easy and 
-		fast.  Interestingly, although it would seem to produce better results 
-		than Random eviction, it is rarely used since it assumes that cache 
-		entries are used only once, which is not common in real-life 
-		situations.
+		although it seems simplistic at first, is sometimes chosen due 
+		to the ease and speed of its implementation. It is preferred in 
+		random workloads where freeing quickly space for an entry is 
+		more important than the entry that will be evicted.
+	\item \textbf{FIFO (First-In-First-Out):} Evict the entry that was 
+		inserted first. This is also a very simplistic approach as well 
+		as easy and fast.  Interestingly, although it would seem to 
+		produce better results than Random eviction, it is rarely used 
+		since it assumes that cache entries are used only once, which 
+		is not common in real-life situations.
 	\item \textbf{LRU (Least-Recently-Used)}
-		Evict the entry that has been less recently used. This is the most 
-		common eviction strategy and there has been a paper that uses a 
-		Bayesian statistic model to prove its optimality (\fixme add paper). It 
-		is not however simple to implement since there needs to be some sort of 
-		tracking of the time of reference for each entry.
+		Evict the entry that has been less recently used. This is the 
+		most common eviction strategy and there has been a paper that 
+		uses a Bayesian statistic model to prove its optimality (\fixme 
+		add paper). It is not however simple to implement since there 
+		needs to be some sort of tracking of the time of reference for 
+		each entry.
 	\item \textbf{LFU (Least-Frequently-Used)}
-		Evict that entry that has been less frequently used. There have been 
-		many derivatives of this algorithm that also use parts of the LRU 
-		algorithm which have promising results, but this algorithm itself is
-		not commonly used. The reason is because it overestimates the frequency 
-		of references to an item and it performs poorly in cases when an item 
-		is frequently accessed and then is not used at all.
+		Evict the entry that has been less frequently used. There have 
+		been many derivatives of this algorithm that also use parts of 
+		the LRU algorithm which have promising results, but this 
+		algorithm itself is
+		not commonly used. The reason is because it overestimates the 
+		frequency of references to an item and it performs poorly in 
+		cases when an item is frequently accessed and then is not used 
+		at all.
 \end{itemize}
 
 %Also, check out this paper:
@@ -148,16 +189,27 @@ strategies:
 %that proves that no algorithm that keeps track of the K most recent references 
 %for a page can be more optimal than LRU.
 
-\section{Common use-case}
+The fact that write requests that have spawned the evictions cannot continue 
+until the dirty data have been safely written to the storage backend, means 
+that when the cache has no space left, its speed deteriorates to the speed of 
+the slower medium.
+
+The above observation indicates that the challenge for caching algorithms is 
+how friendly their flushes are to the underlying storage. To elaborate on that 
+a bit, hard disks excel on sequential payloads, so if a cache could flush in a 
+more sequential way to the disk, it would boost its performance in these 
+scenarios.
+
+\section{Real-life scenario}\label{sec:real-life-triad}
 
 Usually, when a small deployment makes its first steps, it doesn't use SSDs due 
-to management/hardware costs and since its an investment that is actually 
+to management/hardware costs and since it is an investment that is actually 
 needed when the deployment has proved that it will attract traffic. Instead, 
 the most common setup is an array of RAID-protected commodity hard disks or 
 fast SAS drives.
 
-When the storage needs start to increase and more users use the service, the OS 
-caching system of the storage nodes will soon prove ineffective and the 
+When the storage demands start to increase and more users use the service, the 
+OS caching system of the storage nodes will soon prove ineffective and the 
 randomness in the requested data will skyrocket the access times.
 
 At this point, the administrators must take one (or more, if the budget allows 
@@ -177,7 +229,7 @@ it) of the following decisions:
 The employment of one of the aforementioned techniques (scaling, tiering, 
 caching) is of paramount importance for the future of the service.
 
-\section{Caching Solutions}
+\section{Current Solutions}\label{sec:scalability-triad}
 
 For the thesis purpose, we have evaluated a numerous of caching solutions. The 
 results of our evaluations are presented below:
@@ -196,10 +248,10 @@ following characteristics:
 
 \begin{enumerate}
 	\item The data are written sequentially and in erase block size 
-		granularity, in order to avoid the costly read-erase-modify-write 
-		cycle.
-	\item It takes special care to mitigate wear-leveling by touching equally 
-		all SSD cells
+		granularity, in order to avoid the costly 
+		read-erase-modify-write cycle.
+	\item It takes special care to mitigate wear-leveling by touching 
+		equally all SSD cells
 	\item It honors TRIM requests and uses them as hints for its garbage 
 		collection.
 \end{enumerate}
@@ -207,20 +259,26 @@ following characteristics:
 \subsubsection{Installation and usage}
 
 Bcache is a kernel driver that needs a patched kernel and intrusive changes to 
-the backing device, rendering previous data unreadable. On a nutshell, bcache 
-edits the superblock of both the cache and backing devices in order to use 
-them.  Then, it exposes to the users a virtual block device, which can be 
-formatted to any filesystem.  This virtual device's request function actually 
-points to the cache device and, when the cache device has reached its full 
-utilization, it will flush dirty data to the backing device.
+the backing device.
+
+On a nutshell, bcache edits the superblock of both the cache and backing 
+devices in order to use them, rendering existing data unreadable.  Then, it 
+exposes to the user a virtual block device, which can be formatted to any 
+file-system. This virtual block device is the entry point to the bcache code.  
+Then, the caching device is attached to the backing device and at this point 
+the virtual block device is ready to accept requests.
+
+At any point, the bcache parameters can be further tuned via the sysfs 
+interface.  
 
 \subsubsection{Features and limitations}
 
 The most striking bcache feature is that it uses a custom built B+tree as an 
 index, which has the added benefit that dirty data can be coalesced and flushed 
 sequentially to the slower spinning medium. This provides a considerable 
-performance speed-up for hard disks since. Some of other noteworthy features of 
-bcache are the following:
+performance speed-up for hard disks.
+
+Some other noteworthy features of bcache are the following:
 
 \begin{enumerate}
 	\item It can be used to cache more than one devices
@@ -346,15 +404,16 @@ evicted in numerous ways:
 \begin{enumerate}
 	\item Cached data have an expiration time after which they are 
 		garbage-collected.
-	\item Data can be evicted before their expiration time, if the cache has 
-		become full.
-	\item When memcached is out of SLAB pages, it must evict one in order to 
-		regain space. This leads to the eviction of more than one keys.
-	\item When adding or removing memcached servers, the Ketama algorithm that 
-		maps keys to servers will assign a portion of the existing keys to 
-		other servers. This change in mapping, however, will not actually move 
-		the existing keys to these servers and the data are essentially 
-		invalidated.
+	\item Data can be evicted before their expiration time, if the cache 
+		has become full.
+	\item When memcached is out of SLAB pages \fixme what are slab pages?, 
+		it must evict one in order to regain space. This leads to the 
+		eviction of more than one keys.
+	\item When adding or removing memcached servers, the Ketama algorithm 
+		that maps keys to servers will assign a portion of the existing 
+		keys to other servers. This change in mapping, however, will 
+		not actually move the existing keys to these servers and the 
+		data are essentially invalidated.
 \end{enumerate}
 
 To sum up, the lack of persistence means that memcached will never hit the disk 
@@ -441,7 +500,7 @@ peers that use block store semantics, e.g.  when xsegbd receives a request, and
 peers that use key-value store semantics, e.g.  when vlmc has translated a 
 block request to object request.
 
-We will start our evaluation with the block store methodologies first. These 
+We will start our evaluation with the block store techniques first. These 
 methods have in common that they are kernel modules which cache requests that 
 are targeted to a single (or more) slow block device. So, we can use them in 
 this way:
@@ -501,5 +560,5 @@ However, there are also some fundamental problems with them:
 		has its own concept of replication.
 \end{enumerate}
 
-For this reason, we have decided to roll out our own implementation, which is 
-presented in the following chapter.
+For the above reason, we have decided to roll out our own implementation, which 
+is presented in the following chapter.
