@@ -457,18 +457,22 @@ however is not limited to the above role as these components do not cover all
 of the needed tasks. There are several other key tasks that cached must 
 undertake, namely:
 
-\begin{enumerate}
-	\item Request handling
-	\item Write policy enforcing
-	\item Data propagation
-\end{enumerate}
+\begin{itemize}
+	\item \textit{Request handling}, which is how cached handles requests 
+		from other peers and sends its own.
+	\item \textit{Write policy enforcing}, which is the enforcing of a 
+		cache write policy (write-through, write-back).
+	\item \textit{Data propagation}, which controls how data changes are 
+		propagated to the slower medium.
+\end{itemize}
 
 Moreover, cached extends its repertoire using some unique components, namely:
 
+\fixme Add a brief description
 \begin{enumerate}
 	\item Bucket pool
 	\item Request wrapper (Cache-IO)
-	\item Book-keeping functions
+	\item Book-keeping utilities
 \end{enumerate}
 
 We will illustrate the design of cached from two different perspectives: the 
@@ -528,8 +532,16 @@ translate to in cached context.
 These policies are specified once during cached's deployment and cannot be 
 switched on/off later on.
 
-\subsection{Cache coherence}
+\subsection{Data propagation}
 
+In order to ensure that we have no data corruption, cached must provide the 
+following two guarantees:
+\begin{inparaenum}[i)]
+\item consistency of cached data and
+\item correct propagation of data updates to the storage backend.
+\end{inparaenum}
+
+\begin{comment}
 Cache coherence is a concept that is closely connected with concurrency 
 control, as is evident in Figure \ref{fig:cached-design.pdf}. It is commonly 
 used as a term in the literature on the subject of caches for multiprocessor 
@@ -544,26 +556,29 @@ systems or distributed caches and it refers to:
 If we wanted to rephrase the above to match our case, we could say that it 
 refers to the consistency of the data that are stored in cached and how each 
 change is propagated to the blocker.
+\end{comment}
 
-The consistency of the cached data is greatly secured using the xworkq as the 
-guard of parallel accesses to the object's data. However, the guarantee that 
-data updates are conducted serially does not suffice for the consistency 
-requirement.
+As for the first guarantee, we have explained in section 
+\ref{sec:xworkq-design} that the consistency of the cached data is greatly 
+secured using the xworkq as the guard of parallel accesses to the object's 
+data.
 
+\begin{comment}
 The problem is evident if you consider the eviction of an object with dirty 
 data. xcache does not operate on object level and thus is unaware of the 
 contents of the cache entry. Thus, cached must use the cache entry finalization 
 hook to increment the refcount of the object so that it can not be removed 
 until all data have been flushed to the blocker. Essentially, cached overrides 
 the xcache's book-keeping to maintain cache coherency.
+\end{comment}
 
-The propagation of the data to the blocker is solely cached's job. One might 
-consider that flushing the dirty data of an object would be sufficient to 
-propagate the changes to the blocker. However, consider the scenario when an 
-object is evicted and then subsequently reinserted, overwritten and evicted 
-again. The result would be two flush requests, for the same data, sent to the 
-blocker. Although the blocker guarantees that there will be no page-tearing, we 
-cannot be sure about the order on which the data will be written.
+As for the second guarantee, one might consider that flushing the dirty data of 
+an object would be sufficient to correctly propagate data changes to the 
+blocker.  However, consider the scenario when a dirty object is evicted and 
+then subsequently reinserted, overwritten and evicted again. The result would 
+be two flush requests for the same data, sent to the blocker. Although the 
+blocker guarantees that there will be no page-tearing, we cannot be sure about 
+the order on which the data will be written.
 
 To solve this problem, flush jobs must be deferred (using an xwaitq) if another 
 flush for the same object is in flight. 
@@ -578,7 +593,7 @@ flush for the same object is in flight.
 
 We have already explained in Section \ref{sec:rationale-design} the reason why 
 cached caches objects. There is, however, one important design issue that we 
-must address. The issue is how will cached perceive the object's data. To make 
+must address. This issue is how will cached perceive the object's data. To make 
 it a bit clearer, given that an object typically has 4MB of size, what should 
 cached do when a user requests e.g. a 16KB chunk of it?
 
@@ -628,7 +643,7 @@ Then, each thread can pop bucket indexes from the pool and attach them
 to an object when needed. When that object is evicted, its attached buckets 
 indexes are pushed back to the pool.
 
-\subsection{Cache-IO}
+\subsection{Request wrapper (Cache-IO)}
 
 When a request is accepted, all Archipelago peers commonly embed it in a peer 
 request (you can see more about peer requests here ?). The peer request always 
@@ -636,17 +651,17 @@ holds the original request and optionally, several other fields that are of
 importance to the peer.
 
 In our case, we keep in cached's peer requests a new structure called Cache-IO, 
-on which we store the xcache handler of the request handler as well as the 
-state of the request. Moreover, since the request may break internally in many 
-others, we keep track of how many pending requests remain until the original 
-one can be completed.
+on which we store the xcache handler of the request as well as the state of the 
+request. Moreover, since the request may break internally in many others, we 
+keep track of how many pending requests remain until the original one can be 
+completed.
 
-\subsection{Book-keeping}\label{sec:cached-states-design}
+\subsection{Book-keeping utilities}\label{sec:cached-states-design}
 
-In order to know when an object is in flushing state, when a bucket has been 
-allocated or when a bucket is being read, cached must employ some sort of 
-book-keeping of their states. The entities that require to track their states 
-are:
+In order to know information such as when an object is in flushing state, when 
+a bucket has been allocated or when a bucket is being read etc,, cached must 
+employ some sort of book-keeping of their states. The entities that require to 
+track their states are:
 
 \begin{enumerate}
 \item \textbf{buckets:} Each bucket has two different states that must be 
@@ -662,6 +677,8 @@ are:
 			blockers data
 		\item loading, meaning that a read request has been sent to the 
 			blocker to be filled with data
+		\item writing, meaning that the bucket contents are being 
+			written/flushed to the blocker.
 		\item dirty, meaning that it currently holds newer data that 
 			what the blocker has.
 	\end{enumerate}
@@ -676,8 +693,7 @@ are:
 		\item failed, meaning that a request has failed for this object 
 			and we must stop using it
 	\end{enumerate}
-\item \textbf{Cache-ios:} Cache-ios also have states. They are the 
-	following:
+\item \textbf{Cache-IOs:} Cache-ios also have states. They are the following:
 	\begin{enumerate}[i)]
 		\item accpted, meaning that the request has just been accepted
 		\item reading, meaning that the request wants to read data
