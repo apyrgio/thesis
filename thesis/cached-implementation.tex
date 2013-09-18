@@ -271,6 +271,19 @@ wants to, \xcache exposes the following functions:
 \end{description}
 \end{comment}
 
+\subsection{Entry reinsertion}
+
+We have seen in the previous section how an active entry is evicted. However, 
+what happens when xcache receives a request for an evicted entry which hasn't 
+been freed yet? 
+
+In this case, the entry switches state again and is inserted back to the hash 
+table of active entries. Also, its reference counter is incremented by 1, since 
+the xcache can now reference this entry again.
+
+The advantage of reinsertion is that we do not stall until the evicted entry 
+has flushed all its data and instead, we can use it immediately.
+
 \subsection{Concurrency control}\label{sec:xcache-conc-imp}
 
 Concurrency control is an extremely important aspect of xcache, if we want to 

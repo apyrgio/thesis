@@ -1,18 +1,26 @@
 \chapter{Design of cached}\label{ch:cached-design}
 
-In the previous chapters, we have addressed the need for tiering in terms of
+\todo Link the previous chapter and the evaluation of different solutions with 
+this one
+
+\begin{comment}
+In Chapter \ref{ch:triad}, we have addressed the importance of scalability, 
+tiering and caching in the 
+asqualities of a storage tiering in terms of
 scalability as well as performance. % Which are these chapters? Link them.
 
-We have also evaluated current caching solutions and described why they couldn't 
-be used as a cache tier in Archipelago. % Provide link to a table of comparisons
+We have also evaluated current caching solutions and described why they 
+couldn't be used as a cache tier in Archipelago. % Provide link to a table of 
+comparisons
+\end{comment}
 
-With the results of chapter ? in mind, we can provide some more strict 
-requirements that our solution must have:
+Having these observations in mind, we can provide some more strict requirements 
+that our solution must have:
 
 % List the requirements for our solution
 \begin{enumerate}
-	\item \textbf{Nativity:} Our solution must be native to Archipelago i.e.  
-		not need any translation layers to communicate with it.
+	\item \textbf{Nativity:} Our solution must be native to Archipelago 
+		i.e.  not need any translation layers to communicate with it.
 		%explain why
 	\item \textbf{Pluggability:} Our solution must be able to provide a 
 		caching layer between peers that are already in operating mode 
@@ -21,9 +29,12 @@ requirements that our solution must have:
 	\item \textbf{In-memory:} Our solution must cache requests in RAM, 
 		since the next fastest tier, SSDs, are already being used in 
 		RADOS as a journal.
+	\item \textbf{O(1) complexity} Since our solution will keep data 
+		in-memory, the complexity of the indexing mechanism should be 
+		as small as possible, 
 \end{enumerate}
 
-For the following chapters, we will drop the \textit{"solution"} moniker and we 
+For the following sections, we will drop the \textit{"solution"} moniker and we 
 will use instead the proper name of our implementation, "cached", which simply 
 means \textbf{cache d}aemon).
 
@@ -36,10 +47,13 @@ of cached. Section \ref{sec:rationale-design} provides the design rationale of
 cached and explains how its design meets the above requirements. Section 
 \ref{sec:comp-design} presents the building blocks of cached while Sections 
 \ref{sec:xcache-design}, \ref{sec:xworkq-design} and \ref{sec:xwaitq-design} 
-provide a detailed explanation of their design. Section \ref{sec:cached-design}  
-presents the interaction between cached and its  as well as the unique 
-components that cached consists of.  Finally, in Section ?  we illustrate the 
-flow of requests for cached.
+provide a detailed explanation of their design. Moreover, Section 
+\ref{sec:xcache-flow-design} illustrates the request flow of one of the most 
+important components of cached, the xcache. Section \ref{sec:cached-design} 
+explains how cached utilizes the aforementioned components and introduces some 
+unique components that have been tailored specifically for cached. Finally, in 
+Section \ref{sec:cached-flow-design} we illustrate the flow of requests for 
+cached.
 
 \section{Design rationale}\label{sec:rationale-design}
 
@@ -47,56 +61,65 @@ One of the first architectural decisions was to implement cached as an
 Archipelago user-space peer (see Section \ref{sec:arch-peer} about Archipelago 
 peers). This choice was the most natural one since it provides the smallest 
 possible communication overhead with the other Archipelago peers. Also, this 
-design decision covers the nativity requirement we posed at the beginning of 
-this chapter.
+design decision covers the \textbf{nativity} requirement we posed at the 
+beginning of this chapter.
 
-The above design choice has another advantage too; we can register on-line the 
-cached peer between the vlmc and blocker and unregister it when we want to.  
-This opens up numerous possibilities such as plugging cached for 
-QoS\footnote{Quality of Service} reasons when there is a peak in I/O requests.  
+The above design choice has another advantage too; we can plug on-line the 
+cached peer between the vlmcd and blocker and unplug it when we want to. This 
+opens up numerous possibilities such as plugging cached for 
+QoS\footnote{Quality of Service} reasons, when there is a peak in I/O requests.  
+This also means that the \textbf{pluggability} requirement is also being met.
+
+\begin{comment}
 This is possible because, as we have mentioned in Section \ref{sec:arch-ipc}, 
 XSEG ports can be registered on-line. Thus, during normal operation, the 
-administrator can add the cached port to the request path between vlmc and 
+administrator can add the cached port to the request path between vlmcd and 
 blocker, and all requests will seamlessly be intercepted by cached. This 
 follows the same principle with bcache, which plugs its own request\_fn() 
 function to the virtual device it creates.  Unlike bcache however, cached can 
 be plugged on and off at any time.
-
-This also means that the pluggability requirement is also being met.
+\end{comment}
 
 The next important design decision was what will cached index. Given that it 
-will reside between the vlmc and blocker, where the VM's requests have already 
-been translated to object requests, the natural choice is to cache objects.  
+will reside between the vlmcd and blocker, where the VM's requests have already 
+been translated to object requests, the natural choice is to cache objects. To 
+understand why our caching peer must be close to the Archipelago's logic, i.e.  
+the translation of blocks to objects, consider the following two points:
 
-The decision to cache objects not only is the most natural one, but also is 
-closer to the way our storage (RADOS) handles data. To understand the 
-importance of it, consider the following:
-
-Like bcache, our implementation must not only cache object requests fast but 
-also try to coalesce them so that, when needed, they will be flushed to the 
-slower medium in a more sequential fashion. The fact however that the VMs' 
-volumes are partitioned into different objects, means that sequential data (in 
-volume context) which reside in different objects will probably not be 
-sequential in the storage backend too.
-
-Thus, unlike bcache which expects that the backing device is also the physical 
-device and coalesces date accordingly, our implementation is limited only in 
-coalescing data in the object range (commonly 4MBs). If our implementation was 
-caching in block or volume level, it would be unaware of that fact. 
+\begin{itemize}
+\item Like bcache, our implementation must not only cache object requests fast 
+	but also try to coalesce them so that, when needed, they will be 
+	flushed to the slower medium in a more sequential fashion. The fact 
+	however that the VMs' volumes are partitioned into different objects, 
+	means that sequential data (in volume context) which reside in 
+	different objects will probably not be sequential in the storage 
+	backend too.
+	
+	Thus, unlike bcache which expects that the backing device is also the 
+	physical device and coalesces data accordingly, our implementation is 
+	limited only in coalescing data in the object range (commonly 4MBs). If 
+	our implementation was caching in block or volume level, it would be 
+	unaware of that fact.
+\item \todo Add that we are also aware of the CoW operations and can speed them 
+	up
+\end{itemize}
 
 Having decided that cached will cache objects, the next step is to decide
 \begin{inparaenum}[i)]
 \item on the index mechanism and
-\item on what \textbf{exactly} would we index.
+\item on \textbf{what} exactly will we index.
 \end{inparaenum}
 
-As for what we would index, it would be an overkill to further partition the 
-objects and index regions within them. Moreover, this would make sense only if 
-the objects where large (e.g. like volumes). So, our index mechanism should 
-index object names solely. As for the index mechanism, we have chosen to use a 
-very fast in-memory hash-table for this job. This covers the in-memory 
-requirement we have set above. Also, this choice is one of the main reasons 
-that our implementation is O(1).
+As for what we will index, it would be an overkill to further partition the 
+objects and index the regions within them. Moreover, this would make sense only 
+if the objects where large (e.g. like volumes). So, we index object names 
+solely.
+
+As for the index mechanism, we have chosen to use a very fast in-memory hash 
+table that will keep the data in a preallocated space in RAM. This covers the 
+\textbf{in-memory} requirement that we have set above. Also, the choice of the 
+hash table is one of the reasons that our implementation has \textbf{O(1) 
+	complexity}.
 
 Finally, another important decision was whether cached would be a 
 multi-threaded peer. We have decided that we will implement it this way and 
@@ -108,8 +131,8 @@ requests from cached's request queue and serve them concurrently with the other
 threads. Of course, multi-threading can be very tricky, especially when we are 
 dealing with I/O requests and simultaneous accesses to the same object blocks.  
 So, in order to achieve a balance between safety and speed, we use a
-fine-grained locking scheme in critical sections that can be seen is discussed 
-in detail in Section \ref{sec:xworkq-design}.
+fine-grained locking scheme in critical sections which is discussed in detail 
+in Section \ref{sec:xworkq-design}.
 
 \section{Cached components}\label{sec:comp-design}
 
@@ -159,7 +182,7 @@ Below, we can see a design graph of xcache:
 \fixme add Figure here
 
 % While explaining, point to the diagram objects, a, b, c etc.
-\fixme add better design explanation \\
+\todo add better design explanation \\
 As we can see above, xcache utilizes two hash tables. One hash table is 
 responsible for indexing entries (or more generally speaking "cache entries") 
 that are active in cache.  The other hash table is responsible for indexing 
@@ -174,9 +197,8 @@ their design.
 Since xcache indexes a bounded number of entries, there is no need to allocate 
 them on-the fly using malloc/free. Considering that we are caching at RAM level 
 and not at SSD level, the system call overhead will have a considerable impact 
-on performance. Thus, in our case, we pre-allocate the necessary space in 
-advance and store them in a cache-node pool (note that this is different from 
-the bucket pool).
+on performance. Thus, in our case, we preallocate the necessary space in 
+advance.
 
 \subsubsection{Entry indexing}\label{sec:xcache-index-design}
 
@@ -198,7 +220,7 @@ xtype. The reason why a hash table is used as an index mechanism is because:
 \end{enumerate}
 
 The hash table that is used is heavily based on dictobject\cite{dictobject},
-the Python dictionary implementation in C. Distobject has been created to 
+the Python dictionary implementation in C. Dictobject has been created to 
 minimize the collisions and the hops (\fixme Explain that better). Its only 
 drawback is that it needs to resize when the table's entry history has reached 
 the 2/3 of its capacity.
@@ -230,7 +252,7 @@ to an already full cache, the insertion will succeed and the user will not be
 prompted to evict an entry manually. Moreover, the user will be notified via 
 specific event hook that is triggered upon eviction.
 
-The scheme of implicit evictions and later on notification of the user has the 
+The scheme of implicit evictions and later on notification of the user, has the 
 advantage that lookups, inserts and evictions can occur atomically by xcache.  
 This wouldn't be the case if the user was responsible for the evictions.
 
@@ -243,9 +265,9 @@ implementation of the LRU algorithm can be found in Section
 
 \subsubsection{Concurrency control}
 
-The concept of concurrency control has been discussed in chapter ?. The goal of 
-xcache is to handle safely - and preferably fast - simultaneous accesses to the 
-shared memory.
+The concept of concurrency control has been discussed in Section 
+\ref{sec:conc-theory}.  The goal of xcache is to handle safely - and preferably 
+fast - simultaneous accesses to the shared memory.
 
 In order to do so, we must first identify which are the critical sections of 
 xcache, to wit, the sections where a thread modifies a shared structure. These 
@@ -287,14 +309,14 @@ Let's see what guarantees we provide for each of the above scenarios:
 		\textbf{xhash operations:} We provide a lock for each hash 
 		table. Only one thread can access each hash table at any time.
 	\item
-		\textbf{Cache node claiming:} The cache-node queue, is also 
+		\textbf{Cache node claiming:} The cache-node queue is also 
 		protected by a lock.
 	\item
 		\textbf{Entry migration:} When an entry is migrated from one 
 		hash table to the other, we always acquire the lock of the hash 
-		table of active entries and then the lock of the hash table of 
-		the evicted entries. The order on which we take the locks is 
-		very strict to avoid deadlocks.
+		table of active entries first and then the lock of the hash 
+		table of the evicted entries. The order on which we take the 
+		locks is very strict to avoid deadlocks.
 	\item
 		\textbf{Reference counting:} For the atomic increases and 
 		decreases of a counter, we don't need a lock and its added 
@@ -306,29 +328,12 @@ Let's see what guarantees we provide for each of the above scenarios:
 		protect our LRU under the same cache lock.
 \end{itemize}
 
-\subsubsection{Re-insertion}
-
-We have previously mentioned that in xcache, there can be data migration 
-between hash tables. Most commonly, an entry that is evicted from the active 
-cache entries migrates to the hash table of the evicted cache entries, until 
-its reference count falls to zero and can be freed.
-
-However, what happens when xcache receives a request for an evicted entry which 
-hasn't been freed yet? 
-
-In this case, the entry switches state again and is inserted back to the hash 
-table of active entries. Also, its reference counter is incremented accordingly 
-in order not to be freed amidst this process.
-
-This way, we can avoid waiting for an entry that has just been evicted to flush 
-its data. 
-
 \subsubsection{Event hooks}\label{sec:xcache-hooks-design}
 
 Since xcache is created to provide core caching functionalities for other 
 peers, it must also notify them when it takes an implicit action that the peer 
 is not aware of. In Section \ref{xcache-eviction-design} we have seen one 
-implicit action that xccahe takes when a user inserts an entry, namely 
+implicit action that xcache takes when a user inserts an entry, namely 
 eviction. 
 
 Besides this event, there are others. The complete list is the following:
@@ -364,7 +369,7 @@ peer that uses xcache may choose, if it wants, to use them and if so, it can
 plug its own event function for each hook which will be called when the event 
 is triggered.
 
-\subsection{xcache flow}
+\subsection{xcache flow}\label{sec:xcache-flow-design}
 
 To make the way xcache works a bit more clearer, we will see the flow for three 
 of the main xcache operations; lookup of an entry; insertion of a new entry and 
@@ -403,9 +408,10 @@ On the following figure, we can see the design of xworkq:
 
 It consists of a queue where jobs are enqueued.  The thread that enqueues a job 
 can attempt to execute it too, by acquiring a lock for the xworkq. If the lock 
-is unheld, the thread will acquire and will be able to execute the enqueued 
-job. Else, it can safely leave and its job will be executed by the thread that 
-has holds the lock.
+is unheld%yes, the word exists...
+, the thread will acquire it and will be able to execute the enqueued job.  
+Else, it can safely leave and its job will be executed by the thread that holds 
+the lock.
 
 In cached context, every object has an xworkq. Whenever a new request is 
 accepted/received for an object, it is enqueued in the xworkq and we are thus 
@@ -417,8 +423,8 @@ metadata.
 The xwaitq xtype bears some similarities to the xworkq xtype. Like xworkq, it 
 is also an abstraction where "jobs" are enqueued and dequeued later on to be 
 executed. Unlike xworkq though, jobs are executed only when a predefined 
-condition is met. Another distinction is that the jobs in xwaitq are considered 
-to be thread-safe and can be executed concurrently by any thread.  
+condition is met. Another distinction is that the jobs in xwaitq are assumed to 
+be thread-safe and can be executed concurrently by any thread.  
 
 xwaitq is commonly used in non-critical code sections that can be executed only 
 under specific, predefined circumstances. The "jobs" that are enqueued in 
@@ -454,15 +460,15 @@ undertake, namely:
 \begin{enumerate}
 	\item Request handling
 	\item Write policy enforcing
-	\item Cache coherence
+	\item Data propagation
 \end{enumerate}
 
 Moreover, cached extends its repertoire using some unique components, namely:
 
 \begin{enumerate}
 	\item Bucket pool
-	\item Cache-IO
-	\item Book-keeping
+	\item Request wrapper (Cache-IO)
+	\item Book-keeping functions
 \end{enumerate}
 
 We will illustrate the design of cached from two different perspectives: the 
@@ -476,7 +482,7 @@ components and tasks in the following sections.
 
 \subsection{Request handling}
 
-Cached operates as a peer that receives requests from the vlmc. The majority of 
+Cached operates as a peer that receives requests from the vlmcd. The majority of 
 these requests will be read/write requests, but there are other types of 
 requests too such as copy requests (sent when an object is copied-on-write) and 
 info requests i.e. queries on what is the size of an object. Each of these 
@@ -686,7 +692,7 @@ Moreover, we keep global and per-object counters of every object's bucket
 states. The benefits from this approach is that we can know at any time if an 
 object (or cached in general) has a bucket in a certain state.
 
-\section{Cached Operation}\label{sec:op-design}
+\section{Cached Flow}\label{sec:cached-flow-design}
 
 \subsection{Write}
 

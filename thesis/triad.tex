@@ -527,7 +527,7 @@ data will be down with the host. In this case, the VM will not be able to start
 in another host or worse, it will be in inconsistent state with whatever 
 implications this may have.
 
-Even if we ignored the above, there other issues too, such as:
+Even if we ignored the above, there are other issues too, such as:
 
 \begin{enumerate}
 	\item If a user process segfaults, it can be restarted promptly, 
@@ -566,3 +566,5 @@ However, there are also some fundamental problems with them:
 
 For the above reasons, we have decided to roll out our own implementation, 
 which is presented in the following chapter.
+
+\todo Add why we don't want to use the page cache.
