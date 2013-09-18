@@ -5,10 +5,9 @@ its components. In this chapter, we will present how the above design has been
 implemented. To aid us in this task, we will use code snippets from cached, and 
 xcache and we will comment where necessary.
 
-More specifically, Section \ref{sec:xcache-imp} presents the implementation 
-information of xcache, the main cached component. Next, section 
-\ref{sec:cached-imp} presents the implementation of cached, showcasing the 
-structures and functions used.
+More specifically, Section \ref{sec:xcache-imp} presents the implementation of 
+xcache, the main cached component. Next, section \ref{sec:cached-imp} presents 
+the implementation of cached, showcasing the structures and functions used.
 
 \section{Implementation of xcache}\label{sec:xcache-imp}
 
@@ -162,8 +161,7 @@ description of them:
 	\item[xcache\_lookup:]
 		Takes the target's name as an argument and searches for it in 
 		cache.\\
-		Returns on failure: NoEntry\footnote{\#define NoEntry 
-			(xcache\_handler)-1}\\
+		Returns on failure: NoEntry\\
 		Returns on success: the requested handler.\\
 		\textbf{Note:} Looks only in \texttt{entries}.
 	\item[xcache\_insert:]
@@ -343,8 +341,9 @@ sure that there will be no deadlocks.
 \subsubsection{Reference counting}\label{sec:xcache-refcount-imp}
 
 Each cache entry has a volatile uint64\_t field which is atomically get and 
-put. The type is volatile to inform the compiler that it might be changed by an 
-external process and therefore not cache it.
+put. The type is volatile to inform the compiler that it might be changed 
+outside the current execution context and therefore do not cache it in a 
+register.
 
 Furthermore, the atomic gets and puts are executed using the GCC 
 builtins\cite{gcc-atomic} which are shown in Listing \ref{lst:xcache-atomic.c}.
@@ -397,9 +396,9 @@ the following section, we explain how we have handled that case
 \subsubsection{Entry put}
 
 The scenario of putting the entry has proved the most tricky one and deserves 
-its own section in the concurrency control implementation.
+its own section in the concurrency control implemesntation.
 
-For this scenario, we aimed to void the usage of our two biggest lock: 
+For this scenario, we aimed to avoid the usage of our two biggest locks: 
 \texttt{lock} and \texttt{rm\_lock}. Avoiding the first one was easy since the 
 hash table of active entries was not used. However, the same did not hold true 
 for the \texttt{rm\_lock}.
@@ -435,7 +434,10 @@ challenges we faced and the solutions we implemented.
 We have mentioned in the previous chapters that cached can be multi-threaded, 
 have different write policies, maximum number of objects, cache size etc. All 
 these variables are given from command-line and used during cached 
-initialization. The command-line arguments can be seen in Table \ref{tab:usage}
+initialization.
+
+\fixme do not present arguments as input arguments
+The command-line arguments can be seen in Table \ref{tab:usage}
 
 \begin{table}
 	\centering
@@ -481,23 +483,25 @@ which will be discussed in length in their respective sections.
 	\item[req\_waitq:]
 		A waitq for jobs that need to allocate a request to continue
 	\item[bucket\_data:]
-		This is a malloced space whose size is the total\_size of cache. This 
-		space is later split in buckets and its indexes are pushed on a stack
+		This is a allocated space whose size is the total\_size of 
+		cache.  This space is later split in buckets and its indexes 
+		are pushed on a stack
 	\item[bucket\_indexes:]
 		The stack where bucket indexes are pushed
 \end{description}
 
 Furthermore, during the xcache initialization that takes place inside the 
 cached initialization, the cached node initialization hook is triggered and 
-cached can create its own entries, which are as many as the max objects. The 
-cache entry struct (or "ce") can be seen in Listing \ref{lst:ce.h}.
+cached can create its objects, which are as many as the max objects.  
+Programmatically, cached objects are called "ce"s and their structure can be 
+seen in Listing \ref{lst:ce.h}.
 
 \ccode{Cached entry struct}{ce.h}
 
 The explanation of the above fields follows:
 
 \begin{description}
-	\item[status:] The ce status, as seen in Section 
+	\item[status:] The object status, as seen in Section 
 		\ref{sec:cached-states-design}
 	\item[lock:] The lock for the ce's and its buckets' data
 	\item[workq:] The xworkq that is used for concurrency control over 
@@ -505,7 +509,7 @@ The explanation of the above fields follows:
 		aforementioned lock
 	\item[pending\_waitq:] The xwaitq that is used when a request cannot be 
 		executed due to the ce's state. It will allow job executions 
-		only when the ce is not in FLUSHING state.
+		only when the object is not in FLUSHING state.
 \end{description}
 
 We have intentionally left out the bucket related fields that will be discussed 
@@ -521,7 +525,7 @@ When the cache node initialization hook is triggered, the ce's buckets are
 initialized. Essentially, this means we do (once only) the following:
 
 \begin{enumerate}
-	\item First, we calloc an array of struct buckets. The array has
+	\item First, we allocate an array of struct buckets. The array has
 		\texttt{buckets\_per\_object} length, which is typically 1024 
 		(4MB objects / 4KB bucket size). The struct bucket is a very 
 		simple struct and is presented in Listing 
@@ -529,7 +533,7 @@ initialized. Essentially, this means we do (once only) the following:
 		
 		\ccode{Bucket implementation}{bucket.h}
 
-	\item Second, we calloc two more arrays, the  
+	\item Second, we allocate two more arrays, the  
 		\texttt{bucket\_alloc\_status\_counters} and the
 		\texttt{bucket\_data\_status\_counters}, whose length is the 
 		number of allocation states (2) and data states (5) 
@@ -548,21 +552,26 @@ initialized. Essentially, this means we do (once only) the following:
 None of the above operations, however, interact with the bucket pool. This is 
 because we don't initially attach the bucket indexes to the ce's buckets.
 
-The way buckets are attached to the ce is analogous to the way a function maps 
-to its address space a large memory chunk that has previously allocated; the 
-chunk is internally divided to smaller chunks that are mapped to the function's 
-address space only when the function "touches" them.
+The way buckets are attached to the object is analogous to the way a function 
+maps to its address space a large memory chunk that has previously allocated; 
+the chunk is internally divided to smaller chunks and when the function 
+attempts to "touch" them, it is trapped and then the buckets are mapped to the 
+function's address space.
 
 Similarly, when cached accepts a request for a target, the request's range is 
 translated to bucket range. If any of the buckets within that range are not 
-attached to the ce, the request is "trapped" and the needed buckets are claimed 
+attached to the ce, the request is trapped and the needed buckets are claimed 
 from the bucket pool.
 
-Finally, the bucket claiming procedure is the following: we pop a bucket index 
-from the \texttt{bucket\_indexes} stack, translate it to the actual data 
-pointer and store it to the \texttt{data} field of the struct bucket. Later on, 
-when the bucket is released, we translate the data pointer back to the bucket 
-index and we push it to the bucket pool.
+Finally, the bucket claiming and release procedure is the following:
+\begin{enumerate}
+\item We pop a bucket index from the \texttt{bucket\_indexes} stack,
+\item We translate it to the actual data pointer and store it to the 
+	\texttt{data} field of the struct bucket,
+\item When the bucket is released, we translate the data pointer back to the 
+	bucket index
+\item We push the bucket index back to the bucket pool.
+\end{enumerate}
 
 \subsection{Request handling}
 
