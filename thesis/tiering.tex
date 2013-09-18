@@ -516,28 +516,32 @@ this way:
 		the hypervisor.
 \end{enumerate}
 
-The main issue with this approach (and host caching in general) is this. When 
-the host crashes, Ganeti attempts to restart the VM in another host. This is 
-possible since the instance's attributes are known by Ganeti and its storage is 
-either in DRBD slave or in RADOS. However, if we cache in writeback mode, the 
-VM will not be able to start or worse, it will be in inconsistent state with 
-whatever implications this may have.
+The main issue with this approach (and host caching in general) is this: If the 
+cloud software is distributed then, when a host crashes, the VMs can be 
+restarted in another host. This is possible in deployments where the instances' 
+attributes are known by the respective cloud management software and their data 
+are stored in a distributed storage system. 
+
+The issue arises when caching in write-back mode, where the VM's most recent 
+data will be down with the host. In this case, the VM will not be able to start 
+in another host or worse, it will be in inconsistent state with whatever 
+implications this may have.
 
 Even if we ignored the above, there other issues too, such as:
 
 \begin{enumerate}
-	\item If a user process segfaults, it can be restarted promptly, without 
-		interrupting the rest of the VMs. If however the kernel segfaults, the 
-		host will go down.
+	\item If a user process segfaults, it can be restarted promptly, 
+		without interrupting the rest of the VMs. If however the kernel 
+		segfaults, the host will go down.
 	\item Caching at xsegbd level does not take advantage of the fact that 
-		large parts of a VM's volume are shared between other volumes due to 
-		Copy-on-Write. This means there will be lost space in the SSD for data 
-		that are actually duplicate.
+		large parts of a VM's volume are shared between other volumes 
+		due to Copy-on-Write. This means there will be lost space in 
+		the SSD for data that are actually duplicate.
 	\item Flashcache has page tearing issues, which we want to avoid.
 	\item Bcache is for newer kernels and to date it still has some bugs.
-	\item Having a fixed partition for each volume does not scale, since for 
-		each VM with high activity, there can be 10 other stale VMs that 
-		practically eat up cache space.
+	\item Having a fixed partition for each volume does not scale, since 
+		for each VM with high activity, there can be 10 other stale VMs 
+		that practically eat up cache space.
 \end{enumerate}
 
 We will continue with the second category, the key-value store solutions. The 
@@ -560,5 +564,5 @@ However, there are also some fundamental problems with them:
 		has its own concept of replication.
 \end{enumerate}
 
-For the above reason, we have decided to roll out our own implementation, which 
-is presented in the following chapter.
+For the above reasons, we have decided to roll out our own implementation, 
+which is presented in the following chapter.
