@@ -40,8 +40,11 @@ goals:
 
 The first category is the comparison between using cached on top of the sosd 
 (sosd has been discussed here ?) and using solely the sosd as the Archipelago 
-storage. The category's goal is to "defend" one of the core thesis arguments, 
-that tiering is a key element that will improve the performance of Archipelago. 
+storage.
+\begin{comment}
+The category's goal is to "defend" one of the core thesis arguments, that 
+tiering is a key element that will improve the performance of Archipelago.  
+\end{comment}
 
 In order to compare effectively the performance of cached and sosd, we must 
 consider the following: 
@@ -72,8 +75,8 @@ consider the following:
 
 Having the above in mind, the next step is to choose a suitable workload.  This 
 choice though is fairly straight-forward; in production environments, the most 
-troublesome workload is the stampede of small random reads/writes and is 
-usually the most common one that is benchmarked.  
+troublesome workload is the burst of small random reads/writes and is usually 
+the most common one that is benchmarked.  
 
 One may ponder however, how many requests can be considered as a "stampede" or 
 which block size is considered as "small". Of course, there is not only one 
@@ -85,20 +88,8 @@ The second category deals solely with the inner-workings of cached and its
 behavior on different operation modes or states. Its aim is not to capture the 
 performance against a tough workload, but to explain \textbf{why} this 
 performance is observed and how each of the options affect it. For example, we 
-will measure things (blarg?) such as writethrough mode vs writeback mode, 
+will measure aspects such as writethrough mode vs writeback mode, 
 single-threaded vs multi-threaded etc.
-
-Also, here is the following list is the options of cached that affect the 
-measurements: 
-
-\begin{enumerate}
-	\item Bucket size
-	\item IOdepth
-	\item Cache size
-	\item Max cached objects
-	\item Write policy
-	\item ...
-\end{enumerate}
 
 Finally, in the following sections, for brevity reasons, we will talk about 
 comparing cached and sosd. What the reader must keep in mind however is that 
@@ -121,12 +112,12 @@ following.
 		RAΜ & 2 banks x 6 DIMMs PC3-10600 \\
 		& Peak transfer rate: 10660 MB/s \\ \hline
 	\end{tabular}
-	\caption{dev100 specs}
+	\caption{Test-bed specs}
 	\label{tab:specs}
 \end{table}
 
-Also, mention that we evaluated both peers by sending requests directly at 
-their request queues
+\fixme Mention that the peers were evaluated by sending requests directly at 
+their ports.
 
 \label{sec:perf-plot}
 \subsection{Performance comparison between cached and sosd}
@@ -143,7 +134,6 @@ different metrics:
 	\item[Latency:] We will measure the average time the requests need to be 
 		served. Unlike bandwidth, this metric reflects the responsiveness of 
 		the implementation. For example...
-	\item[IOPS:] (Should we include them?)
 \end{description}
 
 \subsubsection{Workload smaller than cache size - Peak behavior}
@@ -359,10 +349,10 @@ against cache hits for \textbf{write} operations. Theoretically, this should
 account to the overhead of adding new entries to cached and consecutively, an 
 indication of the complexity of our index mechanism.
 
-For this reason, we have written 128K (where \textit{K} is 1024 and \textit{M} 
-is 1024\^2), 256K, 512K and 1M objects and have measured their latency 
-performance. We expect that the experimental results will verify the claim that 
-our implementation is O(1).
+For this reason, we have written 128K (where \textbf{K} is \textbf{*1024} and 
+\textbf{M} is \textbf{*1024\^2}), 256K, 512K and 1M objects and have measured 
+their latency performance. We expect that the experimental results will verify 
+the claim that our implementation is O(1).
 
 To get the most accurate results and since we want to test just the performance 
 of our indexing mechanism, we have also used only 1 thread and only 1 IOdepth. 
