@@ -1,14 +1,65 @@
 \chapter{Introduction}\label{ch:intro}
 
-\section{Introduction/Motivation}
+%In the technology race of computer components
+In the new-age race of hardware, where vendors are always trying to produce the 
+next record-breaking unit, be it CPU, RAM or network cards, hard disks seem old 
+and gasping to catch up. For decades now, their sub-par performance, compared 
+to volatile memory, has been the bottleneck of every IO-intensive application 
+and the headache of storage designers \cite{nvm}. As over-stretched as this may 
+seem, it is a fact that it has shaped the way storage is built; from the common 
+computer (Linux's page cache, Bcache) to large deployments (the memcached 
+servers of Facebook and Twitter \fixme add paper), there is a tremendous effort 
+from the research and corporate community that is being invested in 
+sidestepping hard disks and finding alternative methods to store data.
+
+The hard disks' industry answer to this is the continuous drop of their prices.  
+In 2011 (\fixme be more specific), the HDDs reached their all-time low price of 
+\$0.053/GB \cite{hdd-price}. Moreover, the emerging movement of greener data 
+centers has benefited hard disks, since their low energy costs has been proved 
+attractive to the enterprises. Yet, for how long can the HDD industry keep 
+lowering the costs to mitigate their lack of performance?
+
+The answer came very fast and unfortunately in a tragic way. The end of July of 
+2011 marked the beginning of a 6-month turmoil for Thailand, with a flood that 
+was described as "the worst flooding yet in terms of the amount of water and 
+people affected" \cite{flood}. The hard disk industry also suffered a huge hit 
+due to the fact that 25\% percent of the global hard disk production was from 
+factories in Thailand, that were also affected by the flood.
+
+The result was an overnight 40\% percent increase of hard disk prices. The 
+reasons behind this increase were partly to compensate for the flood damages 
+and partly to seize the opportunity to increase the profit margins of the two 
+biggest producers, Western Digital and Seagate, from 6\% and 3\% to 16\% and 
+37\% respectively \cite{rosenthal12-unesco}.
+
+The timing could not have been worse for the HDD industry. This increase in 
+price introduced SSDs who are now starting to be considered as a viable 
+solution for peripheral storage tasks such as journaling and caching, due to 
+their high performance and their persistence, which separates them from other 
+volatile storage types.
+
+On the other hand, the current situation is that HDDs can only marginally 
+improve their performance. As their rotational speed approaches the speed of 
+sound, their production will be rendered at best difficult, and their heat 
+generation, power consumption and lack of long-term reliability will make their
+adoption prohibitive \cite{hddtrends},\cite{speed-of-sound}.
+
+The cloud world is largely affected by the future of storage mediums. Besides 
+SSDs, there are various other non-volatile storage types that are trying to 
+race for the momentum
+
+
+
 
 \todo Explain in a few words what we are trying to do here and why.
+
 
 \section{Thesis structure}
 
 \fixme Fix the summary and references of these chapters.
 
-% TODO: Make `Chapter x` click-able and anchored to the respective chapter
+% TODO: Make Chapter x click-able and anchored to the respective chapter
+
 \begin{description}
 \item[Chapter~\ref{ch:ch2}:]
 We define what "cloud" means and mention some of the most notable examples.
