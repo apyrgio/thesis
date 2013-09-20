@@ -41,14 +41,14 @@ goals:
 
 The first category is the comparison between using cached \textbf{on top} of 
 the sosd peer (sosd has been discussed here ? \fixme add section) and using 
-solely the sosd.
+solely the sosd peer.
 
 \begin{comment}
 The category's goal is to "defend" one of the core thesis arguments, that 
 tiering is a key element that will improve the performance of Archipelago.  
 \end{comment}
 
-In order to compare effectively the performance of cached and sosd, we must 
+In order to effectively compare the performance of cached and sosd, we must 
 consider the following: 
 
 \begin{enumerate}
@@ -115,7 +115,7 @@ following.
 		& Peak transfer rate: 10660 MB/s \\ \hline
 	\end{tabular}
 	\caption{Test-bed hardware specs}
-	\label{tab:specs}
+	\label{tab:hardware-specs}
 \end{table}
 
 \begin{table}[H]
@@ -128,7 +128,7 @@ following.
 		GCC & Debian 4.4.5-8 \\ \hline
 	\end{tabular}
 	\caption{Test-bed software specs}
-	\label{tab:specs}
+	\label{tab:software-specs}
 \end{table}
 
 \todo add configuration of RADOS cluster (journal, backing storage, network 
@@ -149,7 +149,7 @@ different metrics:
 	\item[Bandwidth:] \hfill \\
 		Bandwidth measures the maximum throughput that the application 
 		can sustain. This metric is usually used to indicate how much 
-		data (from various inputs) can an application process within a 
+		I/O (from various inputs) can an application handle within a 
 		second.
 	\item[Latency:] \hfill \\
 		Latency is the converse of bandwidth. It is a measurement from 
@@ -162,8 +162,8 @@ On the following sections, we present the benchmarks that we conducted for the
 first category. The first benchmark, which is shown in Section 
 \ref{sec:peak-plot} attempts to depict the behavior of cached during a peak of 
 I/O requests. The second benchmark, which is shown in Section 
-\ref{sec:consistent-plot}, illustrates the behavior of cached under continuous 
-load.
+\ref{sec:sustained-plot}, illustrates the behavior of cached under continuous 
+load.  On these sections, cached is always multi-threaded and uses 4 threads.
 
 \subsection{Workload smaller than cache size - Peak behavior}
 \label{sec:peak-plot}
@@ -187,43 +187,42 @@ The initial results look very promising. For write requests, the speedup for
 very small block sizes (4KB - 16KB) is approximately \textbf{100x} whereas for 
 larger ones (32KB - 64KB) it ranges from \textbf{50x to 200x}. For read 
 requests, the speedup for very small block sizes is approximately \textbf{50x}, 
-whereas for larger block sizes it ranges between \textbf{20x - 75x}.
+whereas for larger block sizes, it ranges between \textbf{20x - 75x}.
 
 These results not only illustrate the performance gap between RAM and
 HDDs but also show that our implementation manages to keep its bandwidth 
 consistently over 1 GB/s in stress scenarios. However, we must keep in mind 
-that they only show a part of the full picture and, since we do not test how 
+that they only show a part of the full picture, since it does not show how 
 cached behaves past its cache size.
 
 Moreover, upon closer inspection the following questions arise:
 
-\textbf{1) Where is the speedup difference between read and writes attributed 
+\textbf{1) Where is the speedup difference between reads and writes attributed 
 	to?}
 
-We have mentioned that the speedup for writes is between 50x and 200x whereas 
-for reads between 20x and 75x. Although it is a large speedup in both cases, it 
-also shows some of the shortcomings of our implementation.
+We have mentioned above that the speedup for writes is between 50x and 200x 
+whereas for reads is between 20x and 75x. Although it is a large speedup in 
+both cases, it also shows some of the shortcomings of our implementation.
 
 We attribute the speedup difference to three factors:
 
 \begin{enumerate}
 	\item The performance of cached is almost the same for writes and 
 		reads.  This is expected behavior as the read and write paths 
-		for cached have many common parts (\fixme show write/read 
-		path).
+		for cached have many common parts (\fixme show write/read path)
 		\footnote{To be more strict, reading seems a bit faster than 
 			writing, but that is probably attributed to CPU caches 
-			and the fact that reading from RAM is not a distractive 
-			operation in contrast to writing.}
+			and the fact that reading from RAM is a non-destructive 
+			operation in contrast to writing.}.
 	\item Cached doesn't scale much past the 16KB block size. This is an 
 		interesting observation with an unexpected answer. It may seem 
 		implausible at first, but what happens is that we are actually 
-		hitting the bandwidth limit of the server's RAM. If we consult 
+		hitting the bandwidth limit of the RAM modules. If we consult 
 		the table \ref{tab:hardware-specs}, we can see that the 
-		bandwidth limit of the RAM is about \~10.7GB/s.
+		bandwidth limit of the RAM is about \mytilde10.7GB/s
 		\footnote{A more careful look shows that we surpass this limit, 
 			which is expected given the fact that we have a multi 
-			channel RAM setup}
+			channel RAM setup.}.
 		This limit is approached asymptotically as the block size 
 		increases and the index overhead decreases (more about the 
 		index overhead later in the measurements of Section ? \fixme 
@@ -233,51 +232,60 @@ We attribute the speedup difference to three factors:
 \end{enumerate}
 
 To sum up, the cached's performance remains relatively the same in both reads 
-and writes, it's merely the sosd that is getting faster due to caches. 
+and writes, it is merely the sosd that is getting faster in reads due to 
+caches. 
 
 \textbf{2) Why is cached's performance increased along with block size?}
 
-This is another interesting observation but first, why don't we ask the same 
-about sosd? This is because sosd's primary storage are hard disk drives, which 
-have a major drawback; their seek time is not constant and is affected by the 
-location of the contents in the disk platters. Cached however stores data in 
-RAM and we would expect that writing 16 x 4k blocks and 1 x 64k block to take 
-approximately the same time.
+We expected that sosd's performance would increase proportionally to the block 
+size, due to the rotational nature of hard disk drives, but why does this 
+affects cached too? It is certainly not attributed to any \texttt{memcpy()} 
+performance tricks, since we always write in bucket granularity, which means 
+that a 16KB write is translated to 4 x 4KB writes.
 
-From this observation, we can extract that the indexing-related stuff (job 
-enqueuing, lock spinning, hash table indexing) dominate the cached's 
-performance. We can make sure this is the case if the latency results are in
-microseconds instead of nanoseconds, which is typical for RAM.
+From this observation, we extrapolate that the CPU operations such as indexing,
+job enqueuing, accepting and responding requests, that occur proportionally 
+more times for smaller block sizes, dominate the cached's performance.
 
-\textbf{Why isn't the performance of cached improved proportionally as the 
-	parallel requests increase?}
+We can see this more clearly if we consult Table \ref{tab:2threads}.
 
-The reason why we see a minor increase in the performance of cached, even 
-though it's multi-threaded, is because our locking scheme is not fine-grained 
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | l | l |}
+		\hline
+		\input{tables/cached-2threads-write.tex}
+	\end{tabular}
+	\caption{Write performance results for 2-threaded cached}
+	\label{tab:2threads}
+\end{table}
+
+Merely using two threads instead of four lessens the performance gap 
+significantly.
+
+\textbf{3) Why cached's perforance does not improve proportionally to the 
+	parallel requests?}
+
+The reason why we see only a minor increase in the performance of cached, even 
+though it is multi-threaded, is because our locking scheme is not fine-grained 
 enough. We have a single lock for our request queue, a single lock for most of 
 the hash table accesses and this inevitably causes a lot of threads to spin.  
 This slight improvement we see is mainly due to the fact that requests are 
-effectively being pipelined while waiting each other to release locks. (explain 
-better)
+effectively being pipelined while waiting each other to release its lock.  
 
-Let's proceed now to the latency results. The write performance can be seen in 
+We now proceed to the latency results. The write performance can be seen in 
 Figure \ref{fig:lat-write-comp-lie.pdf} while the read performance can be seen 
 in Figure \ref{fig:lat-read-comp-lie.pdf}.
 
 \diagram{Comparison of latency performance for writes}{lat-write-comp-lie.pdf}
 \diagram{Comparison of latency performance for reads}{lat-read-comp-lie.pdf}
 
-We will measure the speedup of the write and read performance of cached. It is 
-bla-bla for writes and bla-bla for reads.
+The latency results corroborate the observations that we made for the bandwidth 
+results. As we can see, the latency of cached is proportional to the number of 
+parallel requests, which reinforces the assumption that our locking scheme is 
+not granular enough, whereas sosd has only a small variance.
 
-We can also see that the latency results confirm our previous observations. The 
-latency is increased proportionally with the iodepth, which indicates once more 
-that we need a more fine-grained locking scheme. Also, latency results are in 
-the order of microseconds instead of nanoseconds which further supports the 
-assertion that the results are dominated by index-related stuff (argh, think of 
-something prettier)
-
-\subsection{Workload larger than cache size - Consistent behavior}
+\subsection{Workload larger than cache size - Sustained behavior}
+\label{sec:sustained-plot}
 
 We now proceed to the second part of the comparison between cached and sosd.  
 On this part, we will once again evaluate their performance against a random 
