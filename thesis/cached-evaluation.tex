@@ -290,32 +290,46 @@ not granular enough, whereas sosd has only a small variance.
 We now proceed to the second part of the comparison between cached and sosd.  
 On this part, we will once again evaluate their performance against a random 
 workload with many parallel requests. Unlike the first part though, where the 
-cache size was the same as the workload's, on this part the cache size will be 
-only a fraction of it. This is after all the projected usage of cached in
-production environments.
+cache size was larger than the workload's, on this part the cache size will be 
+only half of it. Having a smaller cache than the workload is after all the most 
+common scenario for production environments and the results should complete the 
+picture of cached's behavior in a production environment.
 
 For this test, there are two main parameters we must take into account: the 
 cache size and the maximum objects. These parameters have been decoupled in our 
-implementation and we expect different results for each combination. We have 
-chosen to measures cache sizes that start from the 1/64th of the workload's 
-size and reach up to the 1/8th of the workload's size. The maximum objects are 
-chosen differently (oversubscriptions on cache size etc.) they start from a 1/1 
-and reach up to 8/1.
+implementation and we expect different results for each combination. More 
+specifically, we have tested cached with:
 
-In Figure \ref{fig:bw-write-comp-truth.pdf} and Figure 
-\ref{fig:bw-read-comp-truth.pdf} we can see how cached performs for the above 
-scenario. sosd's result are of-course un-affected from the cache size and 
-maximum cache objects, and that's will be used as indicative lines for 
-slowness, fastness, does this word even exist?
+\begin{enumerate}
+	\item as much objects as (cache size / 4MB), essentially half the 
+		objects of the workload since cache size is
+		(benchmark size / 2) and
+	\item more than the objects of the workload.
+\end{enumerate}
 
-Comparing these results with the results Figure \ref{fig:bw-write-comp-lie.pdf} 
-and \ref{fig:bw-read-comp-lie.pdf}, there is a vast drop in the performance. 
+Also, we have tested the cached in write-through mode, to see its behavior in 
+sustained writes.  
+
+Furthermore, for this benchmark, we tested only the write performance of cached 
+and sosd.  Also, we chose to have 16 parallel requests and 4KB block sizes.  
+Finally, before we proceed to the results, we must explain first how this 
+diagram works.  Since cached's performance is fairly unstable in the scenario 
+that the workload exceeds its cache size, we have chosen to illustrate the 
+performance of cached as the benchmark progresses.
+
+The bandwidth results can be seen in Figure \ref{fig:bw-write-comp-truth.pdf}  
+we can see how cached performs for the above scenario. sosd's result are 
+of-course un-affected from the cache size and maximum cache objects, and that's 
+will be used as indicative lines for slowness, fastness, does this word even 
+exist?
+
+Comparing these results with the results Figure 
+\ref{fig:bw-write-comp-lie.pdf}, there is a vast drop in the performance.  
 Writes specifically cannot outperform the sosd. On the other hand, reads are 
 generally faster than sosd, about 1.5x.
 
 \diagram{Comparison of bandwidth performance for writes} 
 {bw-write-comp-truth.pdf}
-\diagram{Comparison of bandwidth performance for reads}{bw-read-comp-truth.pdf}
 
 \textbf{Why adding more objects makes us slower?}
 
@@ -326,8 +340,6 @@ below:
 
 \diagram{Comparison of latency performance for writes}
 {lat-write-comp-truth.pdf}
-\diagram{Comparison of latency performance for reads}{lat-read-comp-truth.pdf}
-
 
 \section{Performance evaluation of cached parameters}
 
