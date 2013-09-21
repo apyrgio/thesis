@@ -463,29 +463,58 @@ Finally, these results, along with the results of the first part, clearly show
 that we cannot fully utilize the multi-threading capabilities of cached unless 
 we employ a more fine-grained locking scheme.
 
-\subsubsection{Cold cache vs Hot cache}
+\subsection{Cold cache vs Hot cache}
 
-This scenario will attempt to evaluate the overhead of cache misses in cached
-against cache hits for \textbf{write} operations. Theoretically, this should 
-account to the overhead of adding new entries to cached and consecutively, an 
-indication of the complexity of our index mechanism.
+This scenario will attempt to evaluate the overhead of cache misses for 
+\textbf{write} operations. Theoretically, this should account to the overhead 
+of adding new entries to cached and consecutively, an indication of the 
+complexity of our index mechanism.
 
-For this reason, we have written 128K (where \textbf{K} is \textbf{*1024} and 
-\textbf{M} is \textbf{*1024\^2}), 256K, 512K and 1M objects and have measured 
-their latency performance. We expect that the experimental results will verify 
-the claim that our implementation is O(1).
+Our experimental procedure is the following:
 
-To get the most accurate results and since we want to test just the performance 
-of our indexing mechanism, we have also used only 1 thread and only 1 IOdepth. 
+\begin{enumerate}
+	\item We inserted 128K
+		\footnote{where \textbf{K} is \textbf{x1024} objects}, 256K, 512K and 
+		1M
+		\footnote{where \textbf{M} is \textbf{x1024\textsuperscript{2}} 
+			objects}
+		objects in a cached peer configured to hold up to 2M objects and 
+		measured their average latency times.
+	\item Subsequently, we attempted to insert these objects in cached again 
+		and measured their average latency times.
+\end{enumerate}
 
-On Figure \ref{fig:cold1.pdf} we can see the results we were talking about. The 
-major point in these results is that we can see that write latency, either of 
-cold or warm cache, remains practically the same as the number of objects 
-increases.
+The difference between the first and the second iteration is that in the second 
+iteration, the objects are hot in the cache and thus cached will not need to 
+reinsert them. This means that the first iteration has the extra actions of 
+allocating the entries and inserting them in the cache, whereas the second 
+iteration will only lookup the objects in the cache.
 
-\diagram{Latency performance of cold/warm cache for variable sizes}{cold1.pdf}
+We expect that the extra indexing action will add a constant overhead to the 
+measurements of the first iteration, regardless of the number of entries.
+Moreover, the latency times for the second iteration should remain the same, 
+regardless of the number of entries.
 
-As a side note, we observe a constant decrease in latency as the number of 
+\textbf{Note:} To get the most accurate results and since we want to test just 
+the overhead of our indexing mechanism, cached has been configured to use one 
+thread.  Moreover, the I/O depth is also one, to make sure that latency times 
+are not skewed by the time the request waits in the request queue.
+
+We present the results on Figure \ref{fig:cold1.pdf}.
+
+\diagram{Latency performance of cold/warm cache for various objects}{cold1.pdf}
+
+The focal point in these results is that the write latency, either of cold or 
+warm caches, remains practically the same as the number of objects increases.  
+This reinforces our statement that cached has average case O(1) complexity.
+
+Finally, an interesting finding from our results is that the latency of 
+indexing an entry, even in a hash table that supports 2 million objects (and 
+potentially 8TBs of data), is less than 1μs, which is a very strong feature of 
+our implementation.
+
+\begin{comment}
+As a side note, we observe a constant decrease in writelatency as the number of 
 objects increase this is not something that should be attributed to our 
 implementation. (explain that we have used a hash table that holds 2million 
 objects, so it is not mapped to our process's address space. When more objects 
@@ -493,3 +522,4 @@ are indexed, the hash table becomes fuller and the latency of mmap()s is
 equally distributed to the objects. Else, the hash table is more scarce but the 
 same blocks are hit, albeit not fully written, and thus the mmap latency is the 
 same but distributed to less objects.)
+\end{comment}
