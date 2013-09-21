@@ -314,7 +314,7 @@ specifically, we have tested cached with half the workload size and:
 \end{enumerate}
 
 Also, we have tested cached in write-through mode, to see its behavior in 
-sustained writes.  
+sustained writes. \fixme say it has unlimited objects 
 
 Furthermore, for this benchmark, we tested only the write performance of cached 
 and sosd.  Also, we chose to use 16 parallel requests and 4KB block sizes, 
@@ -378,6 +378,36 @@ Moreover, cached evicts whole objects to get their buckets, which means that
 evictions will be less frequent that cached-limited, which evicts entries to 
 index other entries.
 
+\textbf{4) Why cached in write-through mode performs the same as sods?}
+
+The performance of cached in write-through mode is the same as sosd's since 
+write requests are essentially forwarded to sosd and are cached when sosd 
+responds. The caching has no significant overhead, compared to the waiting time 
+for sosd, since there are no dirty entries and thus no costly evictions.
+
+What is more interesting however is the comparison of read performance between 
+cached and sosd, which can be seen in Table \ref{tab:writethrough}.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ | l | l | l | l | l | l |}
+		\hline
+		Peer& Bandwidth (MB/s) & IOPS	& Latency (usec) & Iodepth & Block size 
+		(KB) \\
+		\hline \hline
+		\input{tables/sosd-read.tex}
+		\input{tables/cached-writethrough-read.tex}
+	\end{tabular}
+	\caption{Read performance comparison of cached in write-through mode and 
+		sosd}
+	\label{tab:writethrough}
+\end{table}
+
+The read performance of cached has a noticeable increase of 25\%. This is 
+expected, since cached serves read requests either from its cached data or from 
+sosd. This means that it has the baseline performance of sosd plus the extra 
+performance gain from cache hits.
+
 \section{Performance evaluation of cached parameters}
 
 On this part, we will see what impact do different cached parameters have on 
@@ -386,7 +416,6 @@ its performance. We will test the following:
 \begin{enumerate}
 	\item Impact of different number of threads
 	\item Impact of cold cache vs. hot cache
-	\item Impact of writeback vs. writethrough mode
 \end{enumerate}
 
 Note that the tests above are run with the following parameters:
