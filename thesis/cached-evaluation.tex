@@ -410,10 +410,13 @@ performance gain from cache hits.
 
 To some extent, we have already discussed about the behavior of cached when we 
 tweak various of its parameters, such as the over-subscription of its objects, 
-the cache size or its write policy. In this category, we will further quantify 
-our previous assumptions about the inner workings of cached by measuring how
-cached scales with the number of threads and the overhead of the index 
-mechanism.
+the cache size or its write policy. In this category, we will further solidify 
+our previous assumptions about the inner workings of cached by measuring:
+
+\begin{enumerate}
+	\item how cached scales with the number of threads
+	\item the overhead of the index mechanism
+\end{enumerate}
 
 Note that the tests will be run with the following parameters:
 
@@ -429,33 +432,36 @@ may alter its performance, such as evictions and delays due to sosd.
 
 \subsection{Cached performance per number of threads}
 
-Measuring the performance impact of multi-threading is meaningless without 
-issuing any parallel requests. Therefore, we will test each number of cached 
-threads against a range of parallel requests and measure its performance.
+Measuring the performance impact of multi-threading is nonsensical, if the 
+application is not tested against many parallel requests. Hence, we will test 
+each n-threaded cached configuration against a range of parallel requests and 
+measure its performance.
 
 The bandwidth results can be seen in Figure \ref{fig:bw-write-threads.pdf} 
 whereas the latency results can be seen in Figure 
 \ref{fig:lat-write-threads.pdf}.
 
-\diagram{Bandwidth performance per number of threads}{bw-write-threads.pdf}
-\diagram{Latency performance per number of threads}{lat-write-threads.pdf}
+\diagram{Bandwidth performance for each number of 
+	threads}{bw-write-threads.pdf}
+\diagram{Latency performance for each number of threads}{lat-write-threads.pdf}
 
 From these results, we derive the following conclusions:
 
 \begin{enumerate}
-	\item Our implementation is benefited from multi-threading. We achieve 
-		a major performance improvement of up to 75\% when using two 
-		threads, as well as lower performance improvement for up to 
+	\item Cached is generally benefited from multi-threading, when the amount 
+		of parallel requests is more than two. More specifically, we achieve a 
+		major performance improvement of up to 75\% when using two threads, as 
+		well as a lower, but significant, performance improvement for up to 
 		four threads, as the number of parallel requests increases.
-	\item We don't scale well past the two threads and four parallel 
-		requests.
-	\item Adding more than two threads degenerates significantly the 
-		performance when the number of parallel requests is small.
+	\item Cached does not scale well past four parallel requests, regardless of 
+		the number of threads.
+	\item Adding more than two threads degrades significantly the performance 
+		of cached, when the number of parallel requests is small.
 \end{enumerate}
 
 Finally, these results, along with the results of the first part, clearly show 
-the dark spot of our implementation; it needs a more fine-grained locking 
-scheme else most of the thread's time will be spent spinning for a lock.
+that we cannot fully utilize the multi-threading capabilities of cached unless 
+we employ a more fine-grained locking scheme.
 
 \subsubsection{Cold cache vs Hot cache}
 
