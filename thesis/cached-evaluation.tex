@@ -180,8 +180,10 @@ amend this, we have broken the y-axis of our diagrams in two parts with
 different scales and starting values, in order to make the comparison easier to 
 the eye.
 
-\diagram{Comparison of bandwidth performance for writes}{bw-write-comp-lie.pdf}
-\diagram{Comparison of bandwidth performance for reads}{bw-read-comp-lie.pdf}
+\diagram{Comparison of bandwidth performance for write 
+	peaks}{bw-write-comp-lie.pdf}
+\diagram{Comparison of bandwidth performance for read 
+	peaks}{bw-read-comp-lie.pdf}
 
 The initial results look very promising. For write requests, the speedup for 
 very small block sizes (4KB - 16KB) is approximately \textbf{100x} whereas for 
@@ -259,6 +261,8 @@ We can see this more clearly if we consult Table \ref{tab:2threads}.
 	\label{tab:2threads}
 \end{table}
 
+\fixme elaborate on that
+
 Merely using two threads instead of four lessens the performance gap 
 significantly.
 
@@ -276,8 +280,10 @@ We now proceed to the latency results. The write performance can be seen in
 Figure \ref{fig:lat-write-comp-lie.pdf} while the read performance can be seen 
 in Figure \ref{fig:lat-read-comp-lie.pdf}.
 
-\diagram{Comparison of latency performance for writes}{lat-write-comp-lie.pdf}
-\diagram{Comparison of latency performance for reads}{lat-read-comp-lie.pdf}
+\diagram{Comparison of latency performance for write 
+	peaks}{lat-write-comp-lie.pdf}
+\diagram{Comparison of latency performance for read 
+	peaks}{lat-read-comp-lie.pdf}
 
 The latency results corroborate the observations that we made for the bandwidth 
 results. As we can see, the latency of cached is proportional to the number of 
@@ -290,56 +296,87 @@ not granular enough, whereas sosd has only a small variance.
 We now proceed to the second part of the comparison between cached and sosd.  
 On this part, we will once again evaluate their performance against a random 
 workload with many parallel requests. Unlike the first part though, where the 
-cache size was larger than the workload's, on this part the cache size will be 
-only half of it. Having a smaller cache than the workload is after all the most 
-common scenario for production environments and the results should complete the 
-picture of cached's behavior in a production environment.
+cache size was larger than the workload, on this part the cache size will
+only be half of it. Having a smaller cache than the workload is after all the 
+most common scenario for production environments and the results should 
+complete the picture of cached's behavior in a production environment.
 
 For this test, there are two main parameters we must take into account: the 
 cache size and the maximum objects. These parameters have been decoupled in our 
 implementation and we expect different results for each combination. More 
-specifically, we have tested cached with:
+specifically, we have tested cached with half the workload size and:
 
 \begin{enumerate}
-	\item as much objects as (cache size / 4MB), essentially half the 
-		objects of the workload since cache size is
-		(benchmark size / 2) and
-	\item more than the objects of the workload.
+	\item half the objects of the workload (referenced as 
+		\textbf{cached-limited} from now on).
+	\item more than the objects of the workload (referenced as 
+		\textbf{cached-unlimited} from now on).
 \end{enumerate}
 
-Also, we have tested the cached in write-through mode, to see its behavior in 
+Also, we have tested cached in write-through mode, to see its behavior in 
 sustained writes.  
 
 Furthermore, for this benchmark, we tested only the write performance of cached 
-and sosd.  Also, we chose to have 16 parallel requests and 4KB block sizes.  
-Finally, before we proceed to the results, we must explain first how this 
-diagram works.  Since cached's performance is fairly unstable in the scenario 
-that the workload exceeds its cache size, we have chosen to illustrate the 
-performance of cached as the benchmark progresses.
+and sosd.  Also, we chose to use 16 parallel requests and 4KB block sizes, 
+since these seemed the most troublesome in the previous benchmark.
 
-The bandwidth results can be seen in Figure \ref{fig:bw-write-comp-truth.pdf}  
-we can see how cached performs for the above scenario. sosd's result are 
-of-course un-affected from the cache size and maximum cache objects, and that's 
-will be used as indicative lines for slowness, fastness, does this word even 
-exist?
+Before we proceed to the results, we must explain first how the diagrams below 
+are structured. Since cached's performance is fairly unstable in this scenario, 
+we have chosen to illustrate it as the benchmark progresses.  Thus, the x-axis 
+shows what percent of the benchmark has been completed and for every 5\%, we 
+show the performance of cached for that part.
 
-Comparing these results with the results Figure 
-\ref{fig:bw-write-comp-lie.pdf}, there is a vast drop in the performance.  
-Writes specifically cannot outperform the sosd. On the other hand, reads are 
-generally faster than sosd, about 1.5x.
+The bandwidth results can be seen in Figure \ref{fig:bw-write-comp-truth.pdf}, 
+while the latency results can be seen in Figure 
+\ref{fig:lat-write-comp-truth.pdf}.  Due to the vast bandwidth drop of cached, 
+the y-axis uses a logarithmic scale to show a more clear picture of what 
+happens when the performance reaches the 10 MB/s mark.
 
-\diagram{Comparison of bandwidth performance for writes} 
+\diagram{Comparison of bandwidth performance for sustained writes} 
 {bw-write-comp-truth.pdf}
 
-\textbf{Why adding more objects makes us slower?}
-
-\textbf{Why reads manage to remain faster?}
-
-We will accompany the above diagrams with latency results. You can see them 
-below:
-
-\diagram{Comparison of latency performance for writes}
+\diagram{Comparison of latency performance for sustained writes}
 {lat-write-comp-truth.pdf}
+
+This diagram has several interesting points which we will address below.
+
+\textbf{1) Why cached-unlimited's performance drops in the middle of the 
+	benchmark?}
+
+Since cached-unlimited can index more objects than the workload, there is no 
+need to evict entries from the hash table to insert new ones. Cached-limited on 
+the other hand, has at any point a 50\% chance to receive a request for a 
+target that does not index. Thus, when cached-unlimited starts to receive the 
+first 50\% of requests, it only needs to store them and, as we have seen in the 
+first part of this section, it does so very fast.
+
+However, at around 50\% of the benchmark its space is depleted and thus, it has 
+to manually evict entries. At this point, we see that its performance 
+degenerates to the performance of cached-limited.
+
+\textbf{2) Why cached-limited's performance is significantly less than the 
+	sosd's performance?}
+
+As we have explained above, cached-limited constantly evicts entries due to its 
+object limitation. It may seem that the only cost of eviction is that the 
+performance degenerates to the performance of sosd, but that is not entirely 
+true.
+
+When an entry is evicted, all of its contents must be flushed before the new 
+entry can overwrite them. Moreover, the cost of concurrency control for hash 
+table migrations and the cost of creating new requests and copying the data in 
+them is not negligible. Finally, due to constant evictions, there are only a 
+few buckets cached for any entry, which in turn does not leave any margin for 
+coalescences.
+
+\textbf{3) Why cached-unlimited's performance increases after the 50\% mark ?}
+
+After the 50\% mark, cached-unlimited will have to resort to evictions in order 
+to store new data. Unlike cached-limited though, cached-unlimited has already 
+cached half of the workload's data, which allows for many coalescences.  
+Moreover, cached evicts whole objects to get their buckets, which means that 
+evictions will be less frequent that cached-limited, which evicts entries to 
+index other entries.
 
 \section{Performance evaluation of cached parameters}
 
