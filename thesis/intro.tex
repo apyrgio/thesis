@@ -1,65 +1,108 @@
 \chapter{Introduction}\label{ch:intro}
 
-\fixme Polish text below
+The racing track was clear and the computer hardware companies were tentatively 
+positioning themselves on the starting blocks, on the April of 1965. Gordon E.  
+Moore was holding the starter pistol, a paper where he famously stated that:
 
-In the new-age race of hardware, where vendors are always trying to produce the 
-next record-breaking unit, be it CPU, RAM or network cards, hard disks seem old 
-and gasping to catch up. For decades now, their sub-par performance, compared 
-to volatile memory, has been the bottleneck of every IO-intensive application 
-and the headache of storage designers \cite{nvm}. As over-stretched as this may 
-seem, it is a fact that it has shaped the way storage is built; from the common 
-computer (Linux's page cache, Bcache) to large deployments (the memcached 
-servers of Facebook and Twitter \fixme add paper), there is a tremendous effort 
-from the research and corporate community that is being invested in 
-sidestepping hard disks and finding alternative methods to store data.
+\begin{quotation}
+	"The complexity for minimum component costs has increased at a rate of 
+	roughly a factor of two per year. Certainly over the short term this rate 
+	can be expected to continue, if not to increase. Over the longer term, the 
+	rate of increase is a bit more uncertain, although there is no reason to 
+	believe it will not remain nearly constant for at least 10 years. That 
+	means by 1975, the number of components per integrated circuit for minimum 
+	cost will be 65,000. I believe that such a large circuit can be built on a 
+	single wafer."\cite{Moore}
+\end{quotation}
 
-The hard disks' industry answer to this is the continuous drop of their prices.  
-In 2011 (\fixme be more specific), the HDDs reached their all-time low price of 
+Until that year, the integrated circuits (or microchips, as they are commonly 
+called) were used prominently in embedded systems. Around the time the paper 
+was published however, they were also starting to being adopted by computer 
+manufacturers. The replacement of vacuum tubes with microchips marked the 
+passage of the mainframe computer to the minicomputer and on to the personal 
+computer that we know today.
+
+Whether Moore's statement was a very accurate prediction of the future of 
+microchips or a self-fulfilling prophecy that hardware companies used to market 
+their products, is unsure. What is sure though is that his statement propelled 
+the development of technology in general, since what became later on as a 
+\textit{"law"} has been applied to numerous other technologies, unrelated to 
+microchips such as the pixels of a camera or network capacity.  Wherever 
+Moore's law was applicable, the industry would excel itself to adhere as much 
+as possible to the projected growth, be it in microchip density, pixel density 
+or performance.
+
+Storage components, e.g. Hard Disk Drives (HDDs), Random Access Memory (RAM) 
+and Flash Memory, had also entered the race and their capacity has been 
+increasing ever since. In the performance track however, hard disks seem old 
+and gasping to catch up the much faster RAM and CPU caches. For decades now, 
+their sub-par performance has been the bottleneck of every IO-intensive 
+application and the headache of storage designers \cite{nvm}.
+
+As exaggerated as this might seem, their limitations have shaped the way 
+storage is built; hardware solutions such as the RAID technology, 
+battery-backed volatile memory in large servers and software solutions such as 
+the Linux's page cache, memcached, bcache, are all notable examples which show 
+that there is a tremendous effort that is being invested in sidestepping hard 
+disks and finding alternative methods to store data.
+
+The HDD's industry answer to this is the continuous drop of their prices.  In 
+2011 (\fixme be more specific), the HDDs reached their all-time low price of 
 \$0.053/GB \cite{hdd-price}. Moreover, the emerging movement of greener data 
-centers has benefited hard disks, since their low energy costs has been proved 
-attractive to the enterprises. Yet, for how long can the HDD industry keep 
-lowering the costs to mitigate their lack of performance?
+centers has benefited hard disks, since their lower energy costs than RAM is 
+attractive to enterprises. Yet, for how long can the HDD industry keep lowering 
+their costs to mitigate their lack of performance?
 
 The answer came very fast and unfortunately in a tragic way. The end of July of 
 2011 marked the beginning of a 6-month turmoil for Thailand, with a flood that 
 was described as "the worst flooding yet in terms of the amount of water and 
 people affected" \cite{flood}. The hard disk industry also suffered a huge hit 
 due to the fact that 25\% percent of the global hard disk production was from 
-factories in Thailand, that were also affected by the flood.
+factories in Thailand, that were largely affected by the flood.
 
 The result was an overnight 40\% percent increase of hard disk prices. The 
-reasons behind this increase were partly to compensate for the flood damages 
-and partly to seize the opportunity to increase the profit margins of the two 
-biggest producers, Western Digital and Seagate, from 6\% and 3\% to 16\% and 
-37\% respectively \cite{rosenthal12-unesco}.
+reasons behind this increase were in one part to compensate for the flood 
+damages and in another part to seize the opportunity to increase the profit 
+margins of the two biggest producers, Western Digital and Seagate, from 6\% and 
+3\% to 16\% and 37\% respectively \cite{rosenthal12-unesco}.
 
-The timing could not have been worse for the HDD industry. This increase in 
-price introduced SSDs who are now starting to be considered as a viable 
-solution for peripheral storage tasks such as journaling and caching, due to 
-their high performance and their persistence, which separates them from other 
-volatile storage types.
+The timing could not have been worse for the HDD industry. The price increase 
+led indirectly to the introduction of the more expensive but faster SSDs to the 
+enterprise world. Their vast price drop \cite{ssd-price},\cite{ssddrop} in the 
+last few years has made them viable candidates at least for peripheral storage 
+tasks such as journaling and caching, and has led experts to consider them as 
+the successors of HDDs.(\fixme cite someone)
 
-On the other hand, the current situation is that HDDs can only marginally 
-improve their performance. As their rotational speed approaches the speed of 
-sound, their production will be rendered at best difficult, and their heat 
-generation, power consumption and lack of long-term reliability will make their
-adoption prohibitive \cite{hddtrends},\cite{speed-of-sound}.
+On the other hand, HDDs are unable to retort performance-wise and can only 
+marginally improve their performance.  As their rotational speed approaches the 
+speed of sound, their production will be rendered at best difficult, and their 
+heat generation, power consumption and lack of long-term reliability will make 
+their adoption prohibitive \cite{hddtrends},\cite{speed-of-sound}.
 
-The cloud world is largely affected by the future of storage mediums.  \fixme 
-explain why. Besides SSDs, there are various flash memory types such as the 
-IOdrive of Fusion IO that are being utilized in performance-intensive 
-environments, albeit for higher prices. While this tug-of-war continues between 
-flash memory and HDDs and there is no clear winner, clever designs and 
-buffering techniques are very important for software services.
+Our prediction is that in some decades from now, when the dust will settle, the 
+data centers will probably migrate from HDDs to SSDs. Till date however, the 
+storage landscape is baffled with uncertainty as the tug-of-war between SSDs 
+and HDDs is still at large. Moreover, besides SSDs, there are various other 
+flash memory types such as the IOdrive of Fusion IO that are being utilized in 
+performance-intensive environments, albeit for higher prices. Besides hardware 
+solutions, there have also been developed various caching and buffering 
+software to increase the performance of databases and storage in general. 
 
-The Synnefo \cite{synnefo} cloud software, which powers the ~okeanos cloud 
-service \cite{okeanos} \fixme explain how it is affected and where Archipelago 
-enters.
+To sum up, the current storage landscape provides the storage designer with 
+various choices, each of which has its own merits and disadvantages. It is up 
+to the storage designer to weigh these choices and implement the solution that 
+fits the most to the profile of storage he/she builds and the budget of the 
+storage service.
 
-\section{Thesis subject}
+\section{Motivation}
 
-\todo explain that we are going to create a cache which will reside in memory 
-and see if it can help with this situation
+Since ?, GRNET S.A. \cite{grnet} has been developing the Synnefo \cite{synnefo} 
+cloud software, which powers the ~okeanos public cloud service \cite{okeanos}.
+\fixme explain what is okeanos, that it has a storage service, named Arcipelago 
+and that arcipelago is affected from the above.
+
+\todo add the contribution of our thesis, that we have created a cache to 
+increase the performance gain
 
 \section{Thesis structure}
 
