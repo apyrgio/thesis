@@ -39,15 +39,17 @@ that:
 \end{inparaenum}
 The above are provided to the peers by the \texttt{libxseg} library.
 
-In Figure \ref{fig:new_sxima.pdf}, we present the architecture of Archipelago.  
-Moreover, we show the Archipelago peers, the communication channels between 
-them and we briefly explain the operations that they are responsible for.
+In Figure \ref{fig:new_sxima_numbered.pdf}, we present the architecture of 
+Archipelago.  Moreover, we show the Archipelago peers, the communication 
+channels between them and we briefly explain the operations that they are 
+responsible for.
 
-\diagram{Archipelago components}{new_sxima.pdf}
+\diagram{Archipelago components}{new_sxima_numbered.pdf}
 
 \begin{description}
 	\item[XSEG Block Device (xsegbd)] \hfill \\
 		xsegbd is a kernel module that exposes a VM's volume as a block 
+		device. For each VM, Archipelago registers an xsegbd block 
 		device. This block device provides the entry point for the 
 		requests that enter the Archipelago layer.
 	\item[VoLuMe Composer Daemon (vlmcd)] \hfill \\
@@ -65,6 +67,97 @@ them and we briefly explain the operations that they are responsible for.
 		storage. Currently, there are file blockers for NFS and the 
 		RADOS object storage.
 \end{description}
+
+\section{Requests}
+
+We have already explained that Archipelago manipulates the requests that reach 
+to the VM's block device. There are two main reasons behind this approach:
+
+\begin{enumerate}
+	\item Since Archipelago has its own CoW policy, the only way to enforce 
+		it is to translate these requests to object requests and then 
+		consult its mappings to find the actual data.
+	\item In order to be able to use different storage backends, the 
+		requests must be translated to native requests for the 
+		respective backend.
+\end{enumerate}
+
+The request flow can be seen in Figure \ref{fig:new_sxima_numbered.pdf}. We 
+will explain what happens in every step of the process, with the same order as 
+they are presented in Figure \ref{fig:new_sxima_numbered.pdf}:
+
+\begin{enumerate}
+	\item The VM issues an I/O request, which is essentially a block 
+		request. The hypervisor forwards this request to xsegbd, the 
+		block device that is attached to every VM.
+	\item The xsegbd's purpose is to bring this requests to the user level, 
+		by copying its data to the shared memory segment and sending an 
+		XSEG request to vlmcd
+	\item Once the vlmcd receives the request, it translates it to an 
+		object request. The object name can be constructed from the
+		volume name and the dividend of the request offset divided by 
+		the object size. Once vlmcd knows the target object, it asks 
+		the mapper if this object is unique or a copy of another 
+		object.
+	\item The mapperd generally has the mappings of an object cached in its 
+		memory, so it can respond quickly. In the rare event that they 
+		are not cached, it queries a special purpose blocker to 
+		retrieve them.
+	\item At this point, mapperd has two courses of action:
+		\begin{enumerate}[i)]
+			\item it can either respond to vlmcd the correct object 
+				that it must read from or write to (3) or
+			\item perform a CoW operation (5)->(4)->(3)
+		\end{enumerate}
+
+		The CoW operation will be performed if the VM has asked to 
+		write on an object which is a copy of another object. In this 
+		case, mapperd will send a copy request to the data blocker and 
+		will create a new object with the same data (5). Then, mapperd 
+		will update its mapping and store it using the blocker for 
+		mappings (4). Once all of the above have finished, mapperd will 
+		respond to vlmcd the name of the copied object (3).
+	\item At this point, vlmcd can send the request for the correct object 
+		to the data blocker.
+	\item Finally, the blocker will read/write the requested data to the 
+		storage type that it has been written for.
+\end{enumerate}
+
+Once the storage backend completes the request, the data blocker notifies the 
+vlmcd, which in turn notifies the xsebd, which finally notifies the VM.
+
+\subsection{Request polling}
+
+There is a part that has been omitted in the previous section and that is how 
+peers send and receive requests. This is a rather intricate aspect of the 
+Archipelago IPC, but we will explain it here since it is needed to understand 
+mainly the synapsed implementation.
+
+To begin with, one of the features of the shared segment is that it provides a 
+number of \textbf{custom ports}. These ports are similar to network ports, in 
+the sense that peers bind them and can listen for requests through them. Each 
+port has essentially two queues:
+\begin{inparaenum}[i)]
+\item a \textbf{request queue}, where new requests are accepted, and
+\item a \textbf{reply queue}, where replies to requests are received.
+\end{inparaenum}
+
+Thus, when a peer wants to send a request to another peer, it merely needs to 
+enqueue that request to the request queue of the peer's port. Likewise, when a 
+peer responds to a request that was sent by another peer, it will enqueue that 
+request in the reply queue of that peer.
+
+Moreover, peers are notified about new requests via signals. When a peer 
+receives a signal, it wakes up and then accepts the request. However, context 
+switching is expensive, so once the peer has served a request, it will not 
+sleep immediately. Instead, it will iterate its ports for new requests for a 
+small number of cycles and if no request is received until then, it will sleep.
+
+\section{RADOS}
+
+\todo Add RADOS definition, cite philipgian and explain that sosd is used 
+for...
+
 
 
 \begin{comment}
@@ -257,14 +350,4 @@ We have bench xseg which works like so:
 
 Explain here about xq or in xtypes?
 \end{comment}
-
-\todo Add how a request is handled by archipelago (e.g. it goes to xsegbd, then 
-vlmcd, then mapperd, etc.)
-
-\todo Add a generic description of how Archipelago handles the polling of 
-requests (e.g. it binds ports, it waits for requests in them until it gets 
-signalled. It uses polling for a certain number of cycles to solve bursts etc.
-
-\todo Add RADOS definition, cite philipgian and explain that sosd is used 
-for...
 
