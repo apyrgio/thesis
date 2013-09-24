@@ -83,10 +83,11 @@ Our prediction is that in some decades from now, when the dust will settle, the
 data centers will probably migrate from HDDs to SSDs. Till date however, the 
 storage landscape is baffled with uncertainty as the tug-of-war between SSDs 
 and HDDs is still at large. Moreover, besides SSDs, there are various other 
-flash memory types such as the IOdrive of Fusion IO that are being utilized in 
-performance-intensive environments, albeit for higher prices. Besides hardware 
-solutions, there have also been developed various caching and buffering 
-software to increase the performance of databases and storage in general. 
+flash memory types, such as the IOdrive of Fusion IO, that are being utilized 
+in performance-intensive environments, albeit for higher prices. Besides 
+hardware solutions, there have also been developed various caching and 
+buffering software to increase the performance of databases and storage in 
+general. 
 
 To sum up, the current storage landscape provides the storage designer with 
 various choices, each of which has its own merits and disadvantages. It is up 
@@ -94,15 +95,59 @@ to the storage designer to weigh these choices and implement the solution that
 fits the most to the profile of storage he/she builds and the budget of the 
 storage service.
 
+\todo maybe talk about cloud? not quite sure I need to...
+
 \section{Motivation}
 
-Since ?, GRNET S.A. \cite{grnet} has been developing the Synnefo \cite{synnefo} 
-cloud software, which powers the ~okeanos public cloud service \cite{okeanos}.
-\fixme explain what is okeanos, that it has a storage service, named Arcipelago 
-and that arcipelago is affected from the above.
+The motivation for this thesis emerged from the performance limitations that we 
+have encountered during the development of the Synnefo
+\footnote{www.synnefo.org/} cloud software, which powers the \okeanos
+\footnote{https://okeanos.grnet.gr/} public cloud service \cite{okeanos}. We 
+will briefly explain what \okeanos and Synnefo are in the following paragraphs.
 
-\todo add the contribution of our thesis, that we have created a cache to 
-increase the performance gain
+\okeanos is an IaaS (Infrastructure as a Service) that provides Virtual 
+Machines, Virtual Networks and Storage services to the Greek Academic and 
+Research community. It is a production-ready project that has been in 
+development since 2011 by GRNET S.A.
+\footnote{Greek Research and Technology Network, https://www.grnet.gr/}
+
+Synnefo on the other hand is the cloud software stack that implements the 
+following services which are used by \okeanos:
+
+\begin{itemize}
+	\item \textit{Compute Service}, which is the service that enables the 
+		creation and management of Virtual Machines.
+	\item \textit{Network Service}, which is the service that provides network 
+		management, creation and transparent support of various network 
+		configurations.
+	\item \textit{Storage Service}, which is the service responsible for 
+		provisioning the VM volumes and storing user data.
+	\item \textit{Image Service}, which is the service that handles the 
+		customization and the deployment of OS images.
+	\item \textit{Identity Service}, which is the service that is responsible 
+		for user authentication and management, as well as for managing the 
+		various quota and projects of the users.
+\end{itemize}
+
+This thesis will deal exclusively with the Storage Service of Synnefo and more 
+specifically with the part that handles the VMs' data and volumes, which is 
+called Archipelago and is presented in Chapter \ref{ch:archip}.
+
+As we have mentioned at the start of this section, the motivation behind this 
+thesis was the unsatisfactory performance of Archipelago. More specifically, we 
+measured the performance of VMs with and without caching enabled on the host 
+and the results showed that host-side caching improved greatly the Archipelago 
+performance.
+
+Since Archipelago had no caching mechanisms and data were committed directly to 
+a replicated object storage (see more in Section ?) that was using hard disks, 
+we concluded that this was the main reason behind the performance issues of 
+Archipelago and decided to implement a caching system that would use a much 
+faster storage medium.
+
+As a result, this thesis presents the implementation of an in-memory caching 
+system with average-case O(1) complexity and documents all the design decisions 
+and the thinking process that has led to this implementation.
 
 \section{Thesis structure}
 
