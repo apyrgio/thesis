@@ -153,12 +153,52 @@ switching is expensive, so once the peer has served a request, it will not
 sleep immediately. Instead, it will iterate its ports for new requests for a 
 small number of cycles and if no request is received until then, it will sleep.
 
-\section{RADOS}
+\section{RADOS and sosd}
 
-\todo Add RADOS definition, cite philipgian and explain that sosd is used 
-for...
+As we have mentioned above, Archipelago is not restricted to a storage backend 
+and can work with any backend for which a blocker can be created. There is one 
+backend however that provides many important features that are used to make 
+Archipelago more scalable and reliable.
 
+This backend is RADOS\cite{rados}, which is the object store component of the 
+Ceph \footnote{ceph.com} system. Ceph is a free distributed object store and 
+file system that has been created by Sage Weil for his doctoral dissertation
+\cite{weil-thesis} and has been supported by his company, Inktank, ever since.
 
+The architecture of Ceph can be seen in Figure \ref{fig:ceph.png}.
+
+\diagram{Ceph architecture\protect\footnote[1]{Picture retrieved from the 
+		official website on September 24, 2013. All rights go to the
+		respective owners.}}{ceph.png}
+
+\fixme The footnote, position and rasterization are blarg. Do not put blarg in 
+thesis. Blarg is bad.
+
+Ceph utilizes RADOS to achieve the following:
+
+\begin{itemize}
+	\item \textit{Replication}, which means that there can be many copies 
+		of the same object so that the object is always accessible, 
+		even when a node experiences a failure.
+	\item \textit{Fault tolerance}, which is achieved by not having a 
+		single point of failure. Instead, RADOS uses elected servers 
+		called \textbf{monitors}, each of which have mappings of the 
+		storage nodes where the objects and their replicas are stored.  
+	\item \textit{Self-management}, which is possible since monitors know 
+		at any time the status of the storage nodes and, for example, 
+		can command to create new object replicas if a node experiences 
+		a failure.
+	\item \textit{Scalability}, which is aided by the fact that there is no 
+		point of failure, which means that adding new nodes 
+		theoretically does not add any communication overhead.
+\end{itemize}
+
+There are various entry points for RADOS, as is evident from Figure 
+\ref{fig:ceph.png}. Archipelago uses librados for I/O requests and more 
+specifically, a blocker called sosd\cite{sosd} has been created by Filippos 
+Giannakos to facilitate the communication between RADOS and Archipelago.
+
+\fixme cite filippos and explain what seems to be the problem with rados
 
 \begin{comment}
 \section{XSEG design}
