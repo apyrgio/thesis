@@ -97,22 +97,22 @@ storage service.
 
 \todo maybe talk about cloud? not quite sure I need to...
 
-\section{Motivation}
+\section{Thesis motivation and background}
 
-The motivation for this thesis emerged from the performance limitations that we 
-have encountered during the development of the Synnefo
+The motivation behind this thesis emerged from concerns about the storage 
+performance of the Synnefo
 \footnote{www.synnefo.org/} cloud software, which powers the \okeanos
 \footnote{https://okeanos.grnet.gr/} public cloud service \cite{okeanos}. We 
 will briefly explain what \okeanos and Synnefo are in the following paragraphs.
 
 \okeanos is an IaaS (Infrastructure as a Service) that provides Virtual 
 Machines, Virtual Networks and Storage services to the Greek Academic and 
-Research community. It is a production-ready project that has been in 
-development since 2011 by GRNET S.A.
+Research community. It is an open-source service that has been running in 
+production servers since 2011 by GRNET S.A.
 \footnote{Greek Research and Technology Network, https://www.grnet.gr/}
 
-Synnefo on the other hand is the cloud software stack that implements the 
-following services which are used by \okeanos:
+Synnefo is the cloud software stack that implements the following services 
+which are used by \okeanos:
 
 \begin{itemize}
 	\item \textit{Compute Service}, which is the service that enables the 
@@ -140,48 +140,54 @@ and the results showed that host-side caching improved greatly the Archipelago
 performance.
 
 Since Archipelago had no caching mechanisms and data were committed directly to 
-a replicated object storage (see more in Section ?) that was using hard disks, 
-we concluded that this was the main reason behind the performance issues of 
-Archipelago and decided to implement a caching system that would use a much 
-faster storage medium.
+a replicated object storage (see more in Section \fixme add section) that was 
+using hard disks, we concluded that this was the main reason behind the 
+performance issues of Archipelago and decided to implement a caching system 
+that would use a much faster storage medium.
 
 As a result, this thesis presents the implementation of an in-memory caching 
 system with average-case O(1) complexity and documents all the design decisions 
 and the thinking process that has led to this implementation.
 
+\todo hmm, not very satisfied with the intro...
+
 \section{Thesis structure}
 
-\fixme Fix the summary and references of these chapters.
-
-% TODO: Make Chapter x click-able and anchored to the respective chapter
+The thesis is organized as follows:
 
 \begin{description}
-\item[Chapter~\ref{ch:ch2}:]
-We define what "cloud" means and mention some of the most notable examples.
-Then, we give a brief overview of the synnefo implementation, its key
-characteristics and why it can have a place in the current cloud world.
-\item[Chapter~\ref{ch:archipelago}:]
-We present the architecture of Archipelago and provide the necessary 
-theoretical background (mmap, IPC) the reader needs to understand its basic 
-concepts. Then, we thoroughly explain how Archipelago handles I/O requests.  
-Finally, we mention what are the current storage mechanisms for Archipelago and 
-evaluate their performance.
-\item[Chapter~\ref{ch:tiering}:]
-We explain why tiering is important and what is the state of tiered storage at
-the moment (bcache, flashcache, memcached, ramcloud, couchbase).  Then, we
-provide the related theoretical background for cached (hash-tables, LRUs).
-Finally, we defend why we chose to roll out our own implementation.
-\item[Chapter~\ref{ch:cached-design}:]
-We explain the design of cached, the building blocks that is consisted of
-(xcache, xworkq, xwaitq). Then, we give some examples that illustrate the 
-operation under different scenarios
-\item[Chapter~\ref{ch:cached-implementation}:]
-We present the cached implementation, the structures that have been created and 
-the functions that have been used.
-\item[Chapter~\ref{ch:cached-evaluation}:]
-We explain how cached was evaluated and present benchmark results.
-\item[Chapter~\ref{ch:synapsed}:]
-It connects brain parts. And its tale must be told.
-\item[Chapter~\ref{ch:ch7}:]
-We draw some concluding remarks and propose some future work.
+\item[Chapter~\ref{ch:theory}:] \hfill \\
+	We provide the necessary theoretical background for the concepts and 
+	entities that are being discussed throughout the thesis.
+\item[Chapter~\ref{ch:archip}:] \hfill \\
+	We present the architecture of Archipelago and explain how Archipelago 
+	handles I/O requests. Moreover, we provide information about RADOS, one 
+	of the storage backends of Archipelago, as well as sosd, an Archipelago 
+	component that has been created to communicate with RADOS and has been 
+	the subject of a previous CSLAB thesis \cite{philipgian}.
+\item[Chapter~\ref{ch:triad}:] \hfill \\
+	We explain three of the most discussed concepts in the cloud world; 
+	scalability, tiering and caching, and depict how they can be used in a 
+	real-life scenario. Then, we present the most popular solutions for 
+	increasing the storage performance of an application, such as bcache, 
+	memcached, flashcache. Finally, we weigh their pros and cons explain 
+	why they are inadequate for our purposes.
+\item[Chapter~\ref{ch:cached-design}:] \hfill \\
+	We explain the design of cached and the building blocks that is 
+	consisted of (xcache, xworkq, xwaitq). Moreover, we illustrate how 
+	cached handles I/O requests.
+\item[Chapter~\ref{ch:cached-implementation}:] \hfill \\
+	We present the cached implementation, such as the structures and 
+	methods that we have used, in the form of code snippets. Furthermore, 
+	we accompany them with the necessary commentary.
+\item[Chapter~\ref{ch:cached-evaluation}:] \hfill \\
+	In this chapter, we benchmark the sosd and cached peers under various 
+	scenarios and evaluate their performance. Also, we present the 
+	methodology behind our benchmarks and the specifications of the test 
+	beds.
+\item[Chapter~\ref{ch:synapsed}:] \hfill \\
+	We present synapsed, a complimentary component to cached, whose purpose 
+	is to transfer Archipelago requests over the network.
+\item[Chapter~\ref{ch:ch7}:] \hfill \\
+	\todo fill this
 \end{description}
