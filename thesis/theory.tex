@@ -1,24 +1,37 @@
 \chapter{Necessary theoretical background}\label{ch:theory}
 
-\fixme Make this section about the concepts that will be discussed, as well as 
-point to the appropriate chapters.
+In this chapter, we will explain the main concepts and mechanisms that are used 
+by Archipelago as well as our implementation. The concepts that will be 
+discussed are basic as far as Operating Systems are concerned and should pose 
+no comprehension difficulties to a reader with elementary background on the 
+subject.
 
-\begin{comment}
-In this typically boring section, we will explain the basic system facilities 
-and programming concepts that are used by our implementation and Archipelago in 
-general. More specifically, in Section ?...
-\end{comment}
+More specifically, Section \ref{sec:multi-theory} discusses what is 
+multithreading and lists its advantages and disadvantages. Section 
+\ref{sec:ipc-theory} introduces the Interprocess Communication mechanisms that 
+are employed by Linux and concentrates on the ones that are used in Archipelago 
+and our implementation. Finally, Section \ref{sec:conc-theory} explains the 
+various concurrency control methods that exist to synchronize threads or 
+processes.
 
-\section{Multithreading}
+\section{Multithreading}\label{sec:multi-theory}
+
 
 Mutlithreading is a programming concept that has been the subject of research 
 long before the emerge of SMP systems
 \footnote{Symmetric multiprocessing systems, commonly systems with multiple 
 	processors}
 . More specifically, temporal multithreading has been introduced in the 1950s 
-whereas Simultaneous Multithreading (SMT), which is the current invocation of 
-multithreading programming, was first researched by IBM in 1968\cite{mt}.i 
-\todo Add what is temporal mt and simultaneous mt
+whereas simultaneous multithreading (SMT), which is the current invocation of 
+multithreading programming, was first researched by IBM in 1968\cite{mt}.
+
+The difference between these two types is the number of threads that can run 
+simultaneously on the system. For simultaneous multithreading, there are 
+commonly more than one threads that can run in parallel, whereas for temporal 
+multithreading, there is only one. This means that the running thread must be 
+descheduled to let the other threads run. Temporal multithreading was an old 
+concept that predates SMP systems and this limitation mirrors the limitations 
+of the hardware of that era.
 
 Before threads, programs could utilize the concurrency of SMP systems using 
 forked processes that would communicate with each other. The introduction of 
@@ -145,11 +158,11 @@ SIGSTOP signals:
 
 \subsection{Sockets}
 
-Sockets are a bidirectional means \fixme(is it means or mean ?) of sending data 
-between processes.  The processes can be in the same host but most commonly, 
-they are in remote hosts and the data are sent over the network. Furthermore, 
-from all the IPC methods that we have described above, sockets are the only 
-method that enables remote communication. 
+Sockets are a bidirectional means of sending data between processes.  The 
+processes can be in the same host but most commonly, they are in remote hosts 
+and the data are sent over the network. Furthermore, from all the IPC methods 
+that we have described above, sockets are the only method that enables remote 
+communication. 
 
 There are many socket implementations for different purposes, which are divided 
 in several communication domains, most of which are rather obscure. The three 
@@ -215,18 +228,24 @@ unique connection between two sockets, and has the following key features:
 
 \subsubsection{UDP}
 
-\fixme Make this a list
-The User Datagram Protocol on the other hand has far less restrictions than 
-TCP. First, it is connectionless, meaning that the socket can receive requests 
-from anyone. Second, it provides no guarantees about the delivery of the 
-messages. Third, the messages can arrive in other order than the one they were 
-sent. Fourth, there is no rate-limiting, meaning that the congestion control 
-must be handled in the application level. Finally, it sends datagrams instead 
-of bytes, which have definite boundaries.
+The User Datagram Protocol on the other hand is a much simpler protocol. It is 
+used to send \textit{datagrams}, which are basically extended IP packets with 
+some extra features. The UDP protocol has the following differences from 
+TCP:
 
-Although there might seem that there is no reason for one to choose the 
-unreliable UDP protocol, the lack of the TCP overhead makes it an ideal choice 
-for applications that value speed over packet loss.
+\begin{itemize}
+	\item It is connectionless, meaning that the socket can receive 
+		requests from anyone.
+	\item It provides no guarantees about the delivery of the messages.  
+	\item The messages can arrive in other order than the one they were 
+		sent.
+	\item There is no rate-limiting, meaning that the congestion control 
+		must be handled in the application level.
+	\item It cannot send streaming data since datagrams are bounded.
+\end{itemize}
+
+The UDP protocol is often preferred over TCP by applications that value speed 
+over data loss (e.g. video streaming applications) due to its low overhead.
 
 \subsection{Shared memory}
 
