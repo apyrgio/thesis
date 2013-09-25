@@ -79,7 +79,7 @@ the higher tiers.
 
 \diagram{Computer Memory Hierarchy}{mem-hier.pdf}
 
-\section{What is caching?}\label{sec:scalability-triad}
+\section{What is caching?}\label{sec:caching-triad}
 
 In the context of I/O requests, caching is the addition of a fast medium in a 
 data path, whose purpose is to transparently store the data that are intended 
@@ -133,11 +133,11 @@ combinations that make more sense:
 
 \subsection{Caching limitations}
 
-Fast mediums like RAM and SSD drives cost more dollars/GB than slower mediums, 
-such as hard disks \fixme prove it. For this reason, caches always have smaller 
-capacity than the mediums they cache. So, when a cache reaches its maximum 
-capacity, it must evict one of its entries. However, which entry is the one 
-that must be evicted?
+In our introduction we have explained that fast mediums like RAM and SSD drives 
+cost more dollars/GB than slower mediums, such as hard disks.  For this reason, 
+caches always have smaller capacity than the mediums they cache.  So, when a 
+cache reaches its maximum capacity, it must evict one of its entries.  However, 
+which entry is the one that must be evicted?
 
 This is a very old and well documented problem that still troubles the research 
 community. It was first faced when creating hardware caches (the L1, L2 CPU 
@@ -167,21 +167,18 @@ strategies:
 		since it assumes that cache entries are used only once, which 
 		is not common in real-life situations.
 	\item \textbf{LRU (Least-Recently-Used)}
-		Evict the entry that has been less recently used. This is the 
-		most common eviction strategy and there has been a paper that 
-		uses a Bayesian statistic model to prove its optimality (\fixme 
-		add paper). It is not however simple to implement since there 
-		needs to be some sort of tracking of the time of reference for 
-		each entry.
+		Evict the entry that has been less recently used. This is one 
+		of the most common eviction strategies, however, it is not 
+		simple to implement since the application needs a way to track 
+		and index fast the last references to all entries.
 	\item \textbf{LFU (Least-Frequently-Used)}
 		Evict the entry that has been less frequently used. There have 
 		been many derivatives of this algorithm that also use parts of 
 		the LRU algorithm which have promising results, but this 
-		algorithm itself is
-		not commonly used. The reason is because it overestimates the 
-		frequency of references to an item and it performs poorly in 
-		cases when an item is frequently accessed and then is not used 
-		at all.
+		algorithm itself is not commonly used. The reason is because it 
+		overestimates the frequency of references to an item and it 
+		performs poorly in cases when an item is frequently accessed 
+		and then is not used at all.
 \end{itemize}
 
 %Also, check out this paper:
@@ -229,7 +226,7 @@ it) of the following decisions:
 The employment of one of the aforementioned techniques (scaling, tiering, 
 caching) is of paramount importance for the future of the service.
 
-\section{Current Solutions}\label{sec:scalability-triad}
+\section{Current Solutions}\label{sec:solutions-triad}
 
 For the thesis purpose, we have evaluated a numerous of caching solutions. The 
 results of our evaluations are presented below:
@@ -367,11 +364,11 @@ are my friends and who of them are online?", "What are the latest news in my
 feed?" etc. which could be easily cached, crippled instead the database by 
 adding a lot of load to it.
 
-To tackle this problem, administrator can instruct memcached to utilize the 
-unused RAM of the site's servers to cache these kinds of queries. Ten years 
-later, memcached has become the defacto scale-out solution, and has use cases 
-such as Facebook's whose dedicated memcached servers serve the 95\% of their 
-queries (\fixme add presentation)
+To tackle this problem, memcached can be used to utilize the unused RAM of the 
+site's servers to cache these kinds of queries. Ten years later, memcached has 
+become the defacto scale-out solution, and has use cases such as Facebook's, 
+whose 800 dedicated memcached servers can serve billions of request per second 
+for trillions of stored items\cite{facebook-memcached}.
 
 \subsubsection{Installation and usage}
 
@@ -392,10 +389,14 @@ is done in runtime.
 
 Architecturally, memcached tries to do everything in O(1) time. Each memcached 
 server consists of a hash table that indexes the keys and their data. Since the 
-data size can vary from 1 byte to 1MB, they are organized in SLABs in order to 
-prevent memory fragmentation.  Moreover, each memcached must be able to handle 
-tens of thousands connections from clients, so it relies in libevent to do the 
-asynchronous polling.
+data size can vary from 1 byte to 1MB, memcached uses SLAB allocation in order 
+to prevent memory fragmentation. In SLAB allocation, memory is reserved in 
+fixed-sized pages, e.g. 1MB for memcached, which are divided in blocks of equal 
+size. Then, items are stored to the SLAB whose block size is closer to their 
+size.
+
+Moreover, each memcached must be able to handle tens of thousands connections 
+from clients, so it relies in libevent to do the asynchronous polling.
 
 What's more interesting about memcached is that its main strength is actually 
 its biggest limitation. Memcached has no persistence and in fact, data can be 
@@ -406,9 +407,9 @@ evicted in numerous ways:
 		garbage-collected.
 	\item Data can be evicted before their expiration time, if the cache 
 		has become full.
-	\item When memcached is out of SLAB pages \fixme what are slab pages?, 
-		it must evict one in order to regain space. This leads to the 
-		eviction of more than one keys.
+	\item When memcached is out of SLAB pages, it must evict one in order 
+		to regain space. This leads to the eviction of more than one 
+		keys.
 	\item When adding or removing memcached servers, the Ketama algorithm 
 		that maps keys to servers will assign a portion of the existing 
 		keys to other servers. This change in mapping, however, will 
@@ -479,18 +480,46 @@ replication. It didn't catch up however for the following reasons:
 
 \subsubsection{Ramcloud}
 
-RAMCloud (\fixme add paper) is a project that is being directed by John 
-Ousterhout at Stanford University. RAMCloud is not a caching system per se, but 
-a storage system that uses RAM as its primary storage and hard disks for 
-failover scenarions. To be able to stay persistent even after a node crashes, 
-it also maintains data replicas and requires Infiband connection between nodes 
-to migrate the data quickly to other nodes.
+RAMCloud\cite{ramcloud} is a project that is being directed by John Ousterhout 
+at Stanford University. RAMCloud is not a caching system, but a distributed 
+storage system that uses primarily DRAM, whereas hard disks are used only for 
+crash recovery scenarios\cite{recovery-ramcloud}.
 
-RAMCloud states that it, or a system with similar design, will be the primary 
-storage system of services such as AWS or Microsoft's Azure. For the time 
-being, RAMCloud is under heavy development and its requirements are way of the 
-budget of most deployment.
+RAMCloud aims to be persistent, meaning that writes to a server are 
+acknowledged only when the data are replicated to at least three other servers 
+and are in the process to be written asynchronously to disk. Moreover, since 
+DRAM has faster access times than network, RAMCloud requires fast Infiniband 
+connections between nodes for lower access times as well as for quick data 
+migration in recovery scenarios. Finally, in order to retain data even after a 
+power loss, RAMCloud needs either battery-backed servers or DIMM modules with 
+integrated super-capacitors.
 
+Although RAMCloud is an aspiring project, we have chosen not to investigate it 
+further for two reasons:
+
+\begin{enumerate}
+	\item it requires non-commodity hardware, which is the opposite of our 
+		goal.
+	\item it is not production-ready yet.
+\end{enumerate}
+
+\subsubsection{Page-cache}
+
+Theoretically, our search for a production-ready, fast cache that scales and 
+can be used in conjunction with Archipelago can stop, if we allow the VM's 
+hypervisor to use Linux's page cache. In fact, we have measurements in Figures 
+\fixme add figures that show that we can expect a x? increase in performance.  
+
+There are several reasons why we have not favored this approach. The main 
+reason is that this type of caching, as we will explain in the following 
+section, is orthogonal to the way Archipelago handles data. It is agnostic to 
+the CoW policy of Archipelago and as a result, it caches duplicated blocks 
+wasting valuable memory.
+
+Moreover, we have little or no control over the Linux page cache. For example, 
+we cannot enforce a limit to the cache size or apply a replication policy.
+
+\todo not very satisfied, rewrite it
 
 \subsection{Evaluation}
 
@@ -566,5 +595,3 @@ However, there are also some fundamental problems with them:
 
 For the above reasons, we have decided to roll out our own implementation, 
 which is presented in the following chapter.
-
-\todo Add why we don't want to use the page cache.
