@@ -513,6 +513,16 @@ indexing an entry, even in a hash table that supports 2 million objects (and
 potentially 8TBs of data), is less than 1μs, which is a very strong feature of 
 our implementation.
 
+\subsection{Performance evaluation on an existing VM}
+
+\todo add fio job
+
+The bandwidth results for our evaluation can be seen in Figure \ref{bw-vm.pdf} 
+
+\diagram{Bandwidth performance of cached}{bw-vm.pdf}
+
+\diagram{Latency performance of cached}{lat-vm.pdf}
+
 \begin{comment}
 As a side note, we observe a constant decrease in writelatency as the number of 
 objects increase this is not something that should be attributed to our 
