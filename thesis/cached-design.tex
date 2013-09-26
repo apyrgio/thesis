@@ -1,45 +1,53 @@
 \chapter{Design of cached}\label{ch:cached-design}
 
-\todo Link the previous chapter and the evaluation of different solutions with 
-this one
-
-\begin{comment}
 In Chapter \ref{ch:triad}, we have addressed the importance of scalability, 
-tiering and caching in the 
-asqualities of a storage tiering in terms of
-scalability as well as performance. % Which are these chapters? Link them.
+tiering and caching for a storage service. We have also presented various 
+caching solutions and explained why we rejected them.
 
-We have also evaluated current caching solutions and described why they 
-couldn't be used as a cache tier in Archipelago. % Provide link to a table of 
-comparisons
-\end{comment}
+This situation ultimately lead to the design of an new caching entity. This 
+entity is called "cached", which simply means \textbf{cache d}aemon. We have 
+decided to invest time in creating our own implementation mainly for two 
+reasons:
+\begin{inparaenum}[i)]
+\item to create a peer that understands the Archipelago logic and can integrate 
+	naturally with it and
+\item to measure the best possible performance gain that we can achieve and 
+	evaluate if it is worth to further pursue and improve upon it.
+\end{inparaenum}
 
-Having these observations in mind, we can provide some more strict requirements 
-that our solution must have:
+Thus, in addition to the observations of the previous chapter, we will provide 
+some stricter requirements that our solution must have:
 
 % List the requirements for our solution
 \begin{enumerate}
-	\item \textbf{Nativity:} Our solution must be native to Archipelago 
-		i.e.  not need any translation layers to communicate with it.
+	\item \textbf{Nativity:} Cached must be native to Archipelago i.e.  not 
+		need any translation layers to communicate with it.
 		%explain why
-	\item \textbf{Pluggability:} Our solution must be able to provide a 
-		caching layer between peers that are already in operating mode 
-		without restarting Archipelago. Also, it must be removed 
-		without disturbing the service.
-	\item \textbf{In-memory:} Our solution must cache requests in RAM, 
-		since the next fastest tier, SSDs, are already being used in 
-		RADOS as a journal.
-	\item \textbf{O(1) complexity} Since our solution will keep data 
-		in-memory, the complexity of the indexing mechanism should be 
-		as small as possible, 
+	\item \textbf{Pluggability:} Cached must be able to provide a caching 
+		layer between peers that are already in operating mode without 
+		restarting Archipelago. Also, it must be removed without 
+		disturbing the service.
+	\item \textbf{In-memory:}
+		\begin{comment}
+		Our solution must cache requests in RAM, since the next fastest 
+		tier, SSDs, are already being used in RADOS as a 
+		journal.
+		\end{comment}
+		Our main goal is to measure the maximum performance gain that 
+		we can achieve, which means that caching in DRAM is our best 
+		option.
+		
+		This also means that we will temporarily hand-wave the issue of 
+		data volatility and we will concern ourselves with it if cached 
+		has promising results.
+	\item \textbf{O(1) complexity} For performance reasons and since we 
+		already cache data in memory, the complexity of the indexing 
+		mechanism should be as small as possible.
 \end{enumerate}
 
-For the following sections, we will drop the \textit{"solution"} moniker and we 
-will use instead the proper name of our implementation, "cached", which simply 
-means \textbf{cache d}aemon).
-
-The following two chapters are the main bulk of this thesis and they present our 
-own implementation that aims to fill the above requirements.
+The following two chapters are the main bulk of this thesis and they present 
+the design and implementation of cached that aims to fill the above 
+requirements.
 
 % Foretell what the following sections will contain
 More specifically, this chapter provides an in-depth description of the design 
@@ -58,11 +66,10 @@ cached.
 \section{Design rationale}\label{sec:rationale-design}
 
 One of the first architectural decisions was to implement cached as an 
-Archipelago user-space peer (see Section \ref{sec:arch-peer} about Archipelago 
-peers). This choice was the most natural one since it provides the smallest 
-possible communication overhead with the other Archipelago peers. Also, this 
-design decision covers the \textbf{nativity} requirement we posed at the 
-beginning of this chapter.
+Archipelago user-space peer.  This choice was the most natural one since it 
+provides the smallest possible communication overhead with the other 
+Archipelago peers. Also, this design decision covers the \textbf{nativity} 
+requirement we posed at the beginning of this chapter.
 
 The above design choice has another advantage too; we can plug on-line the 
 cached peer between the vlmcd and blocker and unplug it when we want to. This 
@@ -87,21 +94,21 @@ understand why our caching peer must be close to the Archipelago's logic, i.e.
 the translation of blocks to objects, consider the following two points:
 
 \begin{itemize}
-\item Like bcache, our implementation must not only cache object requests fast 
-	but also try to coalesce them so that, when needed, they will be 
-	flushed to the slower medium in a more sequential fashion. The fact 
-	however that the VMs' volumes are partitioned into different objects, 
-	means that sequential data (in volume context) which reside in 
-	different objects will probably not be sequential in the storage 
-	backend too.
+\item Like bcache, cached must not only cache object requests fast but also try 
+	to coalesce them so that, when needed, they will be flushed to the 
+	slower medium in a more sequential fashion. The fact however that the 
+	VMs' volumes are partitioned into different objects, means that 
+	sequential data (in volume context) which reside in different objects 
+	will probably not be sequential in the storage backend too.
 	
 	Thus, unlike bcache which expects that the backing device is also the 
 	physical device and coalesces data accordingly, our implementation is 
 	limited only in coalescing data in the object range (commonly 4MBs). If 
 	our implementation was caching in block or volume level, it would be 
 	unaware of that fact.
-\item \todo Add that we are also aware of the CoW operations and can speed them 
-	up
+\item We can use cached to further improve the performance of Copy-on-Write.  
+	If cached receives a CoW request and has the object cached, we can
+	acknowledge the copy on the fly, without waiting for the slower medium.
 \end{itemize}
 
 Having decided that cached will cache objects, the next step is to decide
@@ -203,27 +210,49 @@ advance.
 \subsubsection{Entry indexing}\label{sec:xcache-index-design}
 
 The index mechanism that xcache uses is a hash table named xhash, also an 
-xtype. The reason why a hash table is used as an index mechanism is because:
+xtype. The reasons why we have chosen to use a hash table are:
 
 \begin{enumerate}
-	\item Given that we index only a certain number of entries, we expect 
-		the that the insert, lookup and delete operations are in 
-		constant time (see below for an explanation why)
+	\item Given that volume names are created pseudorandomly, we expect 
+		that the hash values of the object names will have 
+		approximately uniform distribution and by association, 
+		practically zero hash collisions, as in most real-life 
+		scenarios. If an adversary, on the other hand, was allowed to 
+		choose its own names, that would be a different case.
+
+		Thus, the insert, lookup and delete operations should occur in 
+		constant time.
 	\item Hash tables can preallocate the space needed whereas 
 		tries/b-trees/bst will allocate nodes as new entries are 
-		inserted. Again, the fact that we index a certain number of 
-		entries means that we expect that we will have many evictions 
-		and insertions.
+		inserted. There is actually an exception to this which will be 
+		discussed below. \label{list:exception}
 	\item We don't need to do substring matches (advantage of tries)
 	\item We don't need to traverse the entries sequentially (advantage of 
 		B-trees and BSTs)
 \end{enumerate}
 
 The hash table that is used is heavily based on dictobject\cite{dictobject},
-the Python dictionary implementation in C. Dictobject has been created to 
-minimize the collisions and the hops (\fixme Explain that better). Its only 
-drawback is that it needs to resize when the table's entry history has reached 
-the 2/3 of its capacity.
+the Python dictionary implementation in C. What is interesting about 
+dictobject, and is a feature of other hash tables too, is its dynamic resizing 
+ability once it has reached the two thirds (2/3) of its capacity. This is the 
+exception that we have mentioned in (\ref{list:exception}). We will attempt to 
+explain what is resizing and how it affects us.
+
+Resizing occurs to prevent performance degradation from the hash collisions 
+that will likely ensue once the hash table reaches its maximum capacity. On 
+resizing, the entries are typically rehashed and the hash table is reallocated 
+to double its capacity.
+
+Resizing may seem as an expensive operation, but it is actually not, if we 
+consider the following:
+\begin{quotation}
+\cite{hash-resize}Suppose that we insert \(n\) entries in a hash table that was 
+created to hold only a fraction of \(n\), one (1) in the worst case. In this 
+case, the number of rehashes will be \(n + n/2 + n/4 + n/8 + ... + 1 = 2n\).  
+This means that the \textbf{amortized} cost of rehashes will be \(2n/n\), which 
+is practically O(1) and thus negligible.  The same amortized cost applies to 
+the copies of the entries on reallocation.
+\end{quotation}
 
 Besides the hash table, which answers to the question "Where is the entry?" we 
 also need another mechanism to answer the question "Is the entry still 

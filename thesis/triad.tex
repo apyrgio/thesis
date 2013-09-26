@@ -508,10 +508,11 @@ further for two reasons:
 Theoretically, our search for a production-ready, fast cache that scales and 
 can be used in conjunction with Archipelago can stop, if we allow the VM's 
 hypervisor to use Linux's page cache. In fact, we have measurements in Figures 
-\fixme add figures that show that we can expect a x? increase in performance.  
+\fixme add figures that show that we can expect a x? increase in 
+performance.
 
-There are several reasons why we have not favored this approach. The main 
-reason is that this type of caching, as we will explain in the following 
+However, there are several reasons why we have not favored this approach. The 
+main reason is that this type of caching, as we will explain in the following 
 section, is orthogonal to the way Archipelago handles data. It is agnostic to 
 the CoW policy of Archipelago and as a result, it caches duplicated blocks 
 wasting valuable memory.
