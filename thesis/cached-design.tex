@@ -209,8 +209,8 @@ advance.
 
 \subsubsection{Entry indexing}\label{sec:xcache-index-design}
 
-The index mechanism that xcache uses is a hash table named xhash, also an 
-xtype. The reasons why we have chosen to use a hash table are:
+The index mechanism that xcache uses is a hash table named xhash, which is also 
+an xtype. The reasons why we have chosen to use a hash table are:
 
 \begin{enumerate}
 	\item Given that volume names are created pseudorandomly, we expect 
@@ -233,8 +233,8 @@ xtype. The reasons why we have chosen to use a hash table are:
 
 The hash table that is used is heavily based on dictobject\cite{dictobject},
 the Python dictionary implementation in C. What is interesting about 
-dictobject, and is a feature of other hash tables too, is its dynamic resizing 
-ability once it has reached the two thirds (2/3) of its capacity. This is the 
+dictobject, and is a feature of other hash tables too, is that it dynamically
+resizes once it has reached the two thirds (2/3) of its capacity. This is the 
 exception that we have mentioned in (\ref{list:exception}). We will attempt to 
 explain what is resizing and how it affects us.
 
@@ -247,11 +247,12 @@ Resizing may seem as an expensive operation, but it is actually not, if we
 consider the following:
 \begin{quotation}
 \cite{hash-resize}Suppose that we insert \(n\) entries in a hash table that was 
-created to hold only a fraction of \(n\), one (1) in the worst case. In this 
-case, the number of rehashes will be \(n + n/2 + n/4 + n/8 + ... + 1 = 2n\).  
-This means that the \textbf{amortized} cost of rehashes will be \(2n/n\), which 
-is practically O(1) and thus negligible.  The same amortized cost applies to 
-the copies of the entries on reallocation.
+created to hold only a fraction of \(n\), one (1) entry in the worst case. In 
+this case, the number of rehashes will be \(n + n/2 + n/4 + n/8 + ... + 1 = 
+	2n\).  This means that the \textbf{amortized} cost of rehashes will be 
+\(2n/n = 2\) rehashes for each item, which is practically O(1) and thus 
+negligible.  The same amortized cost applies to the number of entry copies on 
+reallocation.
 \end{quotation}
 
 Besides the hash table, which answers to the question "Where is the entry?" we 
