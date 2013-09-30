@@ -186,7 +186,7 @@ key aspects of caching such as:
 
 Below, we can see a design graph of xcache:
 
-\fixme add Figure here
+\diagram{xcache design}{xcache-design.pdf}
 
 % While explaining, point to the diagram objects, a, b, c etc.
 \todo add better design explanation \\
@@ -407,7 +407,21 @@ removal of an entry:
 
 \subsubsection{Insertion}
 
-\fixme add figure and explanation
+The insertion process involves all xcache elements and has some many steps, 
+which are described below:
+
+\begin{enumerate}
+	\item In order to insert a new entry, we must first allocate the space 
+		for it. This means that we need to pop an entry handler and use 
+		it to initialize the entry it points to. If there are no cache 
+		nodes left, we inform the peer.
+		\fixme explain difference between cache node, cache entry
+	\item Next, we search the active entries to ensure that no other thread 
+		has already inserted that entry. If however our entry is there, 
+		we return and free the entry we have previously allocated
+	\item Then, we search the evicted entries to likewise ensure that our 
+		entry has not
+\end{enumerate}
 
 \subsubsection{Lookup}
 
