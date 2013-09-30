@@ -142,7 +142,7 @@
 % FIGURE SETUP ===============================================================
 
 \newcommand\diagram[2]{
-	\begin{figure}[H]
+	\begin{figure}[h!]
 		\centering
 		\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]
 		{diagrams/#2}
@@ -231,7 +231,7 @@
 }
 
 \newcommand\plaintext[2]{
-	\lstinputlisting[style=plain, caption={#1}, label=lst:#1]{src/#1}
+	\lstinputlisting[style=plain, caption={#1}, label=lst:#2]{src/#2}
 }
 
 % CHANGE MATH FONT ============================================================

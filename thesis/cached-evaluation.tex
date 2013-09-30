@@ -315,8 +315,9 @@ Also, we have tested cached in write-through mode, to see its behavior in
 sustained writes. \fixme say it has unlimited objects 
 
 Furthermore, for this benchmark, we tested only the write performance of cached 
-and sosd.  Also, we chose to use 16 parallel requests and 4KB block sizes, 
-since these seemed the most troublesome in the previous benchmark.
+and sosd \fixme explain why.  Also, we chose to use 16 parallel requests and 
+4KB block sizes, since these seemed the most troublesome in the previous 
+benchmark.
 
 Before we proceed to the results, we must explain first how the diagrams below 
 are structured. Since cached's performance is fairly unstable in this scenario, 
@@ -513,16 +514,6 @@ indexing an entry, even in a hash table that supports 2 million objects (and
 potentially 8TBs of data), is less than 1μs, which is a very strong feature of 
 our implementation.
 
-\subsection{Performance evaluation on an existing VM}
-
-\todo add fio job
-
-The bandwidth results for our evaluation can be seen in Figure \ref{bw-vm.pdf} 
-
-\diagram{Bandwidth performance of cached}{bw-vm.pdf}
-
-\diagram{Latency performance of cached}{lat-vm.pdf}
-
 \begin{comment}
 As a side note, we observe a constant decrease in writelatency as the number of 
 objects increase this is not something that should be attributed to our 
@@ -533,3 +524,75 @@ equally distributed to the objects. Else, the hash table is more scarce but the
 same blocks are hit, albeit not fully written, and thus the mmap latency is the 
 same but distributed to less objects.)
 \end{comment}
+
+\section{Performance evaluation of a VM over Archipelago and cached}
+
+In this category, we will attempt to
+\begin{inparaenum}[i)]
+	\item create a VM over Archipelago with support from cached and
+	\item use it to evaluate the real-life performance of various Archipelago 
+		configurations, with and without cached.
+\end{inparaenum}
+
+The benchmarks of this section have been conducted on a vanilla Ubuntu 13.04 
+VM. Once the VM was started successfully, we installed FIO
+\footnote{Flexible I/O tester, http://git.kernel.dk/?p=fio.git;a=summary}
+, which is a fully-featured benchmark tool created by Jens Axboe, the 
+maintainer of the Linux block layer.
+
+Our aim has been to simulate the workloads of the previous categories, in order 
+to produce comparable results. The FIO job file that was created for this 
+purpose is the following:
+
+\plaintext{fio job file}{job.ini}
+
+The workload that this job file describes has been uniformly issued for every
+Archipelago configuration that we have tested. We will illustrate this workload 
+through an explanation of the job file parameters, which appear on the 
+\textbf{[global]} section:
+
+\begin{itemize}
+	\item The request block size is \textbf{4KB} and is aligned in 4KB 
+		boundaries,
+	\item the total benchmark size is \textbf{1GB},
+	\item the number of parallel requests is \textbf{16},
+	\item the I/O requests bypass the VM's page cache, to ensure that the 
+		results are not skewed due to guest caching.
+\end{itemize}			
+
+The following two sections, \textbf{[randwrite]} and \textbf{[randread]}, 
+describe the two benchmark tests that were conducted. More specifically, the 
+benchmark consists of two parts:
+\begin{inparaenum}[i)]
+\item in the first part we issue random writes that span the file and
+\item in the second part, we randomly read the written data.
+\end{inparaenum}
+
+Moreover, the fact that the benchmark is done on a file means the following two 
+things:
+
+\begin{enumerate}
+	\item That we are bound to include in our measurements the overhead of 
+		filesystem operations and the I/O scheduler of the VM.  This is 
+		actually a welcoming result, since it provides a more accurate 
+		measurement of the I/O speed that the common user is likely to 
+		experience.
+	\item That we can be sure that only the first write to the file will be 
+		affected by Copy-On-Write while the subsequent writes will behave 
+		normally. Thus, we can discard the first write and use only the 
+		subsequent ones.
+\end{enumerate}
+
+Finally, in addition to the bypass of the VM's page cache, we have also ordered 
+the hypervisor to not use the page cache of the host. The only exception to 
+this is the page-cache test that evaluates the performance of the VM using the 
+host's page cache.
+
+The bandwidth results for our evaluation can be seen in Figure \ref{bw-vm.pdf} 
+
+\diagram{Bandwidth performance of cached}{bw-vm.pdf}
+
+\diagram{Latency performance of cached}{lat-vm.pdf}
+
+We will compare the results of each configuration with the results of previous 
+benchmarks:
