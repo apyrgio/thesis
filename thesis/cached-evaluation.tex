@@ -529,22 +529,23 @@ same but distributed to less objects.)
 
 In this category, we will attempt to
 \begin{inparaenum}[i)]
-	\item create a VM over Archipelago with support from cached and
+	\item create a VM using Archipelago with cached as its storage backend and
 	\item use it to evaluate the real-life performance of various Archipelago 
 		configurations, with and without cached.
 \end{inparaenum}
 
 The benchmarks of this section have been conducted on a vanilla Ubuntu 13.04 
-VM. Once the VM was started successfully, we installed FIO
+VM. Once the VM was started successfully (which was an important feat in its 
+own right), we installed FIO
 \footnote{Flexible I/O tester, http://git.kernel.dk/?p=fio.git;a=summary}
 , which is a fully-featured benchmark tool created by Jens Axboe, the 
 maintainer of the Linux block layer.
 
-Our aim has been to simulate the workloads of the previous categories, in order 
-to produce comparable results. The FIO job file that was created for this 
-purpose is the following:
+Our aim was to simulate the workloads of the previous categories, in order to 
+produce comparable results. The FIO job file that was created for this purpose 
+is the following:
 
-\plaintext{fio job file}{job.ini}
+\plaintext{FIO job file}{job.ini}
 
 The workload that this job file describes has been uniformly issued for every
 Archipelago configuration that we have tested. We will illustrate this workload 
@@ -568,31 +569,141 @@ benchmark consists of two parts:
 \item in the second part, we randomly read the written data.
 \end{inparaenum}
 
-Moreover, the fact that the benchmark is done on a file means the following two 
-things:
+Moreover, the fact that the benchmark is executed on a file means the following 
+two things:
 
 \begin{enumerate}
 	\item That we are bound to include in our measurements the overhead of 
-		filesystem operations and the I/O scheduler of the VM.  This is 
-		actually a welcoming result, since it provides a more accurate 
-		measurement of the I/O speed that the common user is likely to 
+		filesystem operations and I/O scheduler of the VM. These overheads 
+		however are essential for our benchmarks since they provide a more 
+		accurate measurement of the I/O speed that the common user is likely to 
 		experience.
-	\item That we can be sure that only the first write to the file will be 
-		affected by Copy-On-Write while the subsequent writes will behave 
-		normally. Thus, we can discard the first write and use only the 
-		subsequent ones.
+	\item That we are guaranteed that only the first write to the file will be 
+		affected by Copy-On-Write delays, while the subsequent writes will 
+		behave normally.  Thus, we can discard the first write and use only
+		the subsequent ones for our measurements. \fixme explain that CoW 
+		overhead is different from the previous
 \end{enumerate}
 
-Finally, in addition to the bypass of the VM's page cache, we have also ordered 
-the hypervisor to not use the page cache of the host. The only exception to 
-this is the page-cache test that evaluates the performance of the VM using the 
-host's page cache.
+Finally, in addition to the bypass(\fixme find better word) of the VM's page 
+cache, we have also ordered the hypervisor to not use the page cache of the 
+host. The only exception to this is the page cache test that evaluates the 
+performance of the VM using the host's page cache.
 
-The bandwidth results for our evaluation can be seen in Figure \ref{bw-vm.pdf} 
+We can now present the bandwidth and latency results for our benchmarks, which 
+are illustrated in Figure \ref{fig:bw-vm.pdf} and \ref{fig:lat-vm.pdf} 
+respectively. 
 
 \diagram{Bandwidth performance of cached}{bw-vm.pdf}
 
 \diagram{Latency performance of cached}{lat-vm.pdf}
 
-We will compare the results of each configuration with the results of previous 
-benchmarks:
+We will explain which scenario each label represents:
+
+\begin{description}
+	\item[page-cache] \hfill \\
+		This scenario tests solely the page cache of the \textbf{host} machine.  
+		The rest of the scenarios bypass this page cache.
+	\item[sosd] \hfill \\
+		This scenario tests solely the performance of sosd peer.
+	\item[cached-vast] \hfill \\
+		This scenario uses cached with a large enough cache size, which means 
+		that no evictions occur.
+	\item[cached-unlimited] \hfill \\
+		This scenario uses cached with half of the necessary space for the 
+		benchmark but with the ability to cache unlimited entries.
+	\item[cached-limited] \hfill \\
+		This scenario uses cached with half of the necessary space as well as 
+		the ability to cache half of the necessary entries.
+	\item[cached-writethrough] \hfill \\
+		This scenario uses cached with half of the necessary space and in 
+		write-through mode.
+\end{description}
+
+		
+Note that we have purposefully combined the write and read results on the same 
+diagrams to make comparisons between them more evident. We will proceed with 
+commenting on the performance results of each tested Archipelago configuration 
+and we will invoke the previous synthetic benchmarks where necessary (\fixme 
+write it better)
+
+\subsubsection{page-cache}
+
+Our measurements clearly indicate that the page cache outperforms every 
+Archipelago configuration. It also sets the mark for the upper speed limit that 
+the Archipelago must strive to achieve.
+
+Since page cache stores data in DRAM, we would expect an even better 
+performance, given that our implementation manages to achieve latencies smaller
+than 40μs, for the same number of parallel requests and block size, which can 
+be seen in Figure \ref{fig:lat-write-comp-lie.pdf}.  We attribute this speed 
+difference of < 1μs to the overhead of the paravirtualized storage, as well as 
+the overhead of the VM operations (e.g. the filesystem, scheduler and kernel 
+operations).
+
+\subsubsection{sosd}
+
+The results for sosd are lower than the expected results. In fact, sosd has an 
+additional latency of about 7ms for writes and 3ms for reads, which cannot be 
+attributed to the < 1ms difference that we have observed in the page cache 
+test. This means that besides the overhead that is incurred from the VM 
+operations, there is also the latency of Archipelago, specifically of xsegbd, 
+vlmcd and mapperd that has a performance penalty which is in the order of 
+milliseconds.
+
+\subsubsection{cached-vast}
+
+The comparison between sosd and this scenario shows that the performance 
+speedup is approximately 4x for writes and 2x for reads. This is a very 
+reinforcing result for our implementation and it proves that it does make a 
+difference in an actual VM.
+
+Arguably, the performance speedup that we measured in the synthetic benchmarks 
+of previous categories was much bigger, yet we must keep in mind that the 
+latency of the levels above cached do not allow this performance difference to 
+show.  This statement is further reinforced by the comparison between these 
+results and the results of the page-cache scenario; in both scenarios, data is 
+cached in DRAM, which means that the main latency difference between them is 
+the latency of Archipelago, which is approximately 2ms.
+
+\subsubsection{cached-unlimited}
+
+The results of this scenario were expected, given the results of the previous 
+scenario (cached-vast) and the synthetic benchmarks of Figures 
+\ref{fig:lat-write-comp-truth.pdf} and \ref{fig:bw-write-comp-truth.pdf}.
+
+For the first 50\% of the workload, the performance of cached-unlimited was the 
+same as the performance of cached-vast. Predictably, it dropped after the 50\% 
+mark but, interestingly, it was consistently better than the performance of 
+sosd until the end, something that was not observed in the synthetic benchmarks 
+we had conducted.  This is attributed to the fact that background flushes to 
+sosd are supposed to take 2-3ms (see Figure 
+\ref{fig:lat-write-comp-truth.pdf}), which is approximately the time that a VM 
+request needs to reach cached.  This means that evictions that happen in the 
+background are essentially hidden under the latency of the system.
+
+We must also add that this scenario also achieves a \textbf{sustained} 2.5x 
+performance speedup for  writes, while the peak behavior of this configuration 
+is expected to be the same as cached-vast's. This shows that even with a small 
+cache we can achieve a major performance improvement over sosd. 
+
+Finally, we see that the read performance is the same as sosd's but, as we have 
+already explained, this happens due to background flushes that take place 
+during the read operation, so the results are bound to be skewed.
+
+\subsubsection{cached-limited}
+
+The revelation of our benchmarks has been this scenario, which is just as fast
+as cached-vast for sustained writes. This is completely different from the 
+results we observed in Figures \ref{fig:lat-write-comp-truth.pdf} and 
+\ref{fig:lat-write-comp-truth.pdf}. It seems that the system latency completely 
+masks the background flushes that take place, which is  probably due to the 
+fact that evictions are more frequent but less batched.
+
+\subsubsection{cached-writethrough}
+
+This scenario had predictable results. The write speed in writethrough mode was 
+the same as the write speed of sosd whereas the read speed was a bit better, 
+due to the fact that the data were cached. Overall, there was no particular 
+performance improvement in writethrough mode.
+
