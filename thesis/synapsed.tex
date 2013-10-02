@@ -209,9 +209,69 @@ on these buffers.
 
 \section{Evaluation of synapsed}
 
+Currently, synapsed is in a functional but nascent state, meaning that 
+important features such as mirroring of requests have not been implemented yet.  
+Were these features implemented, they could also be evaluated and we would be 
+able to quantify their performance cost.
+
+This means that right now, synapsed's main purpose is to enable cached and 
+other Archipelago peers to work in a remote environment with more resources, 
+without encumbering the host machine. This kind of flexibility cannot be 
+evaluated of course, but it should be considered an important feat, since it 
+opens numerous possibilities for a previously network-unaware Archipelago.
+
+There is however an interesting way we can evaluate synapsed. More 
+specifically, we can benchmark its performance for each of the Archipelago 
+configurations that are tested in Section \ref{sec:vm-plot}, minus the page 
+cache test of course. 
+
+The setup for our benchmarks is identical to the setup that is used in Chapter 
+\ref{ch:cached-evaluation}. The only addition is that synapsed is in a 
+different host, with similar specifications as dev100 (\fixme add specs of 
+dev91).  Depending on the Archipelago configuration, it either sends requests 
+to the sosd or cached peer of the other host.
+
+Additionally, the two hosts are connected with a 1Gbit Ethernet cable. Note 
+that neither this connection type nor synapsed are tuned for high performance.  
+This is important in order to properly evaluate the following results.
+
+We proceed with the performance results of our benchmarks. The bandwidth 
+results are presented in Figure \ref{fig:bw-write-synapsed.pdf} and the latency 
+results in Figure \ref{fig:lat-write-synapsed.pdf}.
+
 \diagram{Bandwidth performance for writes through 
 	synapsed}{bw-write-synapsed.pdf}
 \diagram{Latency performance for writes through 
 	synapsed}{lat-write-synapsed.pdf}
 
-\todo add a simple diagram of synapsed's performance
+For the first round of comparisons, will be invoke the results of Section 
+\ref{sec:sustained-plot} and more specifically Figures 
+\ref{fig:bw-write-comp-truth.pdf} and \ref{fig:lat-write-comp-truth.pdf}.
+
+The first impression that one gathers by comparing these results is that they 
+seem very similar but clipped. This is expected since the theoretical maximum 
+bandwidth of a 1Gbit ethernet cable is 128MB/s. The fastest that we seem to 
+reach is 110MB/s, which is very close. 
+
+Most importantly however, besides the clipping in fast scenarios, there is 
+practically little or no other effect on the rest of the scenarios, as they 
+have approximately the same speed, with synapsed being only a little slower.
+
+Moreover, we can see that cached-unlimited is performing similarly in both 
+benchmarks and even manages to outperform sosd, albeit being noticably slower 
+in the synapsed benchmark.
+
+From the above comparisons we can derive that the network can be a bottleneck 
+for an I/O intensive application, especially when it can achieve higher 
+bandwidth than what the network can sustain.
+
+We conclude this section with a comparison of our results with the results of 
+Figures \ref{fig:bw-vm.pdf} and \ref{fig:lat-vm.pdf}. As we can see in these 
+results, the latency that is introduced by the VM operations, hypervisor and 
+Archipelago is currently far greater than the < 1ms latency of the 1Gbit 
+connection. Moreover, if the connection between the two servers were 10G, the 
+latency that is imposed by the network would be negligible.
+
+What we try to infer with the above observation is that in the current 
+situation, the network latency of synapsed is a small price to pay if we can 
+manage to run cached or even Archipelago in a remote environment with more RAM.
