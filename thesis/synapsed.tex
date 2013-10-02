@@ -1,8 +1,5 @@
 \chapter{The synapsed peer}\label{ch:synapsed}
 
-\fixme we probably don't care about cpu utilization but about the fact that 
-cached will go down when the host goes down too.
-
 On the previous sections, we have evaluated the design of cached and we have 
 reached the conclusion that it is heavily bounded by CPU. The implications of 
 this, however, are bigger, if we consider that all the Archipelago is running 
@@ -10,32 +7,28 @@ in the host machine, whose CPU's are already oversubscribed. This means that
 cached must compete for CPU time against the running VMs, essentially defeating 
 the QoS purpose it serves.
 
-\todo Better explain that if cached could run on the under-utilized RADOS 
-nodes, it would be accessible from any host and thus would be a major step 
-forward towards a distributed or eventually persistent cache.
-
-\begin{comment}
 On the other hand, on the RADOS nodes, the CPUs and RAM are not used to their 
-full potential. Also, since these nodes are accessible from any host, it would 
-be a step forward in making cached distributed if cached could run there.
+full potential. If we could run cached or part of the Archipelago in these 
+nodes, we would have the following benefits:
 
-Thus, it would be interesting to check how well cached (and Archipelago in 
-general) would behave, if the VM's data where sent initially over network and 
-then handled by the vlmcd. So what we mean is to turn the current situation 
-from how it is in Figure \ref{fig:new_sxima.pdf} to the following:
-
-\fixme add figure for network
-\end{comment}
+\begin{itemize}
+	\item We would have access to a much larger amount of RAM
+	\item We would make a big step forward in terms of creating a 
+		distributed cache, since we would be able to replicate the data 
+		to two or more cached peers that would ran in different nodes, 
+		since these nodes are accessible from any host.
+\end{itemize}
 
 To this end, we have created a network peer called synapsed (from 
 \textbf{synapse d}aemon) as a proof-of-concept, that should be able to 
-accept/receive any type of requests and send them through the network to 
+accept/receive read/write XSEG requests and send them through network to 
 another Archipelago segment. We must note that this peer has not been created 
 with high-performance in mind but its main aim is to provide the functionality 
 needed for our purposes.  As a consequence, we haven't used tools such as 
 ZeroMQ or libevent that would boost the performance of the implementation.
 
 More specifically, on Section...
+\todo add sections
 
 \section{Design of synapsed}
 
@@ -55,13 +48,9 @@ segment, which will serve as the request target when synapsed accepts request.
 This means that synapsed does not actually connect two remote segments
 but bridge two remote peers over network.
 
-The way synapsed handles requests can be seen in Figure ?
-
-\fixme add figure
-
-The main difficulty is to make synapsed listen from its port and its request 
-queue simultaneously. We have tackled this problem in Section 
-\ref{sec:poll-synapsed}.
+Another difficult task was to make synapsed listen from its port and its 
+request queue simultaneously, using the request handling of Archipelago. We 
+have tackled this problem in Section \ref{sec:poll-synapsed}.
 
 Moreover, synapsed sends requests using the standard TCP protocol.  This means 
 that it handles the marshaling of buffers, send/receive errors as well as 
@@ -76,26 +65,28 @@ Finally, synapsed has been designed as a single-threaded peer.
 \subsection{Synapsed initialization}
 
 Synapsed is a much simpler peer than cached and requires only the following 
-arguments.
+arguments:
 
-\begin{description}
-	\item[-hp] The port where it will listen for requests.
-	\item[-ra] The remote address of the segment. \textbf{NOTE:} it can 
-		point to the same segment, which means that synapsed provides a 
-		generic way to bridge two peers who reside in the same host but 
-		in a different segment.
-	\item[-rp] The remote port of the other synapsed.
-	\item[-txp] The XSEG port of the peer which synapsed will attach on
-\end{description}
+\begin{itemize}
+	\item The port where it will listen for requests.
+	\item The remote address of the segment. \textbf{NOTE:} it can point to 
+		the same segment, which means that synapsed provides a generic 
+		way to bridge two peers who reside in the same host but in a 
+		different segment.
+	\item The remote port of the other synapsed.
+	\item The XSEG port of the peer which synapsed will attach on
+\end{itemize}
 
-Having the above arguments, synapsed can create a socket and bing its port it.  
+Having the above arguments, synapsed can create a socket, bind it and connect 
+to its port. After that, it can listen for new connections and forward the 
+requests that it receives to the XSEG port of peer that it is attached to.
 
 \subsection{Request polling}\label{sec:poll-synapsed}
 
 Synapsed typically uses the common peer loop and Archipelago IPC methods to 
 check its XSEG ports for new requests. However, it simultaneously needs to 
 listen for new requests on its socket. Yet, there is no way for a process to 
-block on its socket *and* sleep using sigtimedwait.
+block on its socket \textbf{and} sleep using sigtimedwait.
 
 The solution seems obvious; synapsed should instead block while polling for 
 requests in its socket and, if a new request arrives at its XSEG port, its 
@@ -199,13 +190,17 @@ the gcc pragma directive:
 
 As we have mentioned in the previous chapter, in order to send the data from 
 one synapsed peer to the other, we must marshal them first and then unmarshal 
-them. This commonly requires to merge all buffers into one and send that one.  
+them. This commonly requires to merge all buffers into one and send that 
+buffer.  
 
-In synapsed however, we have chosen a different appoach; we have employed the 
-\texttt{readv()}/\texttt{writev()} functions, that allow us to do vectored I/O 
-on these buffers.
+In synapsed however, we have chosen a different approach; we have employed the 
+\texttt{readv()}/\texttt{writev()} functions, that allow us to do 
+scatter/gather I/O.
 
-\todo wrap up this section
+This means that when we sent a request, we create an iovec vector that points 
+to the data that we want to sent and their sizes (gather). Respectively, when 
+we receive a request, we check its type and allocate the necessary XSEG buffers 
+where the data can be copied (scatter).
 
 \section{Evaluation of synapsed}
 
