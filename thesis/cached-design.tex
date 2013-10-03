@@ -184,17 +184,21 @@ key aspects of caching such as:
 	\item event hooks
 \end{itemize}
 
-Below, we can see a design graph of xcache:
+In Figure \ref{fig:xcache-design.pdf}, we can see a design graph of xcache:
 
 \diagram{xcache design}{xcache-design.pdf}
 
-% While explaining, point to the diagram objects, a, b, c etc.
-\todo add better design explanation \\
-As we can see above, xcache utilizes two hash tables. One hash table is 
-responsible for indexing entries (or more generally speaking "cache entries") 
-that are active in cache.  The other hash table is responsible for indexing 
-evicted cache entries that have pending jobs.  Again, more generally speaking, 
-evicted cache entries are entries whose refcount has not dropped to zero yet.
+Xcache consists of two hash tables. In the first hash table (a), xcache keeps 
+an index of the currently active entries, whereas on the second hash table (b) 
+it keeps an index of the entries that have been recently evicted but not 
+removed, ergo entries who are in the process of removal but still have some 
+pending jobs.
+
+The entries themselves are located in a contiguous space (c) where each hash 
+table points to. Moreover, in order to acquire or release an entry, all we need 
+is to pop or push an entry index from a special purpose stack (d).
+
+\todo add entry design
 
 On the following subsections, we present the features of xcache as well as 
 their design.
@@ -286,12 +290,11 @@ The scheme of implicit evictions and later on notification of the user, has the
 advantage that lookups, inserts and evictions can occur atomically by xcache.  
 This wouldn't be the case if the user was responsible for the evictions.
 
-As for the eviction strategy, we have utilized an LRU queue. Not only it's 
-optimal (\fixme verify it) for our purposes, but we have also mitigated the 
-cost of keeping the last references for each entry by creating a simple LRU 
-algorithm, which has O(1) complexity for all update actions. More about the 
-implementation of the LRU algorithm can be found in Section 
-\ref{xcache-evict-imp}.
+As for the eviction strategy, we have utilized an LRU queue. Interestingly, we 
+have mitigated the cost of keeping the last reference for each entry by 
+creating a simple LRU algorithm, which has O(1) complexity for all update 
+actions. More about the implementation of the LRU algorithm can be found in 
+Section \ref{xcache-evict-imp}.
 
 \subsubsection{Concurrency control}
 
@@ -407,8 +410,7 @@ removal of an entry:
 
 \subsubsection{Insertion}
 
-The insertion process involves all xcache elements and has some many steps, 
-which are described below:
+The insertion process is described below:
 
 \begin{enumerate}
 	\item In order to insert a new entry, we must first allocate the space 
@@ -417,10 +419,15 @@ which are described below:
 		nodes left, we inform the peer.
 		\fixme explain difference between cache node, cache entry
 	\item Next, we search the active entries to ensure that no other thread 
-		has already inserted that entry. If however our entry is there, 
-		we return and free the entry we have previously allocated
-	\item Then, we search the evicted entries to likewise ensure that our 
-		entry has not
+		has already inserted that entry. If however our entry is there, we 
+		return and free the entry we have previously allocated.
+	\item Then, we search the evicted entries to likewise ensure that our entry 
+		has not been just evicted. In this case, we reinsert it and free the 
+		entry we have previously allocated.
+	\item If our entry is not in any of the two hash tables, we try to insert 
+		it to the hash table of active entries.
+	\item If the hash table is full, we resort to the eviction of another entry 
+		and inform the peer. Else, we return.
 \end{enumerate}
 
 \subsubsection{Lookup}
