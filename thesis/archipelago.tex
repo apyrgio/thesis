@@ -160,19 +160,17 @@ and can work with any backend for which a blocker can be created. There is one
 backend however that provides many important features that are used to make 
 Archipelago more scalable and reliable.
 
+
 This backend is RADOS\cite{rados}, which is the object store component of the 
 Ceph \footnote{ceph.com} system. Ceph is a free distributed object store and 
 file system that has been created by Sage Weil for his doctoral dissertation
 \cite{weil-thesis} and has been supported by his company, Inktank, ever since.
 
 The architecture of Ceph can be seen in Figure \ref{fig:ceph.png}.
+\footnote{Picture retrieved from the official website on September 24, 2013.  
+	All rights go to the respective owners.}
 
-\diagram{Ceph architecture\protect\footnote[1]{Picture retrieved from the 
-		official website on September 24, 2013. All rights go to the
-		respective owners.}}{ceph.png}
-
-\fixme The footnote, position and rasterization are blarg. Do not put blarg in 
-thesis. Blarg is bad.
+\diagram{Ceph architecture}{ceph.png}
 
 Ceph utilizes RADOS to achieve the following:
 
@@ -193,12 +191,38 @@ Ceph utilizes RADOS to achieve the following:
 		theoretically does not add any communication overhead.
 \end{itemize}
 
+In a nutshell, RADOS consists of the following components:
+
+\begin{itemize}
+	\item \textit{object store daemons}, which are userspace processes that run 
+		in the storage backend and are responsible for storing the data.
+	\item \textit{monitor daemons}, which are monitoring userspace processes 
+		that run in an odd number of servers that form a Paxos part-time 
+		parliament\cite{Paxos}. Their main responsibility is holding and 
+		reliably updating the mapping of objects to object store daemons, as 
+		well as self-healing when an object store daemon or monitor daemon has 
+		crashed
+\end{itemize}
+
+The mapping of objects to object store daemons is done indirectly with the help 
+of the \textit{CRUSH map} and \textit{placement groups (pgs)}.  Generally 
+speaking, placement groups can be considered as logical buckets where more than 
+one values can be assigned to.
+
+RADOS uses placement groups in the following manner: On initialization, it is 
+configured to have a fixed number of placement groups and a range of values 
+assigned to each of them. When it is asked to find an object, the object name 
+is hashed and its hash value is used to find in which placement group it 
+belongs.  The relationship between placement groups and object store daemons is 
+stored in CRUSH maps that each monitor daemon holds. This way, the objects are 
+pseudorandomly distributed to the storage backend, which in turn implicitly 
+guarantees load balancing. 
+
 There are various entry points for RADOS, as is evident from Figure 
 \ref{fig:ceph.png}. Archipelago uses librados for I/O requests and more 
 specifically, a blocker called sosd\cite{sosd} has been created by Filippos 
 Giannakos to facilitate the communication between RADOS and Archipelago.
 
-\fixme cite filippos and explain what seems to be the problem with rados
 
 \begin{comment}
 \section{XSEG design}
