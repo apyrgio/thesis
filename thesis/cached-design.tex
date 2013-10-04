@@ -404,9 +404,9 @@ is triggered.
 
 \subsection{xcache flow}\label{sec:xcache-flow-design}
 
-To make the way xcache works a bit more clearer, we will see the flow for three 
-of the main xcache operations; lookup of an entry; insertion of a new entry and 
-removal of an entry:
+To make the way xcache works a bit more clearer, we will see the flow for four 
+of the main xcache operations; insertion of a new entry, lookup of an entry, 
+eviction and removal of an entry:
 
 \subsubsection{Insertion}
 
@@ -414,29 +414,58 @@ The insertion process is described below:
 
 \begin{enumerate}
 	\item In order to insert a new entry, we must first allocate the space 
-		for it. This means that we need to pop an entry handler and use 
-		it to initialize the entry it points to. If there are no cache 
-		nodes left, we inform the peer.
-		\fixme explain difference between cache node, cache entry
+		for it. This means that we need to pop an entry index and use 
+		it to initialize the entry it points to. If there are no 
+		indexes left, we inform the peer.
 	\item Next, we search the active entries to ensure that no other thread 
-		has already inserted that entry. If however our entry is there, we 
-		return and free the entry we have previously allocated.
+		has already inserted our entry. If however our entry is there, 
+		we return and free the entry we have previously allocated.
 	\item Then, we search the evicted entries to likewise ensure that our entry 
 		has not been just evicted. In this case, we reinsert it and free the 
 		entry we have previously allocated.
 	\item If our entry is not in any of the two hash tables, we try to insert 
 		it to the hash table of active entries.
-	\item If the hash table is full, we resort to the eviction of another entry 
-		and inform the peer. Else, we return.
+	\item If the hash table is full, we resort to the eviction of another 
+		entry and inform the peer.
+	\item In either case, we update the reference count of our entry by 2, 
+		one for the hash table and one for the request.
 \end{enumerate}
 
 \subsubsection{Lookup}
 
-\fixme add figure and explanation
+The lookup process is a lot simpler. To lookup an entry, we only need its name.  
+If this name exists in the hash table of active entries, we update the 
+reference count of the entry by 1 and we return with the entry index.
 
-\subsubsection{Put}
+\subsubsection{Eviction}
 
-\fixme add figure and explanation
+When a cache entry is evicted, we do the following:
+
+\begin{enumerate}
+	\item Using the lock of both hash tables, we remove the entry from the 
+		active entries and put it to the evicted entries.
+	\item We release these locks and the inform the peer with the eviction 
+		hook.
+	\item Once the peer has been informed, we decrease the refcount of the
+		entry by 1, since it is no longer referenced by the hash table 
+		of active entries
+\end{enumerate}
+
+\subsubsection{Removal}
+
+The removal of an entry occurs only when its refcount has reached 0. More 
+specifically:
+
+\begin{enumerate}
+	\item We inform the peer that the entry is about to be removed with the
+		finalization hook.
+	\item We then proceed to check again the reference count of the entry.
+	\item If it is more than zero, this means that the entry has been 
+		reinserted or that the peer has taken an action in the 
+		finalization hook. In this case, we can leave.
+	\item Else, we can safely remove that entry from the evicted entries 
+		and inform the peers.
+\end{enumerate}
 
 \subsection{The xworkq xtype}\label{sec:xworkq-design}
 
@@ -702,10 +731,9 @@ holds the original request and optionally, several other fields that are of
 importance to the peer.
 
 In our case, we keep in cached's peer requests a new structure called Cache-IO, 
-on which we store the xcache handler of the request as well as the state of the 
-request. Moreover, since the request may break internally in many others, we 
-keep track of how many pending requests remain until the original one can be 
-completed.
+on which we store the xcache entry index as well as the state of the request.  
+Moreover, since the request may break internally in many others, we keep track 
+of how many pending requests remain until the original one can be completed.
 
 \subsection{Book-keeping utilities}\label{sec:cached-states-design}
 
