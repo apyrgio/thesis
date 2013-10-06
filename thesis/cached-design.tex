@@ -194,6 +194,8 @@ it keeps an index of the entries that have been recently evicted but not
 removed, ergo entries who are in the process of removal but still have some 
 pending jobs.
 
+\diagram{xcache entry}{xcache-entry.pdf}
+
 The entries themselves are located in a contiguous space (c) where each hash 
 table points to. Moreover, in order to acquire or release an entry, all we need 
 is to pop or push an entry index from a special purpose stack (d).
@@ -483,8 +485,7 @@ function and its input data.
 
 On the following figure, we can see the design of xworkq:
 
-% Design of xworkq
-\fixme add figure
+\diagram{Xworkq design}{xworkq-design.pdf}
 
 It consists of a queue where jobs are enqueued.  The thread that enqueues a job 
 can attempt to execute it too, by acquiring a lock for the xworkq. If the lock 
@@ -505,6 +506,8 @@ is also an abstraction where "jobs" are enqueued and dequeued later on to be
 executed. Unlike xworkq though, jobs are executed only when a predefined 
 condition is met. Another distinction is that the jobs in xwaitq are assumed to 
 be thread-safe and can be executed concurrently by any thread.  
+
+\diagram{Xwaitq design}{xwaitq-design.pdf}
 
 xwaitq is commonly used in non-critical code sections that can be executed only 
 under specific, predefined circumstances. The "jobs" that are enqueued in 
@@ -561,7 +564,6 @@ operational perspective, which can be seen in Figure
 if Figure ?. Moreover, we will further explain how cached manages the above new 
 components and tasks in the following sections.
 
-\diagram{Cached design}{cached-design.pdf}
 \fixme add component diagram for cached (xcache, xworkq, objects, buckets etc.)
 
 \subsection{Request handling}
@@ -788,6 +790,11 @@ states. The benefits from this approach is that we can know at any time if an
 object (or cached in general) has a bucket in a certain state.
 
 \section{Cached Flow}\label{sec:cached-flow-design}
+
+The flows of cached operations are illustrated in the following diagrams.
+
+\diagram{Cached design - actions}{cached-design.pdf}
+\diagram{Cached design - components}{cached-design-comp2.pdf}
 
 \subsection{Write}
 
