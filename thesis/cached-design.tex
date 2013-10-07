@@ -201,6 +201,7 @@ of their design is presented in Figure \ref{fig:xcache-entry.pdf}. In this
 figure, each entry is marked with a different color for clarity reasons.
 
 \diagram{xcache entry}{xcache-entry.pdf}
+\fixme make letters smaller
 
 Every entry has the following important fields:
 \begin{inparaenum}[i.]
@@ -223,6 +224,10 @@ them on-the fly using malloc/free. Considering that we are caching at RAM level
 and not at SSD level, the system call overhead will have a considerable impact 
 on performance. Thus, in our case, we preallocate the necessary space in 
 advance.
+
+Also, note that we will use the term "cache node" from now on when we refer to 
+a chunk of the preallocated space and "cache entry" when we refer to a cache 
+node that has been associated with an object.
 
 \subsubsection{Entry indexing}\label{sec:xcache-index-design}
 
@@ -406,7 +411,7 @@ Let's see what guarantees we provide for each of the above scenarios:
 
 Since xcache is created to provide core caching functionalities for other 
 peers, it must also notify them when it takes an implicit action that the peer 
-is not aware of. In Section \ref{xcache-eviction-design} we have seen one 
+is not aware of. In Section \ref{sec:xcache-eviction-design} we have seen one 
 implicit action that xcache takes when a user inserts an entry, namely 
 eviction. 
 
@@ -464,7 +469,7 @@ The insertion process is described below:
 	\item Then, we search the evicted entries to likewise ensure that our entry 
 		has not been just evicted. In this case, we reinsert it and free the 
 		entry we have previously allocated.
-	\item If our entry is not in any of the two hash tables, we try to insert 
+	\item If our entry is not in any of these two hash tables, we try to insert 
 		it to the hash table of active entries.
 	\item If the hash table is full, we resort to the eviction of another 
 		entry and inform the peer.
@@ -483,13 +488,12 @@ reference count of the entry by 1 and we return with the entry index.
 When a cache entry is evicted, we do the following:
 
 \begin{enumerate}
-	\item Using the lock of both hash tables, we remove the entry from the 
-		active entries and put it to the evicted entries.
-	\item We release these locks and the inform the peer with the eviction 
-		hook.
+	\item Having acquired the lock of both hash tables, we remove the entry 
+		from the active entries and put it to the evicted entries.
+	\item We release these locks and inform the peer using the eviction hook.
 	\item Once the peer has been informed, we decrease the refcount of the
-		entry by 1, since it is no longer referenced by the hash table 
-		of active entries
+		entry by 1, since it is no longer referenced by the hash table of 
+		active entries.
 \end{enumerate}
 
 \subsubsection{Removal}
@@ -500,15 +504,17 @@ specifically:
 \begin{enumerate}
 	\item We inform the peer that the entry is about to be removed with the
 		finalization hook.
-	\item We then proceed to check again the reference count of the entry.
+	\item We then proceed to check again the refcount of the entry.
 	\item If it is more than zero, this means that the entry has been 
 		reinserted or that the peer has taken an action in the 
 		finalization hook. In this case, we can leave.
-	\item Else, we can safely remove that entry from the evicted entries 
-		and inform the peers.
+	\item Else, we can safely remove that entry from the evicted entries and 
+		inform the peer.
 \end{enumerate}
 
 \subsection{The xworkq xtype}\label{sec:xworkq-design}
+
+/fixme make xworkq and fellow x-stuff start with a capital letter?
 
 The xworkq xtype is a useful abstraction for concurrency control. Its purpose 
 is to enqueue "jobs" (protected by a lock) and ensure that only one thread will 
@@ -522,7 +528,7 @@ finish, they can enqueue their job in the xworkq and resume processing other
 requests. xworkq is also generic by nature, since the "job" is simply a target 
 function and its input data.
 
-On the following figure, we can see the design of xworkq:
+On Figure \ref{fig:xworkq-design.pdf}, we can see the design of xworkq:
 
 \diagram{Xworkq design}{xworkq-design.pdf}
 
@@ -546,18 +552,17 @@ executed. Unlike xworkq though, jobs are executed only when a predefined
 condition is met. Another distinction is that the jobs in xwaitq are assumed to 
 be thread-safe and can be executed concurrently by any thread.  
 
-\diagram{Xwaitq design}{xwaitq-design.pdf}
-
 xwaitq is commonly used in non-critical code sections that can be executed only 
 under specific, predefined circumstances. The "jobs" that are enqueued in 
 xwaitq are the same as the jobs of xworkq.
 
-% Design of xwaitq
-\fixme add figure
+The design of xwaitq is illustrated in Figure \ref{fig:xwaitq-design.pdf}.
 
-Unlike xworkq, before a job is enqueued, the thread can attempt to execute it 
-by checking the execution condition. Only if the condition is \textbf{not} met 
-does the thread enqueue the job to the queue. Before the thread leaves, it 
+\diagram{Xwaitq design}{xwaitq-design.pdf}
+
+Unlike xworkq, before a job enters the waitq, the thread can attempt to execute 
+it by checking the execution condition. Only if the condition is \textbf{not} 
+met does the thread enqueue the job to the queue. Before the thread leaves, it 
 "signals" the queue and essentially rechecks the condition to ensure that it 
 can't be executed. It can then safely leave since its job will be executed when 
 another thread signals the queue successfully.
