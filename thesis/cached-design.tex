@@ -94,11 +94,11 @@ the translation of blocks to objects, consider the following two points:
 
 \begin{itemize}
 \item Like bcache, cached must not only cache object requests fast but also try 
-	to coalesce them so that, when needed, they will be flushed to the slower 
-	medium in a more sequential fashion. The fact, however, that the VMs' 
-	volumes are partitioned into different objects, means that sequential data 
-	(in volume context) which reside in different objects will probably not be 
-	sequential in the storage backend too.
+	to coalesce them so that, when needed, they will be flushed to the 
+	slower medium in a more sequential fashion. The fact, however, that a 
+	VM's volume is partitioned into different objects, means that 
+	sequential data (in volume context) which reside in different objects 
+	will probably not be sequential in the storage backend too.
 	
 	Thus, in Archipelago it makes sense only to coalesce data in the object 
 	range (commonly 4MBs). If our implementation was caching in block level 
@@ -118,7 +118,7 @@ Having decided that cached will cache objects, the next step is to decide
 
 As for what we will index, it would be an overkill to further partition the 
 objects and index the regions within them. Moreover, this would make sense only 
-if the objects where large (e.g. like volumes). So, we index object names 
+if the objects were large (e.g. like volumes). So, we index object names 
 solely.
 
 As for the index mechanism, we have chosen to use a very fast in-memory hash 
@@ -191,24 +191,22 @@ In Figure \ref{fig:xcache-design.pdf}, we can see the design of xcache:
 Xcache consists of two hash tables. In the first hash table (a), xcache keeps 
 an index of the currently active entries, whereas on the second hash table (b) 
 it keeps an index of the entries that have been recently evicted but not 
-removed, ergo entries who are in the process of removal but still have some 
+removed, meaning entries that are in the process of removal but still have 
 pending jobs.
 
-The entries themselves are located in a contiguous space (c) where each hash 
-table points to. Moreover, in order to acquire or release an entry, all we need 
-is to pop or push an entry index from a special purpose stack (d).
+The cache entries are located in a contiguous space (c) where each hash table 
+points to. In order to acquire or release an entry, all we need is to pop or 
+push an entry index from a special purpose stack (d). A more closer inspection 
+of their design is presented in Figure \ref{fig:xcache-entry.pdf}. In this 
+figure, each entry is marked with a different color for clarity reasons.
 
 \diagram{xcache entry}{xcache-entry.pdf}
 
-As far as the entries (c) are concerned, we provide a closer inspection of 
-their design in Figure \ref{fig:xcache-entry.pdf}. In this figure, each entry 
-is painted with a different color for clarity reasons.
-
 Every entry has the following important fields:
 \begin{inparaenum}[i.]
-	\item Pointers to the previous (O) and next (Y) objects in the LRU list 
+	\item Pointers to the previous (O) and next (Y) entries in the LRU list 
 		(see more in Section \ref{sec:xcache-eviction-design}),
-	\item reference counter and
+	\item a reference counter and
 	\item the entry's name
 \end{inparaenum}
 
@@ -296,7 +294,7 @@ they reside in a special-purpose hash table until the user confirms that they
 can be removed. 
 
 xcache handles evictions in an interesting way. More specifically, evictions 
-occur implicitly and not explicitly, meaning that the user (peer) doesn't have 
+occur implicitly and not explicitly, meaning that the user (peer) does not have 
 to evict entries manually. For example, when a user tries to insert a new entry 
 to an already full cache, the insertion will succeed and the user will not be 
 prompted to evict an entry manually. Moreover, the user will be notified via 
@@ -304,13 +302,40 @@ specific event hook that is triggered upon eviction.
 
 The scheme of implicit evictions and later on notification of the user, has the 
 advantage that lookups, inserts and evictions can occur atomically by xcache.  
-This wouldn't be the case if the user was responsible for the evictions.
+This would not be the case if the user was responsible for the evictions.
 
-As for the eviction strategy, we have utilized an LRU queue. Interestingly, we 
-have mitigated the cost of keeping the last reference for each entry by 
-creating a simple LRU algorithm, which has O(1) complexity for all update 
-actions. More about the implementation of the LRU algorithm can be found in 
-Section \ref{xcache-evict-imp}.
+As for the eviction strategy, we have utilized an LRU queue. We have mitigated 
+the cost of keeping the last reference for each entry by creating a simple LRU 
+algorithm, which has O(1) complexity for all update actions.
+
+The LRU queue that we have created is a very simple structure. It is a doubly 
+linked list whose pointers reside in the xcache entry and its head (MRU) and 
+tail (LRU) entries are stored in xcache.
+
+There are four operations that are supported by this LRU:
+
+\begin{enumerate}
+	\item \textit{Insertions}, where we simply append the new entry to the
+		head of the list.
+	\item \textit{Evictions}, where we remove the tail of the list.
+	\item \textit{Updates}, in which case we already know the entry we want 
+		to update and have instant access to its pointers.  We can thus 
+		unlink this entry from its neighbors and append it to the head 
+		of the list.
+	\item \textit{Removals}, which are similar to \textit{updates}. In this 
+		case we also know the entry that is going to be removed, 
+		meaning that we can unlink it and remove it safely.
+\end{enumerate}
+
+An illustration of this list can be seen in Figure \ref{fig:xcache-entry.pdf}.  
+In this example, the references order is the following:
+
+The least recently used entry is \textbf{obj9}, next is \textbf{obj1}, then 
+\textbf{ob7}, then \textbf{obj5} and finally the entry that has been mostly 
+recently used is \textbf{obj3}.
+
+More about the implementation of the LRU algorithm can be found in Section 
+\ref{xcache-evict-imp}.
 
 \subsubsection{Concurrency control}
 
@@ -347,8 +372,8 @@ sections are the following:
 		the reference counters atomically.
 	\item
 		\textbf{LRU updates:} Most actions that involve cache entries 
-		must subsequently update the LRU queue. The updates at the LRU 
-		queue must also occur atomically.
+		must subsequently update the LRU queue. These updates must also 
+		occur atomically.
 \end{itemize}
 
 Let's see what guarantees we provide for each of the above scenarios:
