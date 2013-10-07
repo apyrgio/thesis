@@ -1,13 +1,13 @@
 \chapter{Design of cached}\label{ch:cached-design}
 
 In Chapter \ref{ch:triad}, we have addressed the importance of scalability, 
-tiering and caching for a storage service. We have also presented various 
-caching solutions and explained why we rejected them.
+tiering and caching for the performance of a storage service. We have also 
+presented various caching solutions and explained why we rejected them.
 
-This situation ultimately lead to the design of an new caching entity. This 
-entity is called "cached", which simply means \textbf{cache d}aemon. We have 
-decided to invest time in creating our own implementation mainly for two 
-reasons:
+This situation ultimately lead to the design of a new caching entity for 
+Archipelago.  This entity is called "cached", which simply means \textbf{cache 
+	d}aemon. We have decided to invest time in creating our own implementation 
+mainly for two reasons:
 \begin{inparaenum}[i)]
 \item to create a peer that understands the Archipelago logic and can integrate 
 	naturally with it and
@@ -16,7 +16,7 @@ reasons:
 \end{inparaenum}
 
 Thus, in addition to the observations of the previous chapter, we will provide 
-some stricter requirements that our solution must have:
+some stricter requirements that our solution must have. These requirements are:
 
 % List the requirements for our solution
 \begin{enumerate}
@@ -45,9 +45,8 @@ some stricter requirements that our solution must have:
 		mechanism should be as small as possible.
 \end{enumerate}
 
-The following two chapters are the main bulk of this thesis and they present 
-the design and implementation of cached that aims to fill the above 
-requirements.
+The following two chapters are the main bulk of this thesis as they present the 
+design and implementation of cached that aims to fill the above requirements.
 
 % Foretell what the following sections will contain
 More specifically, this chapter provides an in-depth description of the design 
@@ -58,10 +57,10 @@ cached and explains how its design meets the above requirements. Section
 provide a detailed explanation of their design. Moreover, Section 
 \ref{sec:xcache-flow-design} illustrates the request flow of one of the most 
 important components of cached, the xcache. Section \ref{sec:cached-design} 
-explains how cached utilizes the aforementioned components and introduces some 
-unique components that have been tailored specifically for cached. Finally, in 
-Section \ref{sec:cached-flow-design} we illustrate the flow of requests for 
-cached.
+explains how cached utilizes the aforementioned components and further 
+introduces some unique ones that have been tailored specifically for cached.  
+Finally, in Section \ref{sec:cached-flow-design} we illustrate the request flow 
+for cached.
 
 \section{Design rationale}\label{sec:rationale-design}
 
@@ -95,20 +94,20 @@ the translation of blocks to objects, consider the following two points:
 
 \begin{itemize}
 \item Like bcache, cached must not only cache object requests fast but also try 
-	to coalesce them so that, when needed, they will be flushed to the 
-	slower medium in a more sequential fashion. The fact however that the 
-	VMs' volumes are partitioned into different objects, means that 
-	sequential data (in volume context) which reside in different objects 
-	will probably not be sequential in the storage backend too.
+	to coalesce them so that, when needed, they will be flushed to the slower 
+	medium in a more sequential fashion. The fact, however, that the VMs' 
+	volumes are partitioned into different objects, means that sequential data 
+	(in volume context) which reside in different objects will probably not be 
+	sequential in the storage backend too.
 	
-	Thus, unlike bcache which expects that the backing device is also the 
-	physical device and coalesces data accordingly, our implementation is 
-	limited only in coalescing data in the object range (commonly 4MBs). If 
-	our implementation was caching in block or volume level, it would be 
-	unaware of that fact.
+	Thus, in Archipelago it makes sense only to coalesce data in the object 
+	range (commonly 4MBs). If our implementation was caching in block level 
+	(e.g. bcache), it would be unaware of that fact.
 \item We can use cached to further improve the performance of Copy-on-Write.  
 	If cached receives a CoW request and has the object cached, we can
-	acknowledge the copy on the fly, without waiting for the slower medium.
+	acknowledge the copy on the fly, without waiting for the slower medium.  
+	Note that this is a feature that has not been implemented yet, but will be 
+	in the future.
 \end{itemize}
 
 Having decided that cached will cache objects, the next step is to decide
@@ -136,9 +135,9 @@ benefited by multi-threading or not.
 Thus, cached must be able to work with multiple threads which will accept 
 requests from cached's request queue and serve them concurrently with the other 
 threads. Of course, multi-threading can be very tricky, especially when we are 
-dealing with I/O requests and simultaneous accesses to the same object blocks.  
-So, in order to achieve a balance between safety and speed, we use a
-fine-grained locking scheme in critical sections which is discussed in detail 
+dealing with I/O requests and simultaneous accesses to the same object.  So, in 
+order to achieve a balance between safety and speed, we use a
+fine-grained locking scheme in critical sections, which is discussed in detail 
 in Section \ref{sec:xworkq-design}.
 
 \section{Cached components}\label{sec:comp-design}
@@ -152,17 +151,18 @@ them to grasp the cached design.
 
 In this section, we will list the main components that cached relies on. Per 
 Archipelago policy, most of these components have been written in the xtypes 
-fashion (see Section \ref{arch-xtypes} about xtypes).  
+fashion (see Section \ref{arch-xtypes} about xtypes).  \fixme should I mention 
+xtypes?
 
 The components of cached can be seen below:
  
 % TODO: Link List to the definitions
 \begin{itemize}
-	\item xcache, an xtype that provides indexing support, amongst many 
-		other things
-	\item xworkq, an xtype that guarantees atomicity for execution of jobs 
-		on the same object
-	\item xwaitq, an xtype that allows conditional execution of jobs
+	\item xcache, an xtype that provides indexing support, amongst many other 
+		functionalities.
+	\item xworkq, an xtype that guarantees atomicity for execution of jobs on 
+		the same object.
+	\item xwaitq, an xtype that allows conditional execution of jobs.
 \end{itemize}
 
 and their design will be discussed in-depth in the following sections.
@@ -184,7 +184,7 @@ key aspects of caching such as:
 	\item event hooks
 \end{itemize}
 
-In Figure \ref{fig:xcache-design.pdf}, we can see a design graph of xcache:
+In Figure \ref{fig:xcache-design.pdf}, we can see the design of xcache:
 
 \diagram{xcache design}{xcache-design.pdf}
 
@@ -194,13 +194,26 @@ it keeps an index of the entries that have been recently evicted but not
 removed, ergo entries who are in the process of removal but still have some 
 pending jobs.
 
-\diagram{xcache entry}{xcache-entry.pdf}
-
 The entries themselves are located in a contiguous space (c) where each hash 
 table points to. Moreover, in order to acquire or release an entry, all we need 
 is to pop or push an entry index from a special purpose stack (d).
 
-\todo add entry design
+\diagram{xcache entry}{xcache-entry.pdf}
+
+As far as the entries (c) are concerned, we provide a closer inspection of 
+their design in Figure \ref{fig:xcache-entry.pdf}. In this figure, each entry 
+is painted with a different color for clarity reasons.
+
+Every entry has the following important fields:
+\begin{inparaenum}[i.]
+	\item Pointers to the previous (O) and next (Y) objects in the LRU list 
+		(see more in Section \ref{sec:xcache-eviction-design}),
+	\item reference counter and
+	\item the entry's name
+\end{inparaenum}
+
+Moreover, each entry has its own lock as well as a pointer to the entry's data, 
+as set by the peer.
 
 On the following subsections, we present the features of xcache as well as 
 their design.
@@ -232,9 +245,10 @@ an xtype. The reasons why we have chosen to use a hash table are:
 		tries/b-trees/bst will allocate nodes as new entries are 
 		inserted. There is actually an exception to this which will be 
 		discussed below. \label{list:exception}
-	\item We don't need to do substring matches (advantage of tries)
-	\item We don't need to traverse the entries sequentially (advantage of 
-		B-trees and BSTs)
+	\item We don't need to do substring matches (which is an advantage of 
+		tries)
+	\item We don't need to traverse the entries sequentially (which is an 
+		advantage of B-trees and BSTs)
 \end{enumerate}
 
 The hash table that is used is heavily based on dictobject\cite{dictobject},
@@ -272,7 +286,7 @@ its refcount to 2, one reference from the user and one standard reference from
 the hash table. When we lookup for an entry, we use the entry's name as a key 
 and then increment by 1 its refcount. 
 
-\subsubsection{Entry eviction}\label{xcache-eviction-design}
+\subsubsection{Entry eviction}\label{sec:xcache-eviction-design}
 
 The decision to have xcache index a bounded number of entries means that when 
 it reaches its maximum capacity and is requested to index a new entry, it has 
