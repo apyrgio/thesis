@@ -593,17 +593,17 @@ initialized. Essentially, this means we do (once only) the following:
 \end{enumerate}
 
 None of the above operations, however, interact with the bucket pool. This is 
-because we don't initially attach the bucket indexes to the ce's buckets.
+because we do not initially attach the bucket indexes to the ce's buckets.
 
 The way buckets are attached to the object is analogous to the way a function 
-maps to its address space a large memory chunk that has previously allocated; 
+maps to its address space a large memory chunk which has previously allocated; 
 the chunk is internally divided to smaller chunks and when the function 
 attempts to "touch" them, it is trapped and then the buckets are mapped to the 
 function's address space.
 
 Similarly, when cached accepts a request for a target, the request's range is 
 translated to bucket range. If any of the buckets within that range are not 
-attached to the ce, the request is trapped and the needed buckets are claimed 
+attached to the ce, the request is "trapped" and the needed buckets are claimed 
 from the bucket pool.
 
 Finally, the bucket claiming and release procedure is the following:
@@ -618,8 +618,8 @@ Finally, the bucket claiming and release procedure is the following:
 
 \subsection{Request handling}
 
-Cached uses a custom loop to poll for requests. This loop follows the same 
-principles as the common peer's loop (see Section ?) with the addition of:
+Cached uses the request polling scheme that we have described in Section 
+\ref{sec:arch-poll}, with the addition of the following:
 
 \begin{enumerate}
 	\item Checks for the state of the bucket pool. If the bucket pool has 
@@ -632,11 +632,11 @@ When a request is accepted/received, it is forwarded to the appropriate handle
 function based on its xcache operation type.
 
 More specifically, for accepted (new) requests, we index the request target 
-(object) and store its xcache handler on the request's cio and we proceed 
-according to its operation type. For received requests, the request's cio holds 
-the xcache handler for the object, so we can proceed immediately according to 
-its operation type. The way the request is handled next is documented on 
-Section \ref{cached-flow-design}.
+(object) and store its xcache handler on the request's cache-io and we proceed 
+according to its operation type. For received requests, the request's cache-io 
+holds the xcache handler for the object, so we can proceed immediately 
+according to its operation type. The way the request is handled next is 
+documented in Section \ref{sec:cached-flow-design}.
 
 \subsection{"ENOSPC" scenarios}
 

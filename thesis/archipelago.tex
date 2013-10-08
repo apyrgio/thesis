@@ -126,7 +126,7 @@ they are presented in Figure \ref{fig:new_sxima_numbered.pdf}:
 Once the storage backend completes the request, the data blocker notifies the 
 vlmcd, which in turn notifies the xsebd, which finally notifies the VM.
 
-\subsection{Request polling}
+\subsection{Request polling}\label{sec:arch-poll}
 
 There is a part that has been omitted in the previous section and that is how 
 peers send and receive requests. This is a rather intricate aspect of the 
@@ -344,9 +344,10 @@ objects or volumes, depending on the peer context.
 Another important aspect of the Archipelago IPC, is the mechanism with which 
 peers poll for new requests, which is seen in the following section.
 
-\subsection{Polling}\label{sec:poll-archip}
+\subsection{Polling}
+\label{sec:arch-poll}
 
-The polling process is the following:
+The polling process \ref{sec:arch-poll}is the following:
 
 \begin{enumerate}
 	\item On peer initialization, the SIGIO signal is blocked and the PID 
