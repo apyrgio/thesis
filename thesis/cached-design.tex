@@ -448,7 +448,7 @@ peer that uses xcache may choose, if it wants, to use them and if so, it can
 plug its own event function for each hook which will be called when the event 
 is triggered.
 
-\subsection{xcache flow}\label{sec:xcache-flow-design}
+\subsection{The xcache flow}\label{sec:xcache-flow-design}
 
 To make the way xcache works a bit more clearer, we will see the flow for four 
 of the main xcache operations; insertion of a new entry, lookup of an entry, 
@@ -514,7 +514,7 @@ specifically:
 
 \subsection{The xworkq xtype}\label{sec:xworkq-design}
 
-/fixme make xworkq and fellow x-stuff start with a capital letter?
+\fixme make xworkq and fellow x-stuff start with a capital letter?
 
 The xworkq xtype is a useful abstraction for concurrency control. Its purpose 
 is to enqueue "jobs" (protected by a lock) and ensure that only one thread will 
@@ -574,13 +574,14 @@ out of requests etc.
 \section{Cached Design}\label{sec:cached-design}
 
 At this point, we have discussed in depth the design of the cached components.  
-Having the above sections in mind, we can proceed with presenting how cached 
-has been designed. We will illustrate the design of cached from two different 
-perspectives: the operational perspective, which can be seen in Figure 
-\ref{fig:cached-design.pdf}, and the component perspective, which can be seen 
-in Figure \ref{fig:cached-design-comp2.pdf}
+Having the above sections in mind, we can present how cached has been designed. 
+We will illustrate the design of cached from two different perspectives: the 
+operational perspective, which can be seen in Figure 
+\ref{fig:cached-design.pdf}, and the component perspective, which is properly 
+discussed in Section \ref{sec:cached-flow-design} and can be seen in Figure 
+\ref{fig:cached-design-comp2.pdf}.
 
-\diagram{Cached design - actions}{cached-design.pdf}
+\diagram{Cached design - operation level}{cached-design.pdf}
 
 Cached has been been designed mainly as the orchestrator, a peer that utilizes 
 several different components to handle various tasks such as indexing (xcache), 
@@ -774,14 +775,14 @@ needs to allocate the necessary buckets for the object's data. In these cases,
 we use a utility called \texttt{cache-io}, which
 \begin{inparaenum}[i)]
 \item holds the original request and
-\item describes the asynchronous task that it will undertake.
-\end{inparaenum}
+\item describes the asynchronous task that will be executed.
+\end{inparaenum}. In order to execute a task, we simply need a function pointer 
+to the entry point of this task and the necessary arguments.
 
-Using cache-ios, the request can break in more than two flows of execution, 
+Using Cache-IOs, the request can break in more than two flows of execution, 
 since the asynchronous task can allocate new requests for its own purposes.  In 
-order to keep track of when the cache-io has finished with its tasks, we have
-some book-keeping entries such as the cache-io state and the number of the 
-requests that it has spawned.
+order to know when the asynchronous task has finished, we keep track of the 
+number of \emph{pending} requests that it has spawned.
 
 \subsection{Book-keeping utilities}\label{sec:cached-states-design}
 
@@ -791,7 +792,7 @@ employ some sort of book-keeping of their states. The entities that require to
 track their states are:
 
 \begin{enumerate}
-\item \textbf{buckets:} Each bucket has two different states that must be 
+\item \textbf{Buckets:} Each bucket has two different states that must be 
 	tracked. The first is its allocation state:
 	\begin{enumerate}[i)]
 		\item free, meaning that the bucket is not allocated
@@ -800,14 +801,14 @@ track their states are:
 	The second is its data state:
 	\begin{enumerate}[i)]
 		\item invalid, meaning that it currently holds no data
-		\item valid, meaning that it has data that correspond with the 
-			blockers data
-		\item loading, meaning that a read request has been sent to the 
-			blocker to be filled with data
+		\item valid, meaning that it has data that are in sync with the
+			storage backend.
+		\item loading, meaning that a read request that includes this 
+			bucket has been sent to the blocker
 		\item writing, meaning that the bucket contents are being 
 			written/flushed to the blocker.
-		\item dirty, meaning that it currently holds newer data that 
-			what the blocker has.
+		\item dirty, meaning that its data are newer than the data of 
+			the storage backend.
 	\end{enumerate}
 \item \textbf{Objects:} The bucket states of an object provide a good 
 	indication of the object's status, yet not a complete one. The statuses 
@@ -820,14 +821,13 @@ track their states are:
 		\item failed, meaning that a request has failed for this object 
 			and we must stop using it
 	\end{enumerate}
-\item \textbf{Cache-IOs:} Cache-ios also have states. They are the following:
+\item \textbf{Cache-IOs:} Cache-IOs also have states. They are the following:
 	\begin{enumerate}[i)]
-		\item accpted, meaning that the request has just been accepted
-		\item reading, meaning that the request wants to read data
-		\item writing, meaning that the request wants to write data
-		\item served, meaning that the request has been served the data 
-			it needed
-		\item failed, meaning that the request has failed
+		\item reading, meaning that the task wants to read data
+		\item writing, meaning that the task wants to write data
+		\item served, meaning that the task has been served the data it 
+			needed
+		\item failed, meaning that the task has failed
 	\end{enumerate}
 \end{enumerate}
 
@@ -837,31 +837,126 @@ object (or cached in general) has a bucket in a certain state.
 
 \section{Cached Flow}\label{sec:cached-flow-design}
 
-The flows of cached operations are illustrated in the following diagrams.
+In this section, we will discuss how cached handles read/write requests.  
+Through the explanation of the cached flow, we hope to reassemble in the 
+reader's mind the puzzle pieces that we have laid out in the previous sections 
+of this chapter.  \fixme is hope a strong word?
 
-\diagram{Cached design - components}{cached-design-comp2.pdf}
+In Figure \ref{fig:cached-design.pdf}, we have essentially assorted the flow of 
+cached in a set of logical operations. Now that we have explained all cached 
+components, we can link these operations to the components that we have 
+designed. The connection between cached operations and components is 
+illustrated in Figure \ref{fig:cached-design-comp2.pdf}.
 
-\subsection{Write}
+\diagram{Cached design - component perspective}{cached-design-comp2.pdf}
 
-This is the flow for the write path:
+We will explain each step of the cached flow, as is presented in Figures 
+\ref{fig:cached-design.pdf} and \ref{fig:cached-design-comp2.pdf}. Note that we
+will focus on the read/write requests and not the copy/info requests.
 
-\fixme add diagram and explanation
+\subsection{Main steps}
 
-\subsection{Read}
+\subsubsection{Request handling}
 
-This is the flow for the read path:
+Initially, cached receives an XSEG request from vlmcd. Cached then checks the 
+type of the request and it forwards it to the right channels.
 
-\fixme add diagram and explanation
+\subsubsection{Indexing}
 
-\subsection{Copy}
+Next, cached uses the name of the request's target to check if it has been 
+indexed (lookup). 
 
-This is the flow for the read path:
+\begin{itemize}
+	\item If the object is in the cache, it stores the returned handler for 
+		later references to the object data.
+	\item If not, it allocates a new entry handler and indexes this handler 
+		in xcache (insert).
+\end{itemize}
 
-\fixme add diagram and explanation
+In either case, the returned handler is used for later references to the 
+object's data.
 
-\subsection{Info}
+The indexing operation may not always succeed, since the cache may be full. In 
+this case, we store the original request in a cache-io struct and wait until an 
+entry becomes evicted. This is covered in the "Conditional execution" step.
 
-This is the flow for the read path:
+\subsubsection{Concurrency control}
 
-\fixme add diagram and explanation
+After cached has managed to acquire a valid entry handler for the object, it 
+enqueues the appropriate read or write work to the object's workq.  Once this 
+job is executed, it runs exclusively and can modify safely the object's data.
+
+The first thing that cached attempts to do is to claim the necessary buckets 
+for the request. Knowing the following:
+\begin{inparaenum}[i)]
+\item bucket size,
+\item request size and
+\item request offset,
+\end{inparaenum}
+cached can determine the bucket range that it must claim.
+
+To claim a bucket, cached pops bucket handlers from the bucket pool. If the 
+pool has been depleted, the request cannot proceed and it must wait until a
+bucket is freed. Again, this is covered in the "Conditional execution" step.
+
+Once cached has claimed the necessary buckets, it can perform the requested 
+operation on them. The way an operation is executed however, is tightly coupled 
+with the cache write policy. Moreover, depending on the cache write policy, 
+cached may need to issue a new request for the object's data. Thus, the request 
+handling step inevitably blends in this step.
+
+There are four possible combinations, which are in part explained in Section 
+\ref{sec:cached-wcp-design}:
+
+\begin{enumerate}
+	\item \textbf{\{Write operation, write-back policy:\}} \hfill \\
+		The data are written to the object, they are marked as dirty 
+		and the request is completed.
+	\item \textbf{\{Write operation, write-through policy:\}} \hfill \\
+		Cached forwards the write request to the blocker. Once the 
+		request returns, it fills the claimed buckets with the object 
+		data and completes the request.
+	\item \textbf{\{Read operation, write-back policy:\}} \hfill \\
+		\textbf{\{Read operation, write-through policy:\}} \hfill \\
+		The behavior for reads is the same, regardless of the policy.
+		Essentially, if the requested data are cached, cached can 
+		instantly complete the request. Else, it creates a new request, 
+		using cache-io, and sends it to the blocker. After the request 
+		is replied, it loads the missing data in the claimed buckets 
+		and then it completes the original request.
+\end{enumerate}
+
+\subsection{Optional steps}
+
+\subsubsection{Conditional execution}
+
+As we have seen in the previous steps, since resources are finite, the requests 
+cannot always be processed immediately. The common way that cached handles 
+these cases is through the usage of xwaitqs; the request enqueues to the xwaitq 
+the function that wants to be called as well as its arguments.
+
+\subsubsection{Data propagation}
+
+When an object is evicted, cached does the following:
+
+\begin{enumerate}
+	\item It quickly checks if the object is dirty or not (using the cache 
+		entry finalization hook)
+	\item If the object is dirty, cached updates its reference count and it 
+		checks if there is a pending flush for it.
+		\begin{enumerate}[i)]
+			\item If there is a pending flush, we wait until that 
+				flush is finished (waitq).
+			\item Else, we mark the buckets as \textbf{WRITING} and 
+				we flush their contents to the blocker.
+		\end{enumerate}
+	\item After the flush has finished, we once again check if the object 
+		is dirty (the cache entry finalization hook is once more 
+		triggered):
+		\begin{enumerate}[i)]
+			\item If the object is clean, then we do nothing and 
+				the object will be freed.
+			\item Else, we go back to step 2.		
+		\end{enumerate}
+\end{enumerate}
 
