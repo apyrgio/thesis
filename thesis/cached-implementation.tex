@@ -7,7 +7,8 @@ xcache and we will comment where necessary.
 
 More specifically, Section \ref{sec:xcache-imp} presents the implementation of 
 xcache, the main cached component. Next, section \ref{sec:cached-imp} presents 
-the implementation of cached, showcasing the structures and functions used.
+the implementation of cached and demonstrates the structures and functions that 
+are used.
 
 \section{Implementation of xcache}\label{sec:xcache-imp}
 
@@ -18,16 +19,17 @@ moving on to the more intrinsic details, such as the concurrency control.
 \subsection{xcache initialization}
 
 In order to use xcache, the peer must first initialize an xcache structure 
-using xcache\_init, which can be seen in Listing \ref{lst:xcache-init.h}.
+using \texttt{xcache\_init}, which can be seen in Listing 
+\ref{lst:xcache-init.h}.
 
-\ccode{\texttt{xcache\_init definition}}{xcache-init.h}
+\ccode{Definition of \texttt{xcache\_init}}{xcache-init.h}
 
-xcache\_init requests the following information from the peer:
+\texttt{xcache\_init} requests the following information from the peer:
 
 \begin{description}
-	\item[cache:] Simply, an allocated xcache struct
-	\item[xcache\_size:] The number of objects xcache will index
-	\item[ops:] The trigger functions for xcache's event hooks
+	\item[cache:] Simply, an allocated xcache struct.
+	\item[xcache\_size:] The number of objects xcache will index.
+	\item[ops:] The trigger functions for xcache's event hooks.
 	\item[flags:] Optional flags that tune the following two things:
 		\begin{enumerate}
 			\item The LRU algorithm. For the cached implementation, 
@@ -61,7 +63,7 @@ implementation.
 \subsection{Cache entry preallocation}
 
 When xcache is initialized, it preallocates the necessary cache entries. The 
-relevant fields of the xcache structure for this purpose can be seen in Listing 
+relevant xcache fields for this purpose can be seen in Listing 
 \ref{lst:xcache-prealloc.h}.
 
 \ccode{\xcache struct fields for preallocated entries}{xcache-prealloc.h}
@@ -69,16 +71,16 @@ relevant fields of the xcache structure for this purpose can be seen in Listing
 The \textbf{size} field is the number of entries. The \textbf{free\_nodes} is a 
 stack where all entry indexes are initially pushed and subsequently popped when 
 a new entry is inserted. Finally, \textbf{nodes} is the space allocated for the 
-cache entries and where the entry indexes point to.
+cache nodes and where the entry indexes point to.
 
-Moreover, the definition of the \texttt{xcache entry} struct is shown in 
+Moreover, the definition of the \texttt{xcache\_entry} struct is shown in 
 Listing \ref{lst:xcache-entry.h}.
 
 \ccode{\texttt{xcache entry} struct}{xcache-entry.h}
 
-We will comment briefly on the relevant cache entry fields for this section, 
-which can be seen in Listing \ref{lst:xcache-entry-prealloc.h}. The rest of the 
-fields will be discussed in the following sections.
+We will comment briefly on the relevant \texttt{xcache\_entry} fields for this 
+section, which can be seen in Listing \ref{lst:xcache-entry-prealloc.h}. The 
+rest of the fields will be discussed in the following sections.
 
 \ccode{\texttt{xcache entry} fields, relevant for 
 	preallocation}{xcache-entry-prealloc.h}
@@ -86,17 +88,17 @@ fields will be discussed in the following sections.
 The description of the fields follows:
 
 \begin{description}
-	\item[ref] The reference count of the entry, initially set to zero.
-	\item[state] The state of the entry. It can either be ACTIVE or EVICTED and 
-		is initially set to the first.
-	\item[name] The name of the entry. Since we cannot know its length 
-		beforehand, we allocate as much space as possible by our segment, 
-		typically 256 characters. During initialization, the entry name is 
+	\item[ref:] The reference count of the entry, initially set to zero.
+	\item[state:] The state of the entry. It can either be ACTIVE or 
+		EVICTED and is initially set to the first.
+	\item[name:] The name of the entry. Since we cannot know its length 
+		beforehand, we allocate as much space as possible, typically 
+		256 characters. During initialization, the entry name is 
 		cleared out of junk values.
-	\item[h] The entry's index.
-	\item[priv] The private contents of the cache entry. On initialization, the 
-		cache node creation hook is triggered and cached initializes the 
-		private contents of cache entry with its data (more on the Section ?)
+	\item[priv:] The private contents of the cache entry. On 
+		initialization, the cache node creation hook is triggered and 
+		cached initializes the private contents of cache entry with its 
+		data (more on Section \ref{sec:xcache-hooks-imp})
 \end{description}
 
 \begin{comment}
@@ -124,37 +126,39 @@ The description of the fields follows:
 \subsection{Cache entry initialization}
 
 Before a peer can index a new entry, it must first allocate it from the cache 
-entry pool and then initialize it. xcache has a special function for this 
-purpose which can be seen in Listing \ref{lst:xcache-alloc-init.c}
+entry pool and then initialize it. Xcache has a special function for this 
+purpose, which can be seen in Listing \ref{lst:xcache-alloc-init.c}.
 
-\ccode{Cache entry allocation/initialization function}{xcache-alloc-init.c}
+\ccode{Allocation/initialization function for 
+	\texttt{xcache\_entry}}{xcache-alloc-init.c}
 
-This function attempts to claim a cache entry from \texttt{free\_nodes}. Then 
-it initializes it with the name given by the peer. Moreover, it triggers the 
-cache entry initialization hook which cached uses to further initialize the 
-entry.
+This function attempts to claim an \texttt{xcache\_entry} index from the
+\texttt{free\_nodes} stack.  Then it initializes it with the name given by the 
+peer.  Moreover, it triggers the cache entry initialization hook which cached 
+uses to further initialize the entry.
 
-An added benefit of this function is that it doesn't need to acquire the cache 
-lock, so it does not slow down the indexing functions that rely on that look.
+An added benefit of this function is that it doesn't need to acquire the main 
+cache lock, so it does not slow down the indexing functions that rely on that 
+lock.
 
 \subsection{Cache entry indexing}
 
 This is the core feature of xcache. In Listing \ref{lst:xcache-index.h}, we 
-present the fields of xcache struct that are relevant to the indexing task.
+present the fields of the xcache struct that are relevant to the indexing task.
 
 \ccode{xcache struct fields for entry indexing}{xcache-index.h}
 
 As we have mentioned in Section \ref{sec:xcache-index-design}, we utilize two 
-hash tables, one for the cached entries and one for the evicted entries. These 
-hash tables can be accessed from the \texttt{xcache struct} and are the 
-\texttt{*entries} and \texttt{*rm\_entries} respectively.
+hash tables, one for the active entries and one for the evicted entries. These 
+hash tables can be accessed from xcache and are the \texttt{*entries} and 
+\texttt{*rm\_entries} fields respectively.
 
 More importantly, in Listing \ref{lst:xcache-index.c} we can see the functions 
-that are related to indexing and \xcache exposes to the peer:
+that are related to indexing and xcache exposes to the peer:
 
 \ccode{Indexing functions}{xcache-index.c}
 
-All of these functions need a pointer to the \xcache struct. Here's a brief 
+All of these functions need a pointer to the xcache struct. Here's a brief 
 description of them:
 
 \begin{description}
@@ -177,33 +181,25 @@ description of them:
 		\textbf{Note:} It looks up first if the entry exist in 
 		\texttt{entries} or \texttt{rm\_entries}. The later case can 
 		lead to re-insertions.
-		\begin{comment}
-			Probably not needed
 		\item[xcache\_remove:]
 			Takes the handler of an allocated entry as an argument and uses 
 			it to remove that entry.\\
-			Returns on failure: -1.
-			Returns on success: 0.
-			\textbf{Note:} Removes entries only from \texttt{entries} hash 
-			table.
-		\end{comment}
+			Returns on failure: -1.\\
+			Returns on success: 0.\\
+			\textbf{Note:} Removes only active entries .
 \end{description}
 
-Moreover, we show in Listing \ref{lst:xcache-entry-index.h} the cache entry 
-struct fields related to indexing and comment on how they are used by each 
-function.
+Moreover, in Listing \ref{lst:xcache-entry-index.h}, we show the 
+\texttt{xcache\_entry} fields that are related to indexing, and comment on how 
+they are used by each function.
 
 \ccode{xcache entry struct relevant indexing}{xcache-entry-index.h}
-
-The commentary on the above fields follows:
 
 \begin{description}
 	\item[ref:] The reference counter of an object is increased on lookups 
 		and inserts, since it is essentially referenced in these 
 		operations.
-	\item[state:] The state of an object is already ACTIVE for lookup 
-		operations (or else lookup will fail). For insertions and 
-		reinsertions, it is manually set to ACTIVE.
+	\item[state:] The state of the entry is set to ACTIVE.
 	\item[older/younger]: These fields show the neighbors of the entry in 
 		the LRU queue. The LRU queue is sorted by reference time order, 
 		so the neighbors are essentially the entries that have been 
@@ -212,12 +208,12 @@ The commentary on the above fields follows:
 
 \subsection{Entry eviction}\label{xcache-evict-imp}
 
-The relevant fields for this purpose can be seen in code listing 
-\ref{lst:xcache-evict.h}
+The relevant fields for this purpose can be seen in Listing 
+\ref{lst:xcache-evict.h}.
 
 \ccode{\xcache struct fields for eviction}{xcache-evict.h}
 
-As we have mentioned in Section \ref{sec:xcache-evict-design}, we resort to 
+As we have mentioned in Section \ref{sec:xcache-eviction-design}, we resort to 
 eviction when the cache is full and new entries can't be inserted. By xcache 
 policy, we evict the least recently used entry. The necessary fields for the 
 doubly-linked list that we maintain for this purpose can be seen below:
@@ -231,6 +227,10 @@ search all entries, which would require O(N) time).
 
 Another feature of this LRU queue is that it doesn't require timestamps, so we 
 can avoid the unnecessary system call.
+
+When we have found out which entry to evict, we migrate it from the hash table 
+of active entries to the hash table of evicted entries. This process is 
+explained in depth in Section \ref{sec:xcache-eviction-design}.
 
 Finally, when a cache entry is evicted from the hash table, it triggers the 
 cache entry eviction hook.
@@ -275,9 +275,9 @@ We have seen in the previous section how an active entry is evicted. However,
 what happens when xcache receives a request for an evicted entry which hasn't 
 been freed yet? 
 
-In this case, the entry switches state again and is inserted back to the hash 
-table of active entries. Also, its reference counter is incremented by 1, since 
-the xcache can now reference this entry again.
+In this case, the entry migrates back to the hash table of active entries.  
+Also, its reference counter is incremented by 1, since the xcache can now 
+reference this entry again.
 
 The advantage of reinsertion is that we do not stall until the evicted entry 
 has flushed all its data and instead, we can use it immediately.
@@ -290,17 +290,15 @@ control have already been discussed in previous sections, in this section, we
 will provide an in-depth explanation of how xcache implements them.
 
 The relevant fields for concurrency control can be seen in Listing 
-\ref{lst:xcache-conc.h}, both for the xcache and xcache\_entry structs.
+\ref{lst:xcache-conc.h}, both for the xcache and \texttt{xcache\_entry} 
+structs.
 
 \ccode{Concurrency control fields}{xcache-conc.h}
 
-There are three main techniques xcache uses for concurrentcy control. The first 
-one is the usage of locks, which is presented in Section 
-\ref{sec:xcache-lock-imp}.  The second one is reference counting, which is 
-presented in Section \ref{sec:xcache-refcount-imp}. Finally, the third one is a 
-more esoteric method that counters the ABA problem and is the tracking of 
-parallel puts to an entry, which is presented in Section 
-\ref{sec:xcache-parput-imp}.
+There are three main techniques xcache uses for concurrency control. The first 
+one is the usage of locks, the second one is reference counting and the third 
+one is the tracking of parallel puts to an entry, a more esoteric method that 
+counters the ABA problem.
 
 \subsubsection{Locking}\label{sec:xcache-lock-imp}
 
@@ -354,14 +352,14 @@ The refcount model in xcache should be familiar to most people:
 
 % Turn this to figure
 \begin{itemize}
-	\item When an entry is inserted in cache, the cache holds a reference 
-		for it (ref = 1).
+	\item When an entry is inserted in cache, xcache holds a reference to 
+		it (ref = 1).
 	\item Whenever a new lookup for this cache entry succeeds, the reference 
 		is increased by 1 (ref++)
-	\item When the request that has issued the lookup has finished with an 
-		which entry, the reference is decreased by 1. (ref--)
-	\item When a cache entry is evicted by cache, the its ref is decreased 
-		by 1. (ref--)
+	\item When a request has been completed and no longer needs the entry, 
+		the reference is decreased by 1. (ref--)
+	\item When a cache entry is evicted by xcache, its ref is decreased by 
+		1, since it no longer holds a reference to it. (ref--)
 \end{itemize}
 
 Moreover, some common refcount cases are:
@@ -391,21 +389,76 @@ Moreover, some common refcount cases are:
 
 Unlike most refcount cases, however, the entry is not put when its refcount 
 drops to zero. The reason is that the entry can be reinserted at any time. In 
-the following section, we explain how we have handled that case
+the following section, we explain how we have handled that case.
 
-\subsubsection{Entry put}
+\subsubsection{Parallel puts}
 
 The scenario of putting the entry has proved the most tricky one and deserves 
-its own section in the concurrency control implemesntation.
+its own section in the concurrency control implementation.
 
 For this scenario, we aimed to avoid the usage of our two biggest locks: 
 \texttt{lock} and \texttt{rm\_lock}. Avoiding the first one was easy since the 
 hash table of active entries was not used. However, the same did not hold true 
-for the \texttt{rm\_lock}.
+for the \texttt{rm\_lock}, since the evicted entry must be reliably removed 
+from the hash table of evicted entries. However, we have managed to reduce its 
+usage to the absolute minimum.
 
-\fixme How much are we going to explain the ABA problem?
+The put procedure is the following:
 
-\subsection{Event hooks}
+\begin{enumerate}
+	\item We decrement the refcount of the entry.
+	\item If the refcount is more than zero, we leave.
+	\item Else, we proceed by triggering the on\_finalize hook. With this 
+		hook, the peer is given a chance to increment the refcount of 
+		the entry if it deems it necessary (e.g. the entry is dirty).
+	\item After we have returned from this hook, we check if the refcount 
+		is zero.  This time, we use the \texttt{rm\_lock} to prevent 
+		reinsertions and remove the entry from the hash table of 
+		evicted entries.
+	\item If the refcount is not zero, then someone in the meantime has 
+		reinserted the entry and we can safely leave.
+	\item Else, we remove the entry.
+\end{enumerate}
+
+This procedure looks simple at first glance. However, looks are deceiving and 
+so is the ABA problem. In our case, consider the following:
+
+\begin{enumerate}
+	\item Tread 1 \textrightarrow\ evicts a clean entry \textbf{(ref 0)}
+	\item Thread 1 \textrightarrow\ triggers the on\_finalize hook
+	\item Thread 2 \textrightarrow\ reinserts the entry \textbf{(ref 2)}
+	\item Thread 2 \textrightarrow\ makes the entry dirty and then puts it 
+		\textbf{(ref 1)}
+	\item Thread 3 \textrightarrow\ evicts the now dirty entry           
+		\textbf{(ref 0)}
+	\item Thread 1 \textrightarrow\ checks if the reference count is zero 
+		and removes the entry
+	\item Thread 3 \textrightarrow\ triggers the on\_finalize hook, 
+		increments the refcount of the entry and issues a flush for its 
+		contents
+		\textbf{(ref 1)}
+\end{enumerate}
+
+Although the final refcount is correct, the entry has been removed midway the 
+put procedure. The fault in our logic was that we expected that, if the 
+refcount is zero before and after the on\_finalize hook, we could safely remove 
+the entry. This is commonly referred to in the bibliography as the "ABA 
+problem"\cite{aba}. Generally, it occurs when a thread reads twice a "guard" 
+variable and gets the same value, but is unaware of the fact that it has 
+changed in between these two checks.
+
+The ABA problem is mostly encountered in lock-free structures and since xcache 
+does not aim to be one of them, we can simply lock the put procedure with the 
+\texttt{rm\_lock}. However, this can have a performance impact, especially if a 
+peer plugs a slow on\_finalize trigger function.
+
+We have chosen instead to use an extra \texttt{xcache\_entry} field called 
+\texttt{parallel\_puts}.  This number is incremented when a thread enters the 
+put function and has dropped the reference of the object to zero i.e. between 
+steps one and two. This way, we can also check during step five the number of 
+parallel puts if and leave if it is more than one.
+
+\subsection{Event hooks}\label{sec:xcache-hooks-imp}
 
 The hooks that xcache provides to users are stored in an xcache\_ops struct 
 that can be seen in Listing \ref{lst:xcache-hooks.h}.
@@ -423,38 +476,28 @@ return two values:
 
 \section{Implementation of cached}\label{sec:cached-imp}
 
-In this section, we will present the implementation of cached. Information 
-about the design of cached is provided in Section \ref{sec:cached-design}.  
+In this section, we will present the implementation of cached. A presentation 
+of the design of cached is provided in Section \ref{sec:cached-design}.  
 Similarly to xcache, we will begin with the initialization process, we will 
-continuee with the request handling of cached and finish with presenting the 
-challenges we faced and the solutions we implemented.
+continue with the request handling and finish with presenting the challenges we 
+faced and the solutions we implemented.
 
 \subsection{Cached initialization}\label{sec:cached-init-imp}
 
 We have mentioned in the previous chapters that cached can be multi-threaded, 
 have different write policies, maximum number of objects, cache size etc. All 
 these variables are given from command-line and used during cached 
-initialization.
+initialization. The necessary arguments are:
 
-\fixme do not present arguments as input arguments
-The command-line arguments can be seen in Table \ref{tab:usage}
-
-\begin{table}
-	\centering
-	\begin{tabular}{ | l | l | }
-		\hline
-		Switch & Info \\ \hline \hline
-		-t & Number of threads \\ \hline
-		-mo & Max objects to cache \\ \hline
-		-ts & Total cache size \\ \hline
-		-os & Object size \\ \hline
-		-bs & Bucket size \\ \hline
-		-bp & Blocker port \\ \hline
-		-wcp & Write policy \\ \hline
-	\end{tabular}
-	\caption{Command line arguments of cached}
-	\label{tab:usage}
-\end{table}
+\begin{itemize}
+	\item Number of threads
+	\item Max objects to cache
+	\item Total cache size
+	\item Object size
+	\item Bucket size
+	\item Blocker port
+	\item Write policy
+\end{itemize}
 
 and the cached structure that is initialized is presented in Listing 
 \ref{lst:cached.h}. 
@@ -462,7 +505,7 @@ and the cached structure that is initialized is presented in Listing
 \ccode{Main cached struct}{cached.h}
 
 Moreover, on cached initialization we also initialize xcache as well as the 
-general xworkqs and xwaitqs.
+necessary xworkqs and xwaitqs.
 
 Some of the above cached fields are the same with the command-line arguments 
 and are self explanatory. We will briefly comment on the less obvious fields, 
@@ -470,24 +513,24 @@ which will be discussed in length in their respective sections.
 
 \begin{description}
 	\item[cache:]
-		The initialized xcache struct is stored here
+		The initialized xcache struct is stored here.
 	\item[max\_req\_size:]
-		The maximum request size that can be sent to the blocker
+		The maximum request size that can be sent to the blocker.
 	\item[workq:]
-		A lockless xworkq where non-critical jobs from threads who are in a 
-		critical section are enqueued (More on Section ?)
+		A lockless xworkq where non-critical jobs from threads who are 
+		in a critical section are enqueued.
 	\item[pending\_waitq:]
-		A waitq for jobs that need to allocate a cache entry to continue
+		An xwaitq for jobs that need to allocate a cache entry to.
+		continue
 	\item[bucket\_waitq:]
-		A waitq for jobs that need to allocate a bucket to continue
+		An xwaitq for jobs that need to allocate a bucket to continue.
 	\item[req\_waitq:]
-		A waitq for jobs that need to allocate a request to continue
+		An xwaitq for jobs that need to allocate a request to continue.
 	\item[bucket\_data:]
-		This is a allocated space whose size is the total\_size of 
-		cache.  This space is later split in buckets and its indexes 
-		are pushed on a stack
+		The bucket pool of cached, Its size is the total\_size of 
+		cached.
 	\item[bucket\_indexes:]
-		The stack where bucket indexes are pushed
+		The stack where bucket indexes are pushed.
 \end{description}
 
 Furthermore, during the xcache initialization that takes place inside the 
@@ -502,18 +545,18 @@ The explanation of the above fields follows:
 
 \begin{description}
 	\item[status:] The object status, as seen in Section 
-		\ref{sec:cached-states-design}
-	\item[lock:] The lock for the ce's and its buckets' data
+		\ref{sec:cached-states-design}.
+	\item[lock:] The lock for the ce's and its buckets' data.
 	\item[workq:] The xworkq that is used for concurrency control over 
 		parallel access to the ce's and its buckets' data. It uses the 
-		aforementioned lock
+		aforementioned lock.
 	\item[pending\_waitq:] The xwaitq that is used when a request cannot be 
 		executed due to the ce's state. It will allow job executions 
 		only when the object is not in FLUSHING state.
 \end{description}
 
 We have intentionally left out the bucket related fields that will be discussed 
-in length in Section \ref{cached-bucket-imp}.
+in length in Section \ref{sec:cached-bucket-imp}.
 
 \subsection{Bucket pool}\label{sec:cached-bucket-imp}
 
@@ -534,9 +577,9 @@ initialized. Essentially, this means we do (once only) the following:
 		\ccode{Bucket implementation}{bucket.h}
 
 	\item Second, we allocate two more arrays, the  
-		\texttt{bucket\_alloc\_status\_counters} and the
-		\texttt{bucket\_data\_status\_counters}, whose length is the 
-		number of allocation states (2) and data states (5) 
+		\texttt{bucket\_alloc\_status\_counters} array and the
+		\texttt{bucket\_data\_status\_counters} array, whose length is 
+		the number of allocation states (2) and data states (5) 
 		respectively.
 	\item Third, we initialize each bucket's allocation state to FREE and 
 		data state to INVALID. The allocation and data state are stored 
@@ -544,9 +587,9 @@ initialized. Essentially, this means we do (once only) the following:
 		actually a custom bit-field with support for variable field 
 		lengths.
 	\item Finally, we initialize all the counters to zero, besides the 
-		allocation counter for FREE buckets, which is set to 
-		\texttt{buckets\_per\_object} (1024), and the data counter for 
-		INVALID buckets, which is similarly to the same number.
+		allocation counter for FREE buckets and the data counter for 
+		INVALID buckets, which are set to \texttt{buckets\_per\_object} 
+		(1024).
 \end{enumerate}
 
 None of the above operations, however, interact with the bucket pool. This is 

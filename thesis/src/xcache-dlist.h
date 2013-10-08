@@ -7,8 +7,8 @@ struct xcache {
 
 struct xcache_entry {
 	...
-	struct xcache_entry *older;			/* Less(?) recent entry in LRU queue */
-	struct xcache_entry *younger;		/* More(?) recent entry in LRU queue */
+	struct xcache_entry *older;			/* Less recent entry in LRU queue */
+	struct xcache_entry *younger;		/* More recent entry in LRU queue */
 	...
 };
 

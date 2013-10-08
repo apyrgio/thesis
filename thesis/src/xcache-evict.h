@@ -1,7 +1,7 @@
 struct xcache {
 	...
-	struct xq free_nodes;		/* Unclaimed (?) entries */
-	xhash_t *entries;			/* Hash-table for valid entries */
+	struct xq free_nodes;		/* Free cache nodes */
+	xhash_t *entries;			/* Hash-table for active entries */
 	xhash_t *rm_entries;		/* Hash-table for evicted entries */
 	struct xlock rm_lock;		/* Lock for rm_entries */
 	...

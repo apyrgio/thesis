@@ -14,6 +14,4 @@ struct cached {
 	struct xwaitq req_waitq;		/* xwaitq for when we are out of requests */
 	unsigned char *bucket_data;		/* allocated space for buckets (bucket pool) */
 	struct xq bucket_indexes;		/* stack of bucket indexes (bucket pool) */
-	struct cached_stats stats;
-	//scheduler
 };
