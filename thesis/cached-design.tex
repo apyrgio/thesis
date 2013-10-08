@@ -573,9 +573,14 @@ out of requests etc.
 
 \section{Cached Design}\label{sec:cached-design}
 
-At this point, we have discussed in length the design of the cached components.  
+At this point, we have discussed in depth the design of the cached components.  
 Having the above sections in mind, we can proceed with presenting how cached 
-has been designed.
+has been designed. We will illustrate the design of cached from two different 
+perspectives: the operational perspective, which can be seen in Figure 
+\ref{fig:cached-design.pdf}, and the component perspective, which can be seen 
+in Figure \ref{fig:cached-design-comp2.pdf}
+
+\diagram{Cached design - actions}{cached-design.pdf}
 
 Cached has been been designed mainly as the orchestrator, a peer that utilizes 
 several different components to handle various tasks such as indexing (xcache), 
@@ -593,22 +598,18 @@ undertake, namely:
 		propagated to the slower medium.
 \end{itemize}
 
-Moreover, cached extends its repertoire using some unique components, namely:
+Moreover, cached extends its repertoire using some unique components that have
+been specifically crafted for it:
 
-\fixme Add a brief description
 \begin{enumerate}
-	\item Bucket pool
-	\item Request wrapper (Cache-IO)
-	\item Book-keeping utilities
+	\item Bucket pool, which is a preallocated space from where cached can draw 
+		resources for the object's data.
+	\item Utilities for asynchronous task execution.
+	\item Utilities for various book-keeping purposes.
 \end{enumerate}
 
-We will illustrate the design of cached from two different perspectives: the 
-operational perspective, which can be seen in Figure 
-\ref{fig:cached-design.pdf}, and the component perspective, which can be seen 
-if Figure ?. Moreover, we will further explain how cached manages the above new 
-components and tasks in the following sections.
-
-\fixme add component diagram for cached (xcache, xworkq, objects, buckets etc.)
+We will further explain how cached manages the above new components and tasks 
+in the following sections.
 
 \subsection{Request handling}
 
@@ -628,9 +629,9 @@ own, as well as handle cases such as running out of requests.
 
 \subsection{Write policy enforcing}\label{sec:cached-wcp-design}
 
-The user defines beforehand what will the write policy of cached be. There are 
-two options: write-through and write-back. These policies aren't new and have 
-already been discussed in chapter ?, but let's see what these policies 
+The user defines beforehand the write policy of cached. There are two options: 
+write-through and write-back. These policies aren't new and have already been 
+discussed in Section \ref{sec:wp-triad}, but let's see what these policies 
 translate to in cached context.
 
 \begin{itemize}
@@ -758,33 +759,34 @@ To make things even faster, we would also like the buckets to be preallocated
 overhead of malloc/free system calls.
 
 We have achieved the above by creating a bucket pool. The design of the bucket 
-pool is the following:
+pool is the same as the design of cache entries, as shown in Figure 
+\ref{fig:xcache-design.pdf}. More specifically, the bucket pool size is static 
+and has been set during initialization by the administrator. After the 
+necessary space has been allocated, it is divided in buckets and all the bucket 
+indexes are pushed in a lock-protected stack. Then, each thread can pop bucket 
+indexes from the pool and attach them to an object when needed. When that 
+object is evicted, its attached buckets indexes are pushed back to the pool.
 
-\fixme add diagram
+\subsection{Asynchronous task execution}
 
-The bucket pool size is static and has been set during initialization by the 
-administrator. After the necessary space has been allocated, it is divided in 
-buckets and all the bucket indexes are pushed in a lock-protected stack (xq).  
-Then, each thread can pop bucket indexes from the pool and attach them
-to an object when needed. When that object is evicted, its attached buckets 
-indexes are pushed back to the pool.
+There are cases when a request cannot be processed immediately e.g. when it 
+needs to allocate the necessary buckets for the object's data. In these cases, 
+we use a utility called \texttt{cache-io}, which
+\begin{inparaenum}[i)]
+\item holds the original request and
+\item describes the asynchronous task that it will undertake.
+\end{inparaenum}
 
-\subsection{Request wrapper (Cache-IO)}
-
-When a request is accepted, all Archipelago peers commonly embed it in a peer 
-request (you can see more about peer requests here ?). The peer request always 
-holds the original request and optionally, several other fields that are of 
-importance to the peer.
-
-In our case, we keep in cached's peer requests a new structure called Cache-IO, 
-on which we store the xcache entry index as well as the state of the request.  
-Moreover, since the request may break internally in many others, we keep track 
-of how many pending requests remain until the original one can be completed.
+Using cache-ios, the request can break in more than two flows of execution, 
+since the asynchronous task can allocate new requests for its own purposes.  In 
+order to keep track of when the cache-io has finished with its tasks, we have
+some book-keeping entries such as the cache-io state and the number of the 
+requests that it has spawned.
 
 \subsection{Book-keeping utilities}\label{sec:cached-states-design}
 
 In order to know information such as when an object is in flushing state, when 
-a bucket has been allocated or when a bucket is being read etc,, cached must 
+a bucket has been allocated or when a bucket is being read etc., cached must 
 employ some sort of book-keeping of their states. The entities that require to 
 track their states are:
 
@@ -837,7 +839,6 @@ object (or cached in general) has a bucket in a certain state.
 
 The flows of cached operations are illustrated in the following diagrams.
 
-\diagram{Cached design - actions}{cached-design.pdf}
 \diagram{Cached design - components}{cached-design-comp2.pdf}
 
 \subsection{Write}
