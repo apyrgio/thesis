@@ -9,7 +9,7 @@
 \end{flushright}
 
 It may seem as an ironic statement, considering that we are about to provide 
-benchmark results for cached, but it's actually is a valid one.
+benchmark results for cached, but it is actually a valid one.
 \begin{comment}
 What Mr.  Twain tries to say here
 \footnote{
@@ -23,17 +23,20 @@ can seem more important to the researcher's eye than negative ones due to
 positive reinforcement.
 \end{comment}
 In our case, we will try not to merely smear the next pages with diagrams but 
-first explain the benchmarking methodology behind them and then provide a 
-concrete depiction of cached's performance under various workloads.
+first explain the benchmarking methodology behind them, provide a concrete 
+depiction of cached's performance under various workloads, and finally explain 
+in depth the results.
 
-The skeleton of this chapter is the following: Section \ref{sec:perf-meth} 
-explains the methodology behind our measurements. Section \ref{sec:test-bed} 
-provides details about the hardware on which we have conducted our benchmarks.  
-Section \ref{sec:vs-plot} presents comparative benchmarks for cached and sosd 
-and quantify the performance gain of our implementation. Section 
-\ref{sec:internals-plot} sheds some light on the internals of cached with the 
-use of several special-purpose benchmarks. Finally, Section ?  is reserved for 
-cached on a VM (\fixme take these measurements).
+The skeleton of this chapter is the following:
+
+Section \ref{sec:perf-meth} explains the methodology behind our measurements.  
+Section \ref{sec:test-bed} provides details about the hardware on which we have 
+conducted our benchmarks.  Section \ref{sec:vs-plot} presents comparative 
+benchmarks for cached and sosd and quantify the performance gain of our 
+implementation. Section \ref{sec:internals-plot} sheds some light on the 
+internals of cached with the use of several special-purpose benchmarks.  
+Finally, Section ?  is reserved for cached on a VM (\fixme take these 
+measurements).
 
 \section{Benchmark methodology}\label{sec:perf-meth}
 
