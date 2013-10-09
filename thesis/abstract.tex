@@ -8,33 +8,16 @@
 
 \begin{abstracten}
 	The storage service of a cloud infrastracture is a very performance 
-	critical part. Hard disks are commonly inadequate in providing the 
+	critical part. Hard disks are usually inadequate in providing the 
 	performance that is needed for large deployments and the storage 
-	engineers must always resort to other ways of sidestepping these 
-	issues.
-	
-	Enter Synnefo, an open source cloud software that powers the \okeanos 
-	cloud service, which is used by the Greek Academic and Research 
-	Community. Towards the early stages of Synnefo, a nover distributed 
-	storage layer called Archipelago has been created to tackle storage 
-	issues by introducing Copy-on-Write logic to the storage of a VM's 
-	volume. One of the storage backends that Archipelago uses is RADOS, 
-	self healing, self-managing, distributed storage system. The 
-	performance of RADOS has not been adequeate however, due to the fact 
-	that is sits on hard disks.
-
-	This thesis describes the third-party solutions that have been 
-	evaluated to improve the performance of Archipelago and presents the 
-	caching solution that we have decided to implement, cached.
-	
-	The design of cached is discussed in length and we present the 
-	obstacles that we encountered as well as the implementation details of 
-	cached. We have evaluated the performance of cached and seen that it 
-	can provide up to 400\% speedup over our current performance.
-
-	Finally, we present the design and implementation of sunapsed, a 
-	component that paves the way to allow cached to be distributed.
-
+	engineers must commonly resort to other ways to counter these issues.  
+	This thesis presents cached, an in-memory caching mechanism with 
+	average O(1) complexity, that aims to improve the performance of 
+	Archipelago, a distributed storage service.  Moreover, this thesis also 
+	introduces synapsed, a complementary tool that paves the way for the 
+	creation of a fully distributed cache. Early performance evaluations 
+	look promising and show that cached can provide up to 400\% speedup 
+	over the current Archipelago performance.
 	\begin{keywordsen}
 		synnefo, okeanos, rados, archipelago, cached, cache, storage, 
 		ram, replication, synapsed
