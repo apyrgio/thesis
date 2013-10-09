@@ -7,10 +7,38 @@
 \end{abstractgr}
 
 \begin{abstracten}
-	\todo Write the english summary and the keywords
-\begin{keywordsen}
-  	Key-word 1, Key-word 2, Key-word 3
-\end{keywordsen}
+	The storage service of a cloud infrastracture is a very performance 
+	critical part. Hard disks are commonly inadequate in providing the 
+	performance that is needed for large deployments and the storage 
+	engineers must always resort to other ways of sidestepping these 
+	issues.
+	
+	Enter Synnefo, an open source cloud software that powers the \okeanos 
+	cloud service, which is used by the Greek Academic and Research 
+	Community. Towards the early stages of Synnefo, a nover distributed 
+	storage layer called Archipelago has been created to tackle storage 
+	issues by introducing Copy-on-Write logic to the storage of a VM's 
+	volume. One of the storage backends that Archipelago uses is RADOS, 
+	self healing, self-managing, distributed storage system. The 
+	performance of RADOS has not been adequeate however, due to the fact 
+	that is sits on hard disks.
+
+	This thesis describes the third-party solutions that have been 
+	evaluated to improve the performance of Archipelago and presents the 
+	caching solution that we have decided to implement, cached.
+	
+	The design of cached is discussed in length and we present the 
+	obstacles that we encountered as well as the implementation details of 
+	cached. We have evaluated the performance of cached and seen that it 
+	can provide up to 400\% speedup over our current performance.
+
+	Finally, we present the design and implementation of sunapsed, a 
+	component that paves the way to allow cached to be distributed.
+
+	\begin{keywordsen}
+		synnefo, okeanos, rados, archipelago, cached, cache, storage, 
+		ram, replication, synapsed
+	\end{keywordsen}
 \end{abstracten}
 
 \begin{acknowledgementsgr}
