@@ -1,7 +1,44 @@
-\chapter{Conclusions and future work}\label{ch:future}
+\chapter{Conclusion}\label{ch:future}
 
-Cached was good (say numbers) and future collaboration with synapsed will make 
-something interesting
+\section{Concluding remarks}
 
-Future work: namespaces, zero copy etc.
+This thesis is a record of over a year long process that has ultimately lead to 
+the creation of two Archipelago peers, cached and synapsed. It documents the 
+evaluation of third-party solutions, the reasoning behind our choice to create 
+a custom cache mechanism, as well as the design decisions and technical issues 
+that we have encountered.
 
+Looking back at what we have created, we can safely state that this thesis has 
+successfully covered two basic needs of Archipelago, caching and networking.  
+The extend at which these needs have been satisfied can be considered as more 
+than adequate, since cached has been successfully tested under an actual VM, 
+while synapsed has managed to bridge two peers over network with minimum 
+latency.
+
+Most importantly however, cached provides a concrete solution to the task that 
+was described in the very first chapter of this thesis; substantially improve 
+the current performance of Archipelago.  To be more specific, the results of 
+synthetic benchmarks show that cached can improve up to 200x the current 
+performance.  Moreover, when tested with an actual VM, the performance speedup 
+was able to reach 400\%, even for small cache sizes.
+
+Finally, the future looks very bright for our caching mechanism. The impending 
+integration of cached in the demo environment\footnote{demo.synnefo.org}
+of Synnefo, will help it gain the necessary exposure that will provide us with 
+the needed feedback for more improvements and the test-bed for new ideas.
+
+\section{Future work}
+
+The future work for cached is happening as of writing this very chapter. We are 
+currently working to add the following:
+
+\begin{itemize}
+	\item Full CoW support.
+	\item Support for different namespaces (mappings, volumes, objects) so 
+		that cached can be used as a generic caching peer for all 
+		Archipelago needs.
+	\item Support for different policies and limits per volume.
+\end{itemize}
+
+Moreover, the long term goal for cached is to be able to be used with synapsed 
+effectively, in order to create a fast distributed and replicated cache.
