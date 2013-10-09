@@ -186,7 +186,7 @@ key aspects of caching such as:
 
 In Figure \ref{fig:xcache-design.pdf}, we can see the design of xcache:
 
-\diagram{xcache design}{xcache-design.pdf}
+\diagram{Xcache design}{xcache-design.pdf}
 
 Xcache consists of two hash tables. In the first hash table (a), xcache keeps 
 an index of the currently active entries, whereas on the second hash table (b) 
@@ -200,7 +200,7 @@ push an entry index from a special purpose stack (d). A more closer inspection
 of their design is presented in Figure \ref{fig:xcache-entry.pdf}. In this 
 figure, each entry is marked with a different color for clarity reasons.
 
-\diagram{xcache entry}{xcache-entry.pdf}
+\diagram{Xcache entry design}{xcache-entry.pdf}
 \fixme make letters smaller
 
 Every entry has the following important fields:
@@ -581,7 +581,7 @@ operational perspective, which can be seen in Figure
 discussed in Section \ref{sec:cached-flow-design} and can be seen in Figure 
 \ref{fig:cached-design-comp2.pdf}.
 
-\diagram{Cached design - operation level}{cached-design.pdf}
+\diagram{Cached design - operations}{cached-design.pdf}
 
 Cached has been been designed mainly as the orchestrator, a peer that utilizes 
 several different components to handle various tasks such as indexing (xcache), 
@@ -848,7 +848,7 @@ components, we can link these operations to the components that we have
 designed. The connection between cached operations and components is 
 illustrated in Figure \ref{fig:cached-design-comp2.pdf}.
 
-\diagram{Cached design - component perspective}{cached-design-comp2.pdf}
+\diagram{Cached design - components}{cached-design-comp2.pdf}
 
 We will explain each step of the cached flow, as is presented in Figures 
 \ref{fig:cached-design.pdf} and \ref{fig:cached-design-comp2.pdf}. Note that we

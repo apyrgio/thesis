@@ -214,7 +214,7 @@
 % Create new commands for simpler usage
 
 \newcommand\ccode[2]{
-	\lstinputlisting[style=c, caption={#1}, label=lst:#2]{src/#2}
+	\lstinputlisting[float=h!, style=c, caption={#1}, label=lst:#2]{src/#2}
 }
 
 \newcommand\haskellcode[3]{
@@ -230,7 +230,8 @@
 }
 
 \newcommand\plaintext[2]{
-	\lstinputlisting[style=plain, caption={#1}, label=lst:#2]{src/#2}
+	\lstinputlisting[float=h!, style=plain, caption={#1}, 
+	label=lst:#2]{src/#2}
 }
 
 % CHANGE MATH FONT ============================================================
