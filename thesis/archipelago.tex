@@ -153,7 +153,7 @@ switching is expensive, so once the peer has served a request, it will not
 sleep immediately. Instead, it will iterate its ports for new requests for a 
 small number of cycles and if no request is received until then, it will sleep.
 
-\section{RADOS and sosd}
+\section{RADOS and sosd}\label{sec:rados-archip}
 
 As we have mentioned above, Archipelago is not restricted to a storage backend 
 and can work with any backend for which a blocker can be created. There is one 

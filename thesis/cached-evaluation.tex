@@ -22,10 +22,10 @@ In science's case, it so often happens that promising results for an experiment
 can seem more important to the researcher's eye than negative ones due to 
 positive reinforcement.
 \end{comment}
-In our case, we will try not to merely smear the next pages with diagrams but 
-first explain the benchmarking methodology behind them, provide a concrete 
-depiction of cached's performance under various workloads, and finally explain 
-in depth the results.
+In our case, we will try not to smear the next pages with diagrams but first 
+explain the benchmarking methodology behind them, provide a concrete depiction 
+of cached's performance under various workloads, and finally explain the 
+results in depth.
 
 The skeleton of this chapter is the following:
 
@@ -34,9 +34,10 @@ Section \ref{sec:test-bed} provides details about the hardware on which we have
 conducted our benchmarks.  Section \ref{sec:vs-plot} presents comparative 
 benchmarks for cached and sosd and quantify the performance gain of our 
 implementation. Section \ref{sec:internals-plot} sheds some light on the 
-internals of cached with the use of several special-purpose benchmarks.  
-Finally, Section ?  is reserved for cached on a VM (\fixme take these 
-measurements).
+internals of cached with the use of several special-purpose synthetic 
+benchmarks.  Finally, Section \ref{sec:vm-plot} evaluates the actual 
+performance of Archipelago and cached for a real VM and compares the results 
+with the results of the previous sections.
 
 \section{Benchmark methodology}\label{sec:perf-meth}
 
@@ -45,8 +46,8 @@ chapter, will be split in two categories, both of which have their own distinct
 goals:
 
 The first category is the comparison between using cached \textbf{on top} of 
-the sosd peer (sosd has been discussed here ? \fixme add section) and using 
-solely the sosd peer.
+the sosd peer (sosd has been discussed in Section \ref{sec:rados-archip}) and 
+using solely the sosd peer.
 
 \begin{comment}
 The category's goal is to "defend" one of the core thesis arguments, that 
@@ -162,8 +163,8 @@ different metrics:
 
 On the following sections, we present the benchmarks that we conducted for the 
 first category. The first benchmark, which is shown in Section 
-\ref{sec:peak-plot} attempts to depict the behavior of cached during a peak of 
-I/O requests. The second benchmark, which is shown in Section 
+\ref{sec:peak-plot}, shows the behavior of cached during a peak of I/O 
+requests.  The second benchmark, which is shown in Section 
 \ref{sec:sustained-plot}, illustrates the behavior of cached under continuous 
 load.  On these sections, cached is always multi-threaded and uses 4 threads.
 
@@ -171,7 +172,7 @@ load.  On these sections, cached is always multi-threaded and uses 4 threads.
 \label{sec:peak-plot}
 
 We begin with the bandwidth performance of our peers. The write performance can 
-be seen in Figure \ref{fig:bw-write-comp-lie.pdf} while the read performance 
+be seen in Figure \ref{fig:bw-write-comp-lie.pdf}, while the read performance 
 can be seen in Figure \ref{fig:bw-read-comp-lie.pdf}.
 
 Before we proceed with the interpretation of the diagram results, we will 
@@ -205,19 +206,18 @@ Moreover, upon closer inspection the following questions arise:
 	to?}
 
 We have mentioned above that the speedup for writes is between 50x and 200x 
-whereas for reads is between 20x and 75x. Although it is a large speedup in 
-both cases, it also shows some of the shortcomings of our implementation.
+whereas for reads is between 20x and 75x. Although these speedups are very big, 
+they also show some of the limitations of our implementation.
 
 We attribute the speedup differences to three factors:
 
 \begin{enumerate}
-	\item The performance of cached is almost the same for writes and 
-		reads.  This is expected behavior as the read and write paths 
-		for cached have many common parts (\fixme show write/read path)
-		\footnote{To be more strict, reading seems a bit faster than 
-			writing, but that is probably attributed to CPU caches 
-			and the fact that reading from RAM is a non-destructive 
-			operation in contrast to writing.}.
+	\item The performance of cached is almost the same for writes and reads.  
+		\footnote{To be fair, reading seems a bit faster than writing, but that 
+			is probably attributed to CPU caches and the fact that reading from 
+			RAM is a non-destructive operation in contrast to writing.}
+		This is expected behavior as the read and write paths for cached have 
+		many common parts, as seen in Section \ref{sec:cached-flow-design}.
 	\item Cached doesn't scale much past the 16KB block size. This is an 
 		interesting observation with an unexpected answer. It may seem 
 		implausible at first, but what happens is that we are actually hitting 
@@ -237,11 +237,12 @@ To sum up, the cached's performance remains relatively the same in both reads
 and writes, it is merely the sosd that is getting faster in reads due to 
 caches. 
 
-\textbf{2) Why is cached's performance increased along with the block size?}
+\textbf{2) Why is cached's performance increased proportionally to the block 
+	size?}
 
 We expected that sosd's performance would increase proportionally to the block 
 size, due to the rotational nature of hard disk drives, but why does this 
-affects cached too? It is certainly not attributed to any \texttt{memcpy()} 
+affect cached too? It is certainly not attributed to any \texttt{memcpy()} 
 performance tricks, since we always write in bucket granularity, which means 
 that a 16KB write is translated to 4 x 4KB writes.
 
@@ -251,7 +252,7 @@ more times for smaller block sizes, dominate the cached's performance.
 
 We can see this more clearly if we consult Table \ref{tab:2threads}.
 
-\begin{table}[H]
+\begin{table}[h!]
 	\centering
 	\begin{tabular}{ | l | l | l | l | l |}
 		\hline
@@ -261,10 +262,26 @@ We can see this more clearly if we consult Table \ref{tab:2threads}.
 	\label{tab:2threads}
 \end{table}
 
-\fixme elaborate on that
+On this table, we present the results for a benchmark that does writes, has 
+four parallel write requests and its block size varies between 4KB and 64KB.  
+Note that this benchmark is conducted on a cached that has \textbf{two} threads 
+instead of four.
 
-Merely using two threads instead of four lessens the performance gap 
-significantly.
+Comparing the results of this table with the results of Figure 
+\ref{fig:bw-write-comp-lie.pdf}, and more specifically the "cached-iodepth4" 
+trend line, we can observe two things:
+
+\begin{enumerate}
+	\item The performance for small block sizes (4KB - 8KB) is better than the 
+		performance of cached with 4 threads.
+	\item The gap between the results for 4KB and 8KB is not 2x, as in Figure 
+		\ref{fig:bw-write-comp-lie.pdf}, but 1.5x.
+	\item The overall performance gap between the results for 4KB and 64KB is 
+		less than the gap in Figure \ref{fig:bw-write-comp-lie.pdf}.
+\end{enumerate}
+
+To sum up, these results show that the lock contention in cached, due to the 
+number of threads, can significantly dominate its performance.
 
 \textbf{3) Why cached's perforance does not improve proportionally to the 
 	parallel requests?}
@@ -315,11 +332,12 @@ specifically, we have tested cached with half the workload size and:
 \end{enumerate}
 
 Also, we have tested cached in write-through mode, to see its behavior in 
-sustained writes. \fixme say it has unlimited objects 
+sustained writes.
 
 Furthermore, for this benchmark, we tested only the write performance of cached 
-and sosd \fixme explain why.  Also, we chose to use 16 parallel requests and 
-4KB block sizes, since these seemed the most troublesome in the previous 
+and sosd, since the evictions and subsequent flushes in reads would skey 
+considerably the results.  Also, we chose to use 16 parallel requests and 4KB 
+block sizes, since this seemed the most troublesome workload in the previous 
 benchmark.
 
 Before we proceed to the results, we must explain first how the diagrams below 
