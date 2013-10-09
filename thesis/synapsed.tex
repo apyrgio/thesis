@@ -1,11 +1,11 @@
 \chapter{The synapsed peer}\label{ch:synapsed}
 
-On the previous sections, we have evaluated the design of cached and we have 
-reached the conclusion that it is heavily bounded by CPU. The implications of 
-this, however, are bigger, if we consider that all the Archipelago is running 
-in the host machine, whose CPU's are already oversubscribed. This means that 
-cached must compete for CPU time against the running VMs, essentially defeating 
-the QoS purpose it serves.
+On the previous sections, we have evaluated the design of cached and one of the 
+conclusions that we have reached at is that it has heavy lock contention when 
+more than one threads are used. The implications of this, however, are bigger, 
+if we consider that Archipelago is running in the host machine, whose CPU's are 
+already oversubscribed. This means that cached must compete for CPU time 
+against the running VMs, essentially defeating the QoS purpose it serves.
 
 On the other hand, on the RADOS nodes, the CPUs and RAM are not used to their 
 full potential. If we could run cached or part of the Archipelago in these 
@@ -20,17 +20,22 @@ nodes, we would have the following benefits:
 \end{itemize}
 
 To this end, we have created a network peer called synapsed (from 
-\textbf{synapse d}aemon) as a proof-of-concept, that should be able to 
-accept/receive read/write XSEG requests and send them through network to 
-another Archipelago segment. We must note that this peer has not been created 
-with high-performance in mind but its main aim is to provide the functionality 
-needed for our purposes.  As a consequence, we haven't used tools such as 
-ZeroMQ or libevent that would boost the performance of the implementation.
+\textbf{synapse d}aemon) as a proof-of-concept, that should be able to accept 
+read/write XSEG requests and send them through network to another Archipelago 
+segment. We must note that this peer, given that it is proof-of-concept, has 
+not been created with high-performance in mind but its main aim is to provide 
+the functionality needed for our purposes.  As a consequence, we have not used 
+tools such as ZeroMQ or libevent that would boost the performance of the 
+implementation.
 
-More specifically, on Section...
-\todo add sections
+The structure of this chapter is the following. Section 
+\ref{sec:design-synapsed} presents the design of the synapsed peer. Section 
+\ref{sec:imp-synapsed} explains how we implemented synapsed as well as the 
+challenges that we have faced. Finally, Section \ref{sec:plot-synapsed} 
+provides the results of some preliminary benchmarks that we have conducted 
+using synapsed.
 
-\section{Design of synapsed}
+\section{Design of synapsed}\label{sec:design-synapsed}
 
 Given that currently Archipelago is not network-aware, peers from one segment 
 cannot know the ports of peers of another segment. Moreover, they cannot send a 
@@ -38,29 +43,30 @@ request to the synapsed peer and simultaneously target a peer in another
 segment. So, we are faced with the problem of defining the limitations of 
 synapsed.
 
-We propose the following solution to this problem: Each of these two segments 
-must have at least one synapsed peer. So, when one synapsed accepts an XSEG 
-request, it will translate it to a network request, send it to the synapsed 
-peer of the other segment, who will finally translate it back to an XSEG 
-request.  Moreover, each synapsed peer must be attached to a peer of its 
-segment, which will serve as the request target when synapsed accepts request.  
+We propose the following design: Each of these two segments must have at least 
+one synapsed peer. So, when one synapsed accepts an XSEG request, it will 
+translate it to a network request, send it to the synapsed peer of the other 
+segment, who in turn will finally translate it back to an XSEG request.  
+Moreover, each synapsed peer must be attached to a peer of its segment, which 
+will serve as the request target when synapsed accepts a request.  
 
-This means that synapsed does not actually connect two remote segments
-but bridge two remote peers over network.
+This means that synapsed does not actually connect two remote segments. More 
+appropriately, it bridges two remote peers over network.
 
-Another difficult task was to make synapsed listen from its port and its 
+Another difficult task was to enable synapsed to listen from its port and its 
 request queue simultaneously, using the request handling of Archipelago. We 
 have tackled this problem in Section \ref{sec:poll-synapsed}.
 
-Moreover, synapsed sends requests using the standard TCP protocol.  This means 
-that it handles the marshaling of buffers, send/receive errors as well as 
-polling for new requests all by itself.
+Moreover, synapsed has been designed to send requests using the standard TCP 
+protocol.  This means that it must handle the marshaling of buffers, 
+send/receive errors as well as polling for new requests all by itself.
 
 Finally, synapsed has been designed as a single-threaded peer.
 
-\section{Implementation of synapsed}
+\section{Implementation of synapsed}\label{sec:imp-synapsed}
 
-\todo Explain what are the following chapters about.
+In this section, we will explain how we implemented the main aspects of 
+synapsed.
 
 \subsection{Synapsed initialization}
 
@@ -68,38 +74,42 @@ Synapsed is a much simpler peer than cached and requires only the following
 arguments:
 
 \begin{itemize}
-	\item The port where it will listen for requests.
+	\item The network port where it will listen for requests.
 	\item The remote address of the segment. \textbf{NOTE:} it can point to 
-		the same segment, which means that synapsed provides a generic 
-		way to bridge two peers who reside in the same host but in a 
-		different segment.
-	\item The remote port of the other synapsed.
-	\item The XSEG port of the peer which synapsed will attach on
+		the host address, which means that synapsed can also provide a 
+		generic way to bridge two peers who reside in the same host but 
+		in a different segment.
+	\item The remote network port of the other synapsed peer.
+	\item The XSEG port of the peer where synapsed will send the requests 
+		that it accepts.
 \end{itemize}
 
-Having the above arguments, synapsed can create a socket, bind it and connect 
-to its port. After that, it can listen for new connections and forward the 
-requests that it receives to the XSEG port of peer that it is attached to.
+Once synapsed has the above arguments, it can create a socket, bind it and 
+connect to its port. After that, it can listen for new connections and forward 
+the requests that it receives to the synapsed of the other segment. That 
+synapsed can in turn forward the request to the peer that it has been 
+configured to target to.
 
 \subsection{Request polling}\label{sec:poll-synapsed}
 
-Synapsed typically uses the common peer loop and Archipelago IPC methods to 
-check its XSEG ports for new requests. However, it simultaneously needs to 
-listen for new requests on its socket. Yet, there is no way for a process to 
-block on its socket \textbf{and} sleep using sigtimedwait.
+Synapsed typically uses the common peer polling and Archipelago IPC methods 
+(see Section \ref{sec:arch-poll}) to check its XSEG ports for new requests.  
+However, it simultaneously needs to listen for new requests on its socket. Yet, 
+there is no way for a process to block on its socket \textbf{and} and 
+synchronously wait for a queued signal.
 
 The solution seems obvious; synapsed should instead block while polling for 
 requests in its socket and, if a new request arrives at its XSEG port, its 
-polling will be interrupted. This is a simple solution, but there is one
-detail we must take into account: Sleeping like so is unsafe because peers 
+polling should be interrupted. This is a simple solution, but there is one
+detail we must take into account; sleeping like so is unsafe because peers 
 currently block the SIGIO signal in order to wake up synchronously.
 
-Let's elaborate on it a bit: When a peer is initialized, it blocks the SIGIO 
+Let's elaborate on that a bit: When a peer is initialized, it blocks the SIGIO 
 signal. Using sigtimedwait, it can check fast and without races if a signal has 
-been enqueued, and then it can sleep. This is not the case with poll() though, 
-since if the peer sleeps with the SIGIO signal blocked, it will not wake up.  
-On the other hand, if we unblock the SIGIO signal, we have a new set of 
-problems:
+been enqueued, and then it can sleep. This is not the case with \texttt{poll()} 
+though, since if the peer sleeps with the SIGIO signal blocked, it will not 
+wake up.  On the other hand, if we unblock the SIGIO signal, we have a new set 
+of problems:
 
 Consider the case where we receive a signal before we go to sleep. In order to 
 be notified that a signal has been sent so as not to sleep, we would need to 
@@ -108,13 +118,12 @@ checked right before we go to sleep. This approach is not only racy (what
 happens if SIGIO is received after this global variable is checked) but it is 
 also very slow.
 
-For this reason, we use the ppoll alternative, which accepts a signal mask as 
-an additional argument. Ppoll provides the guarantee that it will atomically 
-\begin{inparaenum}[i.]
+For this reason, we use the \texttt{ppoll()} alternative, which accepts a 
+signal mask as an additional argument. \texttt{ppoll()} provides the guarantee 
+that it will atomically: \begin{inparaenum}[i)]
 \item replace the old signal mask of the process with the one provided,
-\item check if there are pending signals and
-\item return if there are pending signals or block until a request has been 
-	received.
+\item check if there are pending signals and if so return,
+\item block until a request has been received or a signal has been queued.
 \end{inparaenum}
 
 Solving the issue of waiting for XSEG requests while blocking on a socket is 
@@ -122,8 +131,9 @@ only part of the problem. We also have to solve its counterpart, which means we
 need to find a quick way to iterate the XSEG ports of synapsed for new 
 requests, while listening for new requests on its socket.
 
-We have countered this problem by checking alternately the ports of synapsed 
-and doing a poll with zero timeout, which returns immediately.
+We have countered this problem by checking alternately the XSEG port of 
+synapsed, with the existing methods, and the network port of synapsed, by doing 
+a poll with zero timeout, which returns immediately.
 
 \subsection{Marshalling}
 
@@ -152,9 +162,10 @@ have chosen is the following:
 	\item Once the header has been sent and the remote peer has the 
 		information that it needs, it allocates a new XSEG request from 
 		its segment and fills it with the information provided by the 
-		header.
-	\item Finally, the remote peer reads the rest two buffers and stores 
-		them in the XSEG request it has previously allocated.
+		header, thereby creating to buffers with the appropriate 
+		length.
+	\item Finally, the remote synapsed peer reads the rest two buffers and 
+		stores them in the XSEG request it has previously allocated.
 \end{enumerate}
 
 Marshaling however is usually not so simple. There are three caveats that one 
@@ -172,17 +183,18 @@ not architecturally the same, which can lead to:
 		types with different number of bytes. This is most common with 32-bit 
 		and 64-bit architectures which, for example, use 4 bytes and 8 bytes 
 		respectively to represent an int.
-	\item \textbf{Padding}. Due to data alignment issues, the compiler may need 
-		to pad the fields of a struct. The padding is depended on the machine's 
-		architecture but also on the compiler that is used (\fixme is this 
-		true?).  A common solution is to "pack" the structure, i.e. to enforce 
-		that the structure will have no padding.
+	\item \textbf{Padding}. Due to data alignment issues, the compiler may 
+		need to pad the fields of a struct. The padding is depended on 
+		the processor that is used to compile the program. A common 
+		solution to sidestep padding issues from different processors 
+		is to "pack" the structure, i.e.  to enforce that the structure 
+		will have no padding.
 \end{enumerate}
 
 For synapsed, the first two caveats do not affect us, since the machines that 
 are used are both 64-bit, little endian machines. The third caveat may also not 
-affect us, but just to make sure, we have packed our header structures using 
-the gcc pragma directive:
+affect us, but just to make sure, we have packed our header structure using the 
+gcc pragma directive:
 
 \ccode{GCC pragma pack directive}{synapsed-pack.h}
 
@@ -202,7 +214,7 @@ to the data that we want to sent and their sizes (gather). Respectively, when
 we receive a request, we check its type and allocate the necessary XSEG buffers 
 where the data can be copied (scatter).
 
-\section{Evaluation of synapsed}
+\section{Evaluation of synapsed}\label{sec:plot-synapsed}
 
 Currently, synapsed is in a functional but nascent state, meaning that 
 important features such as mirroring of requests have not been implemented yet.  
@@ -222,13 +234,11 @@ cache test of course.
 
 The setup for our benchmarks is identical to the setup that is used in Chapter 
 \ref{ch:cached-evaluation}. The only addition is that synapsed is in a 
-different host, with similar specifications as dev100 (\fixme add specs of 
-dev91).  Depending on the Archipelago configuration, it either sends requests 
-to the sosd or cached peer of the other host.
-
-Additionally, the two hosts are connected with a 1Gbit Ethernet cable. Note 
-that neither this connection type nor synapsed are tuned for high performance.  
-This is important in order to properly evaluate the following results.
+different host, with similar specifications as our test-bed (see Section 
+\ref{sec:test-bed}).  Additionally, the two hosts are connected with a 1Gbit 
+Ethernet cable. Note that neither this connection type nor synapsed are tuned 
+for high performance.  This is important in order to properly evaluate the 
+following results.
 
 We proceed with the performance results of our benchmarks. The bandwidth 
 results are presented in Figure \ref{fig:bw-write-synapsed.pdf} and the latency 
@@ -246,17 +256,18 @@ For the first round of comparisons, will be invoke the results of Section
 The first impression that one gathers by comparing these results is that they 
 seem very similar but clipped. This is expected since the theoretical maximum 
 bandwidth of a 1Gbit ethernet cable is 128MB/s. The fastest that we seem to 
-reach is 110MB/s, which is very close. 
+reach is 110MB/s, which is very close, if we consider that on the same cable 
+both peers send data simultaneously. 
 
 Most importantly however, besides the clipping in fast scenarios, there is 
 practically little or no other effect on the rest of the scenarios, as they 
 have approximately the same speed, with synapsed being only a little slower.
 
 Moreover, we can see that cached-unlimited is performing similarly in both 
-benchmarks and even manages to outperform sosd, albeit being noticably slower 
-in the synapsed benchmark.
+benchmarks and once again manages to outperform sosd, albeit being noticeably 
+slower in the synapsed benchmark.
 
-From the above comparisons we can derive that the network can be a bottleneck 
+From the above comparisons we can observe that the network can be a bottleneck 
 for an I/O intensive application, especially when it can achieve higher 
 bandwidth than what the network can sustain.
 

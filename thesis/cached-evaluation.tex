@@ -309,14 +309,13 @@ the hash table accesses and this inevitably causes a lot of threads to spin.
 This slight improvement we see is mainly due to the fact that requests are 
 effectively being pipelined while waiting each other to release its lock.  
 
-We now proceed to the latency results. The write performance can be seen in 
-Figure \ref{fig:lat-write-comp-lie.pdf} while the read performance can be seen 
-in Figure \ref{fig:lat-read-comp-lie.pdf}.
-
 \diagram{Comparison of latency performance for write 
 	peaks}{lat-write-comp-lie.pdf}
 \diagram{Comparison of latency performance for read 
 	peaks}{lat-read-comp-lie.pdf}
+We now proceed to the latency results. The write performance can be seen in 
+Figure \ref{fig:lat-write-comp-lie.pdf} while the read performance can be seen 
+in Figure \ref{fig:lat-read-comp-lie.pdf}.
 
 The latency results corroborate the observations that we made for the bandwidth 
 results. As we can see, the latency of cached is proportional to the number of 
