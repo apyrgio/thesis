@@ -150,12 +150,6 @@ following.
 	\label{tab:software-specs}
 \end{table}
 
-\todo add configuration of RADOS cluster (journal, backing storage, network 
-connection)
-
-\fixme Mention that the peers were evaluated by sending requests directly at 
-their ports.
-
 \section{Performance comparison between cached and sosd}
 \label{sec:vs-plot}
 
@@ -377,9 +371,6 @@ happens when the performance reaches the 10 MB/s mark.
 {lat-write-comp-truth.pdf}
 
 These diagrams have several interesting points which we will address below.
-
-\fixme diagram names?
-
 
 \textbf{1) Why does cached-unlimited's performance drop in the middle of the 
 	benchmark?}
@@ -639,9 +630,9 @@ We can now present the bandwidth and latency results for our benchmarks, which
 are illustrated in Figures \ref{fig:bw-vm.pdf} and \ref{fig:lat-vm.pdf} 
 respectively. 
 
-\diagram{Bandwidth performance of cached}{bw-vm.pdf}
+\diagram{Bandwidth performance of a VM over Archipelago}{bw-vm.pdf}
 
-\diagram{Latency performance of cached}{lat-vm.pdf}
+\diagram{Latency performance of a VM over Archipelago}{lat-vm.pdf}
 
 We will explain which scenario each label represents:
 

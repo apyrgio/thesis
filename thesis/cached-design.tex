@@ -151,8 +151,8 @@ them to grasp the cached design.
 
 In this section, we will list the main components that cached relies on. Per 
 Archipelago policy, most of these components have been written in the xtypes 
-fashion (see Section \ref{arch-xtypes} about xtypes).  \fixme should I mention 
-xtypes?
+fashion. Xtypes can be considered as modules for Archipelago that are designed 
+to be reusable and to mostly reside in the shared memory segment.
 
 The components of cached can be seen below:
  
@@ -201,7 +201,6 @@ of their design is presented in Figure \ref{fig:xcache-entry.pdf}. In this
 figure, each entry is marked with a different color for clarity reasons.
 
 \diagram{Xcache entry design}{xcache-entry.pdf}
-\fixme make letters smaller
 
 Every entry has the following important fields:
 \begin{inparaenum}[i.]
@@ -513,8 +512,6 @@ specifically:
 \end{enumerate}
 
 \subsection{The xworkq xtype}\label{sec:xworkq-design}
-
-\fixme make xworkq and fellow x-stuff start with a capital letter?
 
 The xworkq xtype is a useful abstraction for concurrency control. Its purpose 
 is to enqueue "jobs" (protected by a lock) and ensure that only one thread will 
@@ -840,7 +837,7 @@ object (or cached in general) has a bucket in a certain state.
 In this section, we will discuss how cached handles read/write requests.  
 Through the explanation of the cached flow, we hope to reassemble in the 
 reader's mind the puzzle pieces that we have laid out in the previous sections 
-of this chapter.  \fixme is hope a strong word?
+of this chapter.
 
 In Figure \ref{fig:cached-design.pdf}, we have essentially assorted the flow of 
 cached in a set of logical operations. Now that we have explained all cached 

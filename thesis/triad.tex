@@ -507,9 +507,9 @@ further for two reasons:
 
 Theoretically, our search for a production-ready, fast cache that scales and 
 can be used in conjunction with Archipelago can stop, if we allow the VM's 
-hypervisor to use Linux's page cache. In fact, we have measurements in Figures 
-\fixme add figures that show that we can expect a x? increase in 
-performance.
+hypervisor to use Linux's page cache. In fact, we have measured its performance 
+(see Figures \ref{fig:bw-vm.pdf} and \ref{fig:lat-vm.pdf}) and we can expect a 
+10x performance increase for writes and a 6x performance increase for reads.
 
 However, there are several reasons why we have not favored this approach. The 
 main reason is that this type of caching, as we will explain in the following 
