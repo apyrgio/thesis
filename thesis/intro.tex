@@ -1,7 +1,5 @@
 \chapter{Introduction}\label{ch:intro}
 
-\fixme consider replacing all "RAM" references to DRAM.
-
 The racing track was clear and the computer hardware companies were tentatively 
 positioning themselves on the starting blocks, on the April of 1965. Gordon E.  
 Moore was holding the starter pistol, a paper where he famously stated that:
@@ -70,16 +68,16 @@ margins of the two biggest producers, Western Digital and Seagate, from 6\% and
 
 The timing could not have been worse for the HDD industry. The price increase 
 led indirectly to the introduction of the more expensive but faster SSDs to the 
-enterprise world. Their vast price drop \cite{ssd-price},\cite{ssddrop} in the 
-last few years has made them viable candidates at least for peripheral storage 
-tasks such as journaling and caching, and has led experts to consider them as 
-the successors of HDDs.(\fixme cite someone)
+enterprise world. Their vast price drop \cite{ssd-price,ssddrop} in the last 
+few years has made them viable candidates at least for peripheral storage tasks 
+such as journaling and caching, and has led experts to consider them as the 
+successors of HDDs.
 
 On the other hand, HDDs are unable to retort performance-wise and can only 
 marginally improve their performance.  As their rotational speed approaches the 
 speed of sound, their production will be rendered at best difficult, and their 
 heat generation, power consumption and lack of long-term reliability will make 
-their adoption prohibitive \cite{hddtrends},\cite{speed-of-sound}.
+their adoption prohibitive \cite{hddtrends,speed-of-sound}.
 
 Our prediction is that in some decades from now, when the dust will settle, the 
 data centers will probably migrate from HDDs to SSDs. Till date however, the 
@@ -96,8 +94,6 @@ various choices, each of which has its own merits and disadvantages. It is up
 to the storage designer to weigh these choices and implement the solution that 
 fits the most to the profile of storage he/she builds and the budget of the 
 storage service.
-
-\todo maybe talk about cloud? not quite sure I need to...
 
 \section{Thesis motivation and background}
 
@@ -142,16 +138,14 @@ and the results showed that host-side caching improved greatly the Archipelago
 performance.
 
 Since Archipelago had no caching mechanisms and data were committed directly to 
-a replicated object storage (see more in Section \fixme add section) that was 
-using hard disks, we concluded that this was the main reason behind the 
+a replicated object storage (see more in Section \ref{sec:rados-archip}) that 
+was using hard disks, we concluded that this was the main reason behind the 
 performance issues of Archipelago and decided to implement a caching system 
 that would use a much faster storage medium.
 
 As a result, this thesis presents the implementation of an in-memory caching 
 system with average-case O(1) complexity and documents all the design decisions 
 and the thinking process that has led to this implementation.
-
-\todo hmm, not very satisfied with the intro...
 
 \section{Thesis structure}
 
@@ -191,6 +185,9 @@ The thesis is organized as follows:
 	We present synapsed, a complimentary component to cached, whose purpose 
 	is to transfer Archipelago requests over the network and allow cached 
 	to run in other nodes than the host.
-\item[Chapter~\ref{ch:ch7}:] \hfill \\
-	\todo fill this
+\item[Chapter~\ref{ch:future}:] \hfill \\
+	We provide some concluding remarks about our thesis and assess in what 
+	extend has it managed to achieve the goals that where set.  Also, we 
+	discuss our plans for future improvements and deeper integration with 
+	Archipelago.
 \end{description}
