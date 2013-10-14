@@ -67,7 +67,7 @@ penalty is x10,000 times the access time of RAM.
 		SSD & < 10\textsuperscript{5} \\ \hline
 		Hard Disk & < 10\textsuperscript{7} \\ \hline
 	\end{tabular}
-	\caption{Access times of storage mediums}
+	\caption{Access times of storage media}
 	\label{tab:gap}
 \end{table}
 
@@ -88,11 +88,10 @@ later accesses to the same data will be faster than fetching them from the
 slower medium.
 
 Caching is extensively used in computer architecture, as is evident from Figure 
-\ref{fig:mem-hier.pdf}. Besides the memory hierarchy model, it is a widely 
-employed concept in storage services where fast mediums are used as journals 
-for slower ones, essentially caching the data, or where dedicated servers are 
-used to cache data, like in memcached's case (see more in Section 
-\ref{sec:memcached-triad}).
+\ref{fig:mem-hier.pdf}. Besides its application in a single computer, it is a 
+widely employed concept in multi-node storage services where fast media are 
+used to cache slower ones or where dedicated servers are used to cache data, 
+like in memcached's case (see more in Section \ref{sec:memcached-triad}).
 
 \subsection{Write policies}\label{sec:wp-triad}
 
@@ -102,7 +101,7 @@ request. There are two main write policies:
 \begin{description}
 	\item[Write-through] \hfill \\
 		The write is acknowledged only when the data are written both 
-		on the cache and on the slower medium.
+		in the cache and on the slower medium.
 	\item[Write-back] \hfill \\
 		The write is acknowledged when data are written in cache. The 
 		slower medium is later updated with the correct data, when they 
@@ -110,12 +109,12 @@ request. There are two main write policies:
 \end{description}
 
 Moreover, there are also policies that affect the behavior of a cache in write 
-miss schenarios:
+miss scenarios:
 
 \begin{description}
 	\item[Write allocate] \hfill \\
-		Cache loads the corresponding data block from the slower medium
-		and the data are written to it.
+		The cache loads the corresponding data block from the slower 
+		medium and the data are written to it.
 	\item[No-write allocate] \hfill \\
 		The write request bypasses the cache and writes directly to the 
 		slower medium.
@@ -133,9 +132,9 @@ combinations that make more sense:
 
 \subsection{Caching limitations}
 
-In our introduction we have explained that fast mediums like RAM and SSD drives 
-cost more dollars/GB than slower mediums, such as hard disks.  For this reason, 
-caches always have smaller capacity than the mediums they cache.  So, when a 
+In our introduction we have explained that fast media like RAM and SSD drives 
+cost more dollars/GB than slower media, such as hard disks.  For this reason, 
+caches always have smaller capacity than the media they cache.  So, when a 
 cache reaches its maximum capacity, it must evict one of its entries.  However, 
 which entry is the one that must be evicted?
 
@@ -219,8 +218,8 @@ it) of the following decisions:
 		to improve access times (vertical scaling).
 	\item Put time-critical storage operations, such as journaling, in higher 
 		tiers (tiering)
-	\item Add RAM or SSD caches in write-back mode that will ACK the requests 
-		before they reach the slower mediums (caching).
+	\item Add RAM or SSD caches in write-back mode that will ACK the 
+		requests before they reach the slower media (caching).
 \end{enumerate}
 
 The employment of one of the aforementioned techniques (scaling, tiering, 
@@ -238,7 +237,7 @@ results of our evaluations are presented below:
 Bcache has been designed by Kent Overstreet since 2011 and has been included in 
 the Linux kernel (3.10) since the May of 2013.
 
-Bcache allows one to use one or more fast mediums as a cache for slower ones.  
+Bcache allows one to use one or more fast media as a cache for slower ones.  
 Typically, the slow medium is a RAID array of hard disks and the fast medium 
 are SSD drives. Bcache has been specifically built for SSDs and has the 
 following characteristics:
@@ -278,7 +277,7 @@ performance speed-up for hard disks.
 Some other noteworthy features of bcache are the following:
 
 \begin{enumerate}
-	\item It can be used to cache more than one devices
+	\item It can be used to cache more than one devices.
 	\item It can operate in three modes, write-through, write-back and 
 		write-around, which can be switched on/off arbitrarily during normal 
 		usage or when the fast medium is congested.
@@ -361,7 +360,7 @@ User pages would often have queries that would be executed hundreds of times
 per second or would span across the database due to a big SELECT, but whose 
 nature would be less critical or would not change rapidly. Queries such as "Who 
 are my friends and who of them are online?", "What are the latest news in my 
-feed?" etc. which could be easily cached, crippled instead the database by 
+feed?" etc. which could be easily cached, would instead cripple the database by 
 adding a lot of load to it.
 
 To tackle this problem, memcached can be used to utilize the unused RAM of the 
@@ -508,8 +507,9 @@ further for two reasons:
 Theoretically, our search for a production-ready, fast cache that scales and 
 can be used in conjunction with Archipelago can stop, if we allow the VM's 
 hypervisor to use Linux's page cache. In fact, we have measured its performance 
-(see Figures \ref{fig:bw-vm.pdf} and \ref{fig:lat-vm.pdf}) and we can expect a 
-10x performance increase for writes and a 6x performance increase for reads.
+(see Figures \ref{fig:bw-vm.pdf} and \ref{fig:lat-vm.pdf}) and we can expect 
+approximately a 13x performance increase for writes and a 6x performance 
+increase for reads.
 
 However, there are several reasons why we have not favored this approach. The 
 main reason is that this type of caching, as we will explain in the following 
@@ -519,6 +519,10 @@ wasting valuable memory.
 
 Moreover, we have little or no control over the Linux page cache. For example, 
 we cannot enforce a limit to the cache size or apply a replication policy.
+
+Finally, the page-cache is dedicated to a block device and is therefore not a
+suitable solution, if Archipelago ever manages to operate completely in user 
+space.
 
 \subsection{Evaluation}
 
@@ -560,12 +564,16 @@ Even if we ignored the above, there are other issues too, such as:
 \begin{enumerate}
 	\item If a user process segfaults, it can be restarted promptly, 
 		without interrupting the rest of the VMs. If however the kernel 
-		segfaults, the host will go down.
+		panics
+		\footnote{Kernel panic is raised by the Linux Kernel when it 
+			detects that it has encountered a fatal error, e.g.  
+			when it dereferences a wrong memory address},
+		the host will typically hang.
 	\item Caching at xsegbd level does not take advantage of the fact that 
 		large parts of a VM's volume are shared between other volumes 
 		due to Copy-on-Write. This means there will be lost space in 
 		the SSD for data that are actually duplicate.
-	\item Flashcache has page tearing issues, which we want to avoid.
+	\item Flashcache has atomicity issues, which we want to avoid.
 	\item Bcache is for newer kernels and to date it still has some bugs.
 	\item Having a fixed partition for each volume does not scale, since 
 		for each VM with high activity, there can be 10 other stale VMs 
