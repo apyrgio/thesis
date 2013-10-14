@@ -1,12 +1,23 @@
 \chapter{Archipelago}\label{ch:archip}
 
-\section{Overview}
+This chapter presents Archipelago, a distributed storage layer that is part of 
+the Synnefo cloud software. More specifically, Section 
+\ref{sec:overview-archip} introduces Archipelago and its basic features.  
+Section \ref{sec:arch-archip} shows the architecture of Archipelago and 
+explains the components that it consists of. Section \ref{sec:req-archip} 
+illustrates how Archipelago handles the I/O request flow up to the storage 
+backend and finally, Section \ref{sec:rados-archip} shows an important 
+Archipelago storage backend, the RADOS object storage.
 
-Archipelago is the Volume Service of the Synnefo cloud software. It is 
-responsible for creating Copy-on-Write, snapshottable volumes for VMs.  
-Archipelago can be considered as a storage layer (see Figure 
+\section{Overview}\label{sec:overview-archip}
+
+Archipelago is a distributed storage layer that is part of the Synnefo cloud 
+software. It is responsible for creating Copy-on-Write, snapshottable volumes 
+for VMs.  Archipelago can be considered as a storage layer (see Figure 
 \ref{fig:archipelago_overview_a.pdf}) that is positioned between the VM's block 
-device, and the underlying storage.
+device, and the underlying storage. Also, we can see that it is distributed in 
+nature since it can run in an arbitrary number of nodes and most importantly 
+with zero communication overhead between them.
 
 \diagram{Archipelago overview}{archipelago_overview_a.pdf}
 
@@ -20,7 +31,7 @@ Archipelago has the following objectives:
 	\item Be agnostic to the actual storage backend used.
 \end{itemize}
 
-\section{Architecture}
+\section{Architecture}\label{sec:arch-archip}
 
 Archipelago has a modular architecture, which allows it to categorize its 
 operations and assign them to distinct components. The IPC between these 
@@ -58,26 +69,30 @@ responsible for.
 		This means that it must tackle a broad set of tasks such as 
 		knowing the objects that a volume consists of, cloning and 
 		snapshotting volumes and creating new ones.
-	\item[File Blocker Daemon (blockerd)] \hfill \\
+	\item[Blocker Daemon (blockerd)] \hfill \\
 		blockerd is not a specific entity but a family of drivers, each 
-		of which is written for a specific storage type. File blockers 
-		have a single purpose, to read/write objects from/to the 
-		storage. Currently, there are file blockers for NFS and the 
-		RADOS object storage.
+		of which is written for a specific storage type. Blockers have 
+		a single purpose, to read/write objects from/to the storage.  
+		Currently, there are blockers for NFS and the RADOS object 
+		storage.
 \end{description}
 
-\section{Requests}
+\section{Requests}\label{sec:req-archip}
 
-We have already explained that Archipelago manipulates the requests that reach 
-to the VM's block device. There are two main reasons behind this approach:
+In the previous section, we have shown that Archipelago uses distinct 
+components that operate in various modes and spaces. At this point, one might 
+wonder, why can't the above logic be handled solely by our custom block device 
+driver?
+
+The reason is because the approach that we have favored gives us the following 
+benefits:
 
 \begin{enumerate}
-	\item Since Archipelago has its own CoW policy, the only way to enforce 
-		it is to translate these requests to object requests and then 
-		consult its mappings to find the actual data.
-	\item In order to be able to use different storage backends, the 
-		requests must be translated to native requests for the 
-		respective backend.
+	\item We can do most of our operations in user space instead of kernel 
+		space.
+	\item We can support multiple storage backends by means of plugging.
+	\item We have a more manageable, modular software due to the fact that 
+		it is split in smaller, single-purpose entities.
 \end{enumerate}
 
 The request flow can be seen in Figure \ref{fig:new_sxima_numbered.pdf}. We 
@@ -85,36 +100,36 @@ will explain what happens in every step of the process, with the same order as
 they are presented in Figure \ref{fig:new_sxima_numbered.pdf}:
 
 \begin{enumerate}
-	\item The VM issues an I/O request, which is essentially a block 
-		request. The hypervisor forwards this request to xsegbd, the 
-		block device that is attached to every VM.
-	\item The xsegbd's purpose is to bring this requests to the user level, 
-		by copying its data to the shared memory segment and sending an 
-		XSEG request to vlmcd
-	\item Once the vlmcd receives the request, it translates it to an 
-		object request. The object name can be constructed from the
-		volume name and the dividend of the request offset divided by 
-		the object size. Once vlmcd knows the target object, it asks 
-		the mapper if this object is unique or a copy of another 
-		object.
-	\item The mapperd generally has the mappings of an object cached in its 
-		memory, so it can respond quickly. In the rare event that they 
-		are not cached, it queries a special purpose blocker to 
-		retrieve them.
+	\item The VM issues an I/O request, which is essentially a request to a 
+		block device. The hypervisor forwards this request to an xsegbd 
+		device, which is attached to every VM.
+	\item The xsegbd's purpose is to bring this request to the user space, 
+		by copying its data to the shared memory segment and sending a
+		request through XSEG to vlmcd
+	\item Once the vlmcd receives the request, it forwards it to
+		mapperd, along with the volume name. Then, it waits until
+		mapperd returns with the objects that this request consists of.  
+	\item The mapperd usually has the mapping of a volume, i.e. the objects 
+		that a volume consists of, cached in its memory, so it can 
+		respond quickly.  Using the volume's mapping, mapperd can  
+		decide which are the objects that this request consists of.
+		In the rare event that the mapping is not cached, it queries a 
+		special purpose blocker to retrieve it.
 	\item At this point, mapperd has two courses of action:
 		\begin{enumerate}[i)]
-			\item it can either respond to vlmcd the correct object 
-				that it must read from or write to (3) or
+			\item it can either respond to vlmcd the correct 
+				objects	that it must read from or write to (3) 
+				or
 			\item perform a CoW operation (5)->(4)->(3)
 		\end{enumerate}
 
 		The CoW operation will be performed if the VM has asked to 
-		write on an object which is a copy of another object. In this 
-		case, mapperd will send a copy request to the data blocker and 
-		will create a new object with the same data (5). Then, mapperd 
-		will update its mapping and store it using the blocker for 
-		mappings (4). Once all of the above have finished, mapperd will 
-		respond to vlmcd the name of the copied object (3).
+		write on an object which shares data with another object.  In 
+		this case, mapperd will send a copy request to the data blocker 
+		and will create a new object with the same data (5).  Then, 
+		mapperd will update its mapping and store it using the blocker 
+		for mappings (4). Once all of the above have finished, mapperd 
+		will respond to vlmcd the name of the copied object (3).
 	\item At this point, vlmcd can send the request for the correct object 
 		to the data blocker.
 	\item Finally, the blocker will read/write the requested data to the 
@@ -168,7 +183,7 @@ The architecture of Ceph can be seen in Figure \ref{fig:ceph.png}.
 \footnote{Picture retrieved from the official website on September 24, 2013.  
 	All rights go to the respective owners.}
 
-\diagram{Ceph architecture}{ceph.png}
+\diagram{Ceph entry points}{ceph.png}
 
 Ceph utilizes RADOS to achieve the following:
 
