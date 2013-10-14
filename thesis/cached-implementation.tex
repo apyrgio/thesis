@@ -66,7 +66,8 @@ When xcache is initialized, it preallocates the necessary cache entries. The
 relevant xcache fields for this purpose can be seen in Listing 
 \ref{lst:xcache-prealloc.h}.
 
-\ccode{\xcache struct fields for preallocated entries}{xcache-prealloc.h}
+\ccode{\xcache struct fields relevant to preallocated 
+	entries}{xcache-prealloc.h}
 
 The \textbf{size} field is the number of entries. The \textbf{free\_nodes} is a 
 stack where all entry indexes are initially pushed and subsequently popped when 
@@ -76,13 +77,13 @@ cache nodes and where the entry indexes point to.
 Moreover, the definition of the \texttt{xcache\_entry} struct is shown in 
 Listing \ref{lst:xcache-entry.h}.
 
-\ccode{\texttt{xcache entry} struct}{xcache-entry.h}
+\ccode{The \texttt{xcache\_entry} struct}{xcache-entry.h}
 
 We will comment briefly on the relevant \texttt{xcache\_entry} fields for this 
 section, which can be seen in Listing \ref{lst:xcache-entry-prealloc.h}. The 
 rest of the fields will be discussed in the following sections.
 
-\ccode{\texttt{xcache entry} fields, relevant for 
+\ccode{\texttt{xcache\_entry} fields, relevant to 
 	preallocation}{xcache-entry-prealloc.h}
 
 The description of the fields follows:
@@ -146,7 +147,7 @@ lock.
 This is the core feature of xcache. In Listing \ref{lst:xcache-index.h}, we 
 present the fields of the xcache struct that are relevant to the indexing task.
 
-\ccode{xcache struct fields for entry indexing}{xcache-index.h}
+\ccode{xcache struct fields relevant to entry indexing}{xcache-index.h}
 
 As we have mentioned in Section \ref{sec:xcache-index-design}, we utilize two 
 hash tables, one for the active entries and one for the evicted entries. These 
