@@ -203,14 +203,12 @@ figure, each entry is marked with a different color for clarity reasons.
 \diagram{Xcache entry design}{xcache-entry.pdf}
 
 Every entry has the following important fields:
-
-\begin{enumerate}
-	\item Pointers to the previous (O) and next (Y) entries in the LRU list 
-		(see more in Section \ref{sec:xcache-eviction-design}),
-	\item A reference counter (the number on the bottom-right of the entry) 
-		and
-	\item The entry's name.
-\end{enumerate}
+\begin{inparaenum}[(i)]
+	\item Pointers to the previous (O) and next (Y) entries in the LRU 
+		list,
+	\item a reference counter and
+	\item the entry's name.
+\end{inparaenum}
 
 Moreover, each entry has its own lock as well as a pointer to the entry's data, 
 as set by the peer.
