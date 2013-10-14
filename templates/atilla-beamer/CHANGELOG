@@ -1,0 +1,16 @@
+2.1
+- Fixed arithmetic overflow on penguin position computations
+- Reduced the size of the penguins for increased readability and cuteness overflow
+- Now with a CHANGELOG file !
+
+2.0
+- The penguins now move from the right to the left of the slides
+
+1.337.42
+- Now with “Section : SubSection” on top of the slides (or “Section” when there's no subsection, or nothing)
+
+1.337
+- Now with vector penguins by Dan :)
+
+1.0
+- Two color themes

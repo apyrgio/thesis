@@ -57,6 +57,9 @@ while if you want to clean all produced files (the .pdf file too) you can do:
 make distclean
 ```
 
+The above also applies to the Beamer theme that has been cloned from the
+[Association-Atilla repo](https://github.com/Association-Atilla/atilla-beamer)
+
 # Copyright #
 
 You can say it's GPL v2/3 in the sense that if you find anything useful and

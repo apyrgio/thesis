@@ -1,0 +1,52 @@
+% Atilla Beamer theme
+% based on Torino theme by Marco Barisione
+%
+% This file may be distributed and/or modified
+%
+% 1. under the LaTeX Project Public License and/or
+% 2. under the GNU Public License.
+%
+% Modified 10/2011 by Dan Forest-Barbier & Pierre Sudron
+
+\mode<presentation>
+
+\newif\if@atillaShowoutline
+\@atillaShowoutlinefalse
+
+\PassOptionsToPackage{alternativetitlepage=true}{beamertheme_atilla/beamerinnerthemefancy}
+\PassOptionsToPackage{titlepagelogo=beamertheme_atilla/logo-atilla}{beamertheme_atilla/beamerinnerthemefancy}
+\PassOptionsToPackage{bullet=circle}{beamertheme_atilla/beamerinnerthemefancy}
+\PassOptionsToPackage{pageofpages=/}{beamertheme_atilla/beamerouterthemedecolines}
+\PassOptionsToPackage{titleline=true}{beamertheme_atilla/beamerouterthemedecolines}
+
+\DeclareOptionBeamer{alternativetitlepage}[true]{\PassOptionsToPackage{alternativetitlepage=#1}{beamertheme_atilla/beamerinnerthemefancy}}
+\DeclareOptionBeamer{titlepagelogo}[beamertheme_atilla/logo-atilla]{\PassOptionsToPackage{titlepagelogo=#1}{beamertheme_atilla/beamerinnerthemefancy}}
+\DeclareOptionBeamer{bullet}[circle]{\PassOptionsToPackage{bullet=#1}{beamertheme_atilla/beamerinnerthemefancy}}
+\DeclareOptionBeamer{pageofpages}[/]{\PassOptionsToPackage{pageofpages=#1}{beamertheme_atilla/beamerouterthemedecolines}}
+\DeclareOptionBeamer{titleline}[true]{\PassOptionsToPackage{titleline=#1}{beamertheme_atilla/beamerouterthemedecolines}}
+\DeclareOptionBeamer{showoutline}[true]{\@atillaShowoutlinetrue}
+
+\ProcessOptionsBeamer
+
+\usepackage{beamertheme_atilla/beamerinnerthemefancy}
+\usepackage{beamertheme_atilla/beamerouterthemedecolines}
+\usepackage{beamertheme_atilla/beamercolorthemeatilla1}
+
+\setbeamertemplate{navigation symbols}{}
+
+\newcommand{\setTitle}[1]{\title{#1}\gdef\getTitle{#1}}
+
+%\if\@atillaShowoutlinetrue
+%\AtBeginSection[]
+%{
+%  \begin{frame}
+%    \frametitle{\getTitle}
+%    \small
+%    \tableofcontents[currentsection,hideothersubsections]
+%    \normalsize
+%  \end{frame}
+%}
+%\fi
+
+\mode
+<all>
