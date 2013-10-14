@@ -8,7 +8,7 @@ This situation ultimately lead to the design of a new caching entity for
 Archipelago.  This entity is called "cached", which simply means \textbf{cache 
 	d}aemon. We have decided to invest time in creating our own implementation 
 mainly for two reasons:
-\begin{inparaenum}[i)]
+\begin{inparaenum}[(i)]
 \item to create a peer that understands the Archipelago logic and can integrate 
 	naturally with it and
 \item to measure the best possible performance gain that we can achieve and 
@@ -34,14 +34,14 @@ some stricter requirements that our solution must have. These requirements are:
 		journal.
 		\end{comment}
 		Our main goal is to measure the maximum performance gain that 
-		we can achieve, which means that caching in DRAM is our best 
+		we can achieve, which means that caching in RAM is our best 
 		option.
 		
 		This also means that we will temporarily hand-wave the issue of 
 		data volatility and we will concern ourselves with it if cached 
 		has promising results.
-	\item \textbf{O(1) complexity} For performance reasons and since we 
-		already cache data in memory, the complexity of the indexing 
+	\item \textbf{Low indexing overhead} For performance reasons and since 
+		we already cache data in memory, the overhead of the indexing 
 		mechanism should be as small as possible.
 \end{enumerate}
 
@@ -72,9 +72,9 @@ requirement we posed at the beginning of this chapter.
 
 The above design choice has another advantage too; we can plug on-line the 
 cached peer between the vlmcd and blocker and unplug it when we want to. This 
-opens up numerous possibilities such as plugging cached for 
-QoS\footnote{Quality of Service} reasons, when there is a peak in I/O requests.  
-This also means that the \textbf{pluggability} requirement is also being met.
+opens up numerous possibilities such as plugging cached for performance 
+reasons, when there is a peak in I/O requests.  This also means that the 
+\textbf{pluggability} requirement is also being met.
 
 \begin{comment}
 This is possible because, as we have mentioned in Section \ref{sec:arch-ipc}, 
@@ -111,21 +111,21 @@ the translation of blocks to objects, consider the following two points:
 \end{itemize}
 
 Having decided that cached will cache objects, the next step is to decide
-\begin{inparaenum}[i)]
+\begin{inparaenum}[(i)]
 \item on the index mechanism and
 \item on \textbf{what} exactly will we index.
 \end{inparaenum}
 
 As for what we will index, it would be an overkill to further partition the 
-objects and index the regions within them. Moreover, this would make sense only 
-if the objects were large (e.g. like volumes). So, we index object names 
+objects and index the regions within them. This would probably be more 
+appropriate for larger objects (e.g. volumes).  So, we index object names 
 solely.
 
 As for the index mechanism, we have chosen to use a very fast in-memory hash 
 table that will keep the data in a preallocated space in RAM. This covers the 
 \textbf{in-memory} requirement that we have set above. Also, the choice of the 
-hash table is one of the reasons that our implementation has \textbf{O(1) 
-	complexity}.
+hash table is one of the reasons that our implementation has \textbf{low 
+	indexing overhead}.
 
 Finally, another important decision was whether cached would be a 
 multi-threaded peer. We have decided that we will implement it this way and 
@@ -152,7 +152,7 @@ them to grasp the cached design.
 In this section, we will list the main components that cached relies on. Per 
 Archipelago policy, most of these components have been written in the xtypes 
 fashion. Xtypes can be considered as modules for Archipelago that are designed 
-to be reusable and to mostly reside in the shared memory segment.
+to be reusable and reside in the shared memory segment.
 
 The components of cached can be seen below:
  
@@ -203,12 +203,14 @@ figure, each entry is marked with a different color for clarity reasons.
 \diagram{Xcache entry design}{xcache-entry.pdf}
 
 Every entry has the following important fields:
-\begin{inparaenum}[i.]
+
+\begin{enumerate}
 	\item Pointers to the previous (O) and next (Y) entries in the LRU list 
 		(see more in Section \ref{sec:xcache-eviction-design}),
-	\item a reference counter and
-	\item the entry's name
-\end{inparaenum}
+	\item A reference counter (the number on the bottom-right of the entry) 
+		and
+	\item The entry's name.
+\end{enumerate}
 
 Moreover, each entry has its own lock as well as a pointer to the entry's data, 
 as set by the peer.
@@ -241,40 +243,39 @@ an xtype. The reasons why we have chosen to use a hash table are:
 		scenarios. If an adversary, on the other hand, was allowed to 
 		choose its own names, that would be a different case.
 
-		Thus, the insert, lookup and delete operations should occur in 
-		constant time.
-	\item Hash tables can preallocate the space needed whereas 
-		tries/b-trees/bst will allocate nodes as new entries are 
-		inserted. There is actually an exception to this which will be 
-		discussed below. \label{list:exception}
+		Thus, the insert, lookup and delete operations should occur 
+		averagely in constant time.
 	\item We don't need to do substring matches (which is an advantage of 
 		tries)
 	\item We don't need to traverse the entries sequentially (which is an 
-		advantage of B-trees and BSTs)
+		advantage of B-trees)
 \end{enumerate}
 
 The hash table that is used is heavily based on dictobject\cite{dictobject},
 the Python dictionary implementation in C. What is interesting about 
 dictobject, and is a feature of other hash tables too, is that it dynamically
-resizes once it has reached the two thirds (2/3) of its capacity. This is the 
-exception that we have mentioned in (\ref{list:exception}). We will attempt to 
-explain what is resizing and how it affects us.
+resizes once it has reached the two thirds (2/3) of its capacity. We will 
+attempt to explain what is resizing and how it affects us.
 
 Resizing occurs to prevent performance degradation from the hash collisions 
 that will likely ensue once the hash table reaches its maximum capacity. On 
-resizing, the entries are typically rehashed and the hash table is reallocated 
-to double its capacity.
+resizing, the entries are typically rehashed, reinserted and the hash table is 
+reallocated to double its capacity.
 
 Resizing may seem as an expensive operation, but it is actually not, if we 
 consider the following:
 \begin{quotation}
-\cite{hash-resize}Suppose that we insert \(n\) entries in a hash table that was 
-created to hold only a fraction of \(n\), one (1) entry in the worst case. In 
-this case, the number of rehashes will be \(n + n/2 + n/4 + n/8 + ... + 1 = 
-	2n\).  This means that the \textbf{amortized} cost of rehashes will be 
-\(2n/n = 2\) rehashes for each item, which is practically O(1) and thus 
-negligible.  The same amortized cost applies to the number of entry copies on 
-reallocation.
+Suppose that we insert \(n\) entries in a hash table that was created to hold 
+only a fraction of \(n\), one (\(1\)) entry in the worst case.  Now, consider 
+the case where the \(nth\) entry has triggered a resize:
+
+In this case, the total number of computed hashes will be \(n\) plus the 
+previous rehashes, which are \(n + n/2 + n/4 + n/8 + ...  + 1 = 2n\).  This 
+means that the total rehashes are \(n + 2n = 3n\), while their 
+\textbf{amortized} cost will be \(3n/n = 3\) hashes for each item, which is 
+practically O(1) and thus negligible. The same amortized cost applies to the 
+reinsertion of the entries, since the insertion of \(n\) entries in a hash 
+table requires O(n) time.\cite{hash-resize}
 \end{quotation}
 
 Besides the hash table, which answers to the question "Where is the entry?" we 
@@ -293,16 +294,17 @@ and then increment by 1 its refcount.
 The decision to have xcache index a bounded number of entries means that when 
 it reaches its maximum capacity and is requested to index a new entry, it has 
 to resort to the eviction of a previously cached entry. Evicted entries are not 
-removed immediately from xcache. They are instead set in an "evicted" state and 
-they reside in a special-purpose hash table until the user confirms that they 
-can be removed. 
+removed immediately from xcache. They are instead set in an "evicted" state, 
+their refcount is decremented by 1 and they are indexed by a special-purpose 
+hash table until the user confirms that they can be removed. 
 
-xcache handles evictions in an interesting way. More specifically, evictions 
+Xcache handles evictions in an interesting way. More specifically, evictions 
 occur implicitly and not explicitly, meaning that the user (peer) does not have 
 to evict entries manually. For example, when a user tries to insert a new entry 
 to an already full cache, the insertion will succeed and the user will not be 
-prompted to evict an entry manually. Moreover, the user will be notified via 
-specific event hook that is triggered upon eviction.
+prompted to evict an entry manually. What has happened in the background, 
+however, is that an entry has been evicted and the user will be notified about 
+this eviction via a specific xcache event hook.
 
 The scheme of implicit evictions and later on notification of the user, has the 
 advantage that lookups, inserts and evictions can occur atomically by xcache.  
@@ -353,10 +355,10 @@ sections are the following:
 
 \begin{itemize}
 	\item
-		\textbf{Most xhash operations:} Inserts and removals can modify 
-		the hash table (e.g. they can resize it, add more entries or 
-		delete existing ones). This also means that lookups must not 
-		run simultaneously with the above two operations.
+		\textbf{Most indexing operations:} Inserts and removals can 
+		modify the hash table (e.g. they can resize it, add more 
+		entries or delete existing ones). This also means that lookups 
+		must not run simultaneously with the above two operations.
 	\item
 		\textbf{Cache node claiming:} Before an entry is inserted, it 
 		must	acquire one of the pre-allocated nodes from the 
@@ -516,7 +518,7 @@ specifically:
 The xworkq xtype is a useful abstraction for concurrency control. Its purpose 
 is to enqueue "jobs" (protected by a lock) and ensure that only one thread will 
 execute them. There is no distinction as to which thread this will be, as well 
-as no execution condition. The executive thread is simply the one that acquires 
+as no execution condition. The execution thread is simply the one that acquires 
 the lock first.
 
 xworkq is generally used when multiple threads want simultaneous access to a 
@@ -618,12 +620,12 @@ info requests i.e. queries on what is the size of an object. Each of these
 requests must be handled independently, using special-purpose functions.
 
 Furthermore, cached will also issue requests to the blocker mainly on two 
-occasions: when it flushes a dirty object and when operating in write-through 
+occasions: when it flushes a dirty object and when it operates in write-through 
 mode.
 
-This means that, cached must be able to categorize requests and send them to 
-the appropriate functions. Moreover, it must be able to create requests of its 
-own, as well as handle cases such as running out of requests.
+This means that cached must be able to categorize requests and send them to the 
+appropriate functions. Moreover, it must be able to create requests of its own, 
+as well as handle cases such as running out of requests.
 
 \subsection{Write policy enforcing}\label{sec:cached-wcp-design}
 
@@ -661,7 +663,7 @@ switched on/off later on.
 
 In order to ensure that we have no data corruption, cached must provide the 
 following two guarantees:
-\begin{inparaenum}[i)]
+\begin{inparaenum}[(i)]
 \item consistency of cached data and
 \item correct propagation of data updates to the storage backend.
 \end{inparaenum}
@@ -701,9 +703,8 @@ As for the second guarantee, one might consider that flushing the dirty data of
 an object would be sufficient to correctly propagate data changes to the 
 blocker.  However, consider the scenario when a dirty object is evicted and 
 then subsequently reinserted, overwritten and evicted again. The result would 
-be two flush requests for the same data, sent to the blocker. Although the 
-blocker guarantees that there will be no page-tearing, we cannot be sure about 
-the order on which the data will be written.
+be two write requests for the same data sent to the blocker, that we cannot be 
+sure about the order they will be executed.
 
 To solve this problem, flush jobs must be deferred (using an xwaitq) if another 
 flush for the same object is in flight. 
@@ -748,7 +749,7 @@ that we can cache since that, even if the user requested only a small chunk,
 each object would statically need 4MB of space.
 
 Ideally, we would like to be able to cache thousands of objects but
-\begin{inparaenum}[i)]
+\begin{inparaenum}[(i)]
 \item allocate a much smaller amount of buckets and
 \item strictly when the user requests to.
 \end{inparaenum}
@@ -770,7 +771,7 @@ object is evicted, its attached buckets indexes are pushed back to the pool.
 There are cases when a request cannot be processed immediately e.g. when it 
 needs to allocate the necessary buckets for the object's data. In these cases, 
 we use a utility called \texttt{cache-io}, which
-\begin{inparaenum}[i)]
+\begin{inparaenum}[(i)]
 \item holds the original request and
 \item describes the asynchronous task that will be executed.
 \end{inparaenum}. In order to execute a task, we simply need a function pointer 
@@ -873,9 +874,20 @@ indexed (lookup).
 In either case, the returned handler is used for later references to the 
 object's data.
 
-The indexing operation may not always succeed, since the cache may be full. In 
-this case, we store the original request in a cache-io struct and wait until an 
-entry becomes evicted. This is covered in the "Conditional execution" step.
+From this point on, there are three paths that the request may follow:
+
+\begin{enumerate}
+	\item The \textit{"Conditional execution"} path. This usually occurs 
+		when an outside situation does not allow our request to 
+		continue. Typically, this outside condition is the depletion of 
+		cache entries, buckets or XSEG requests.
+	\item The \textit{"Data propagation"} path. This usually occurs when 
+		the indexing of our object has resulted in an eviction of 
+		another object, whose data must be flushed.
+	\item The \textit{"Concurrency control"} path. Concurrency control 
+		refers to the access to the object's data and is the default 
+		next step for a request.
+\end{enumerate}
 
 \subsubsection{Concurrency control}
 
@@ -885,7 +897,7 @@ job is executed, it runs exclusively and can modify safely the object's data.
 
 The first thing that cached attempts to do is to claim the necessary buckets 
 for the request. Knowing the following:
-\begin{inparaenum}[i)]
+\begin{inparaenum}[(i)]
 \item bucket size,
 \item request size and
 \item request offset,
@@ -929,8 +941,12 @@ There are four possible combinations, which are in part explained in Section
 
 As we have seen in the previous steps, since resources are finite, the requests 
 cannot always be processed immediately. The common way that cached handles 
-these cases is through the usage of xwaitqs; the request enqueues to the xwaitq 
-the function that wants to be called as well as its arguments.
+these cases is through the usage of xwaitqs.
+
+More specifically, when a resource has been depleted, we store the original 
+request in a Cache-IO struct and we enqueue a job in the appropriate xwaitq.  
+This job will be executed once the resource becomes replenished and our request 
+will resume.
 
 \subsubsection{Data propagation}
 
