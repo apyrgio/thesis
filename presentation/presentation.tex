@@ -5,6 +5,7 @@
 \usepackage{fontspec}
 \usepackage{xunicode}
 \usepackage{xltxtra}
+\usepackage{color}
 
 \usepackage{beamertheme_atilla/beamerthemeAtilla}
 
@@ -12,13 +13,32 @@
 %\setromanfont{Linux Libertine O}
 \setsansfont{FreeSans}
 
+\setbeameroption{show notes}
+\setbeameroption{show notes on second screen=left}
+
 % Hack to allow XeTeX to produce wide pdf
 \renewcommand\pgfsetupphysicalpagesizes{%
 	\pdfpagewidth\pgfphysicalwidth\pdfpageheight\pgfphysicalheight%
 }
 
-\setbeameroption{show notes}
-\setbeameroption{show notes on second screen=left}
+% CUSTOM COLORS ===============================================================
+
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+\definecolor{myorange}{RGB}{246,177,50}
+
+% CUSTOM COMMANDS =============================================================
+
+\newcommand\fixme{\textrm{\textbf{\textcolor{red}{FIXME: }}}}
+\newcommand\todo{\textrm{\textbf{\textcolor{myorange}{TODO: }}}}
+\newcommand\okeanos{\raise.17ex\hbox{$\scriptstyle\sim$}okeanos }
+\newcommand\spc{\hfill \\}
+\newcommand\dspc{\spc\spc}
+
+% PRESENTATION SETTING ========================================================
 
 \author{Αλέξιος Πυργιώτης}
 \title{Σχεδίαση και Υλοποίηση Μηχανισμού Κρυφής Μνήμης για
@@ -30,6 +50,7 @@
 
 \begin{document}
 \include{intro}
-\include{synnefo}
+\include{req}
+\include{solutions}
 \end{document}
 

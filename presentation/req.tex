@@ -1,0 +1,108 @@
+\section{Request handling}
+
+\begin{frame}[t]{What is request handling?}
+
+	\note{Τι είναι η διαχείρηση των αιτημάτων ενός VM?\\
+		Είναι η εφαρμογή πολιτικών και επεξεργασία των αιτημάτων σε όλη 
+		την πορεία τους μέχρι το να φτάσουν στο storage.\dspc
+		Δηλαδή έχουμε ένα εικονικό μηχάνημα <κλικ>\\
+		... το storage μας <κλικ>\\
+		και πρέπει με κάποιο τρόπο τα δεδομένα του μηχανήματος να 
+		φτάσουν σε εμάς <κλικ>\\
+
+		Ένας απλός τρόπος θα ήταν να τα συνδέσουμε. Άλλωστε όταν τρέχει 
+		VM, ο hypervisor κοιτάει block device. Θα μπορούσε να ήταν 
+		κομμάτι του storage
+		Είναι αυτό αρκετό; <κλικ>\\
+		Όχι, χρειαζόμαστε επίσης \fixme
+	}
+
+
+	\pause
+	\makebox[\textwidth]{\includegraphics[width=.2\paperwidth]{images/vm.jpg}}
+	\pause {\Huge +}	
+	\makebox[\textwidth]{\includegraphics[width=.2\paperwidth]{images/cloud-server1.jpg}}
+	\pause {\Huge = ?}
+
+	Policy enforcement, Storage agnosticity?
+
+\end{frame}
+
+\begin{frame}{Our solution}
+
+	{\Large Archipelago}
+
+	include first archipelago image
+
+	\spc
+
+	Key features:
+	\begin{itemize}
+		\item Software-defined
+		\item Distributed
+		\item Modular
+		\item Copy-On-Write
+		\item Storage agnostic
+	\end{itemize}
+
+
+	\note{Η λύση που χρησιμοποιήσαμε είναι το Archipelago}
+	\note{
+		\begin{itemize}
+			\item Software-defined: αν και είναι ένα όρος 
+				μαρκετινγκ, εμείς κανονικά. Σημαίνει με το 
+				software ΟΡΙΖΕΙΣ το storage (εφαρμογή policy, 
+				αλλαγή πορείας του request)
+			\item τρέχει σε πολλούς κόμβους
+			\item αποτελείται από διακριτά κομμάτια
+			\item κάνει CoW (εξήγησε ότι τα images είναι λίγα, τα
+				VMs πολλά, όπως όταν ένα process κάνει fork)
+			\item μπορούμε χρησιμοποιήσουμε ότι θέλουμε
+		\end{itemize}
+	}
+
+\end{frame}
+
+\begin{frame}{Archipelago Architecture}
+	%\includegraphics[{images/new_sxima_numbered.pdf}
+	\begin{center}
+		  \makebox[\textwidth]{\includegraphics[width=0.9\paperwidth]{images/new_sxima_numbered.pdf}}
+	\end{center}
+
+	\note{
+		\begin{itemize}
+			\item To VM στέλνει αίτημα στο δίσκο του, ο δίσκος 
+				είναι εικονικός, θα το δει ο hypervisor 
+				(εξήγησε τι είναι ο hypervisor) και θα το 
+				στείλει στον δίσκο που το έχουμε πει. (xsegbd)
+			\item 2) \fixme 
+		\end{itemize}
+	}
+			
+\end{frame}
+
+\begin{frame}{RADOS}
+
+	Self replicating
+	self managing
+
+	\todo
+
+	\note{Το RADOS έχει τα εξής πολύ θετικά:
+		\begin{itemize}
+			\item Self-replication
+		\end{itemize}
+	}
+
+	\pause
+
+	Speed issues.\\
+	\spc Page-cache: > 90MB/s, < 1ms\\
+	Rados: < 7MB/s, ~ 10ms
+
+	\pause
+
+	Thesis goal, make this faster.
+
+\end{frame}
+

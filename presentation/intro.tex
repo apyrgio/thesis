@@ -11,33 +11,94 @@
 		δώσει στον cached δικτυακές δυνατότητες}
 \end{frame}
 
+\section{Introduction}
+
 \begin{frame}[t]{Contents}
-	\note[item]{O κορμός της παρουσίασης είναι ο εξής:}
-	\begin{itemize}
-		\item cached
-		\item synapsed
-	\end{itemize}
-\end{frame}
 
-\begin{frame}{}
-	\note{This is a note}
-	Synnefo: Cloud software
-	Has the following services:
 	\begin{itemize}
-		\item Compute
-		\item Storage
-		\item Network
+		\item Introduction
+		\item Request handling
 	\end{itemize}
 
+	\note[item]{O κορμός της παρουσίασης είναι ο εξής:
+		\begin{itemize}
+			\item Αρχικά, παρουσιάζουμε κάποια εισαγωγικά που 
+				αφορούν το background της εργασίας μας.  
+				Αναφέρουμε τι είναι το Synnefo, τι είναι η 
+				υπηρεσια ~okeanos και τι είναι το Αρχιπέλαγο
+			\item Έπειτα, δείχνουμε τον τρόπο με τον οποίο η 
+				υποδομή μας χειριζεται αιτήματα δεδομένων από 
+				ένα VM.
+		\end{itemize}
+	}
 
-	~okeanos: Synnefo deployment since 2011
 \end{frame}
 
-\begin{frame}
-	We will do storage service
+\begin{frame}{Synnefo}
+	\note{Ας ξεκινήσουμε με την παρούσα κατάσταση.\\
+	Το software που τα ξεκίνησε όλα είναι το Synnefo}
+
+	\includegraphics{images/synnefo-logo.png}
+
+	Open source, production-ready, cloud software.\\
+	Designed since 2010 by GRNET.
+	\note{\dspc..by GRNET -> Και φυσικά τα παιδιά που βλεπετε εδώ}
+	
+	\spc
+	Synnefo, as most cloud software, has the following services:
+	\begin{itemize}
+		\item Compute Service
+		\item Network Service
+		\item Storage Service
+		\item Image Service
+		\item Identity Service
+	\end{itemize}
+
+	\note{\dspc
+		\begin{itemize}
+			\item Compute service, είναι η υπηρεσία η οποία 
+				προμηθεύει τους χρήστες με VMs και επιτρέπει το 
+				χειρισμό τους
+			\item Network service, είναι η υπηρεσία η οποία δίνει 
+				τη δυνατότητα στους χρήστες να δημιουργήσουν 
+				ιδιωτικά δίκτυα και να συνδέσουν τα VMs τους σε 
+				αυτά.
+			\item Storage service, που κοινώς αποθηκεύει τα αρχεία 
+				των χρηστών. Στην περίπτωση του Synnefo όμως, 
+				έχουμε ένα κοινό σημείο για τα πάντα: είτε 
+				είναι αρχεία, είτε δίσκοι των VMS, είτε images 
+			\item Image Service, υπεύθυνο για το deployment ενός VM 
+				από ένα image. Επίσης, κάνει και 
+				παραμετροποιήσεις (παράδειγμα ssh κλειδιά)
+		\end{itemize}
+		image service είναι\\
+	}
+\end{frame}
+
+\begin{frame}{okeanos}
+
+	\includegraphics{images/okeanos-logo.png}
+
+	\begin{itemize}
+		\item IaaS service
+		\item Targeted at the Greek Academic and Research Community
+		\item Designed by GRNET
+		\item In production since 2011
 	\pause
-	of VMs
+		\item ...and of course powered by Synnefo.
+	\end{itemize}
 
+	\note{
+		\begin{itemize}
+			\item IaaS είναι πρακτικά η παροχή εικονικής υποδομής 
+				σε χρήστες (δηλαδή πάρε υπολογιστή (VM), 
+				δίκτυα, αρχεία κτλ)
+			\item Δωρεάν για τους Ακαδημαϊκους σκοπούς, ήδη 
+				γίνονται εργαστήρια στο EMP και απ' αυτό το 
+				εξάμηνο σε άλλες σχολές
+		\end{itemize}
+	}
+				
 \end{frame}
 
 
