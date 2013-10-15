@@ -1,0 +1,22 @@
+\documentclass{beamer}
+\usepackage{pgfpages}
+\setbeameroption{show notes}
+\setbeameroption{show notes on second screen=right}
+
+\begin{document}
+\begin{frame}{The \texttt{\textbackslash note}-Macro}
+\begin{itemize}[<+->]
+\item normal text for the presentation.
+\note<1-2>[item]{Say something to the audience!}
+\item and text for the presentation.
+\item foo
+\end{itemize}
+\note<2>{Another note for you!}
+\end{frame}
+
+\note[enumerate]{\item foo \item bar \item baz \item foobar}
+
+\begin{frame}{second slide} 
+foo 
+\end{frame}
+\end{document}
