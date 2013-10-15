@@ -45,9 +45,40 @@
 \end{frame}
 
 \begin{frame}{Bucket pool}
-	Buckets have been designed to do this	
+	When an object is indexed, it does not have immediate access to 4MB 
+	size of data because:
+	\begin{itemize}
+		\item RAM is limited
+		\item Leads to small number of entries
+	\end{itemize}
 
-	list
+	Ideally, we want to:
+	\begin{itemize}
+		\item Decouple the objects from their data
+		\item Cache unlimited objects but put a limit on their data
+	\end{itemize}
+
+	Solution:
+	\begin{itemize}
+		\item Preallocated data space
+		\item Every object request a bucket (typically 4KB)		
+		\item When an object is evicted, its buckets are 
+			reclaimed
+	\end{itemize}
 \end{frame}
 
+\begin{frame}{Other important cached tasks}
 
+	Several other key-tasks are:
+	\begin{itemize}
+		\item Book-keeping
+		\item Cache write policy
+		\item Asynchronous task execution
+		\item Data propagation
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Cached flow}
+	\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
+	\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
+\end{frame}
