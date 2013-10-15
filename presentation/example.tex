@@ -1,9 +1,35 @@
-\documentclass{beamer}
+\documentclass[xetex]{beamer}
 \usepackage{pgfpages}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\usepackage{xunicode}
+\usepackage{xltxtra}
 
-\setbeameroption{show notes on second screen}
+\defaultfontfeatures{Mapping=tex-text}
+%\setromanfont{Linux Libertine O}
+\setsansfont{Liberation Serif}
+
+\renewcommand\pgfsetupphysicalpagesizes{%
+	\pdfpagewidth\pgfphysicalwidth\pdfpageheight\pgfphysicalheight%
+}
+
+
+\setbeameroption{show notes}
+\setbeameroption{show notes on second screen=left}
 
 \begin{document}
+
+\begin{frame}[t]{Contents}
+	\note[item]{Καλημέρα, ονομάζομαι Αλέξιος Πυργιώτης\\
+		Θα σας παρουσιάσω τη διπλωματική μου με τίτλο.}
+	\note[item]{Συνοπτικά, η παρουσίαση αυτή περιλαμβάνει:
+		\begin{itemize}
+			\item cached
+			\item synapsed
+		\end{itemize}
+	}
+\end{frame}
 
 \begin{frame}
 	A frame.
