@@ -2,7 +2,7 @@
 
 \begin{frame}[t]{What is request handling?}
 
-	\note{Τι είναι η διαχείρηση των αιτημάτων ενός VM?\\
+	\note{Τι είναι η διαχείριση των αιτημάτων ενός VM?\\
 		Είναι η εφαρμογή πολιτικών και επεξεργασία των αιτημάτων σε όλη 
 		την πορεία τους μέχρι το να φτάσουν στο storage.\dspc
 		Δηλαδή έχουμε ένα εικονικό μηχάνημα <κλικ>\\
@@ -18,13 +18,22 @@
 	}
 
 
-	\pause
-	\makebox[\textwidth]{\includegraphics[width=.2\paperwidth]{images/vm.jpg}}
-	\pause {\Huge +}	
-	\makebox[\textwidth]{\includegraphics[width=.2\paperwidth]{images/cloud-server1.jpg}}
-	\pause {\Huge = ?}
-
-	Policy enforcement, Storage agnosticity?
+	\begin{columns}[t]
+		\begin{column}{.5\textwidth}
+			\pause
+			\makebox[\textwidth]{\includegraphics[width=.2\paperwidth]{images/vm.jpg}}
+			\pause \centering{ {\Huge +} }
+				\makebox[\textwidth]{\includegraphics[width=.2\paperwidth]{images/cloud-server1.jpg}}
+			\pause \centering{ {\Huge = ?}}
+		\end{column}
+		\begin{column}{.5\textwidth}
+			\pause
+			\begin{itemize}
+				\item Policy enforcement?
+				\item Storage agnosticity?
+			\end{itemize}
+		\end{column}
+	\end{columns}
 
 \end{frame}
 
@@ -32,19 +41,16 @@
 
 	{\Large Archipelago}
 
-	include first archipelago image
+	\makebox[\textwidth]{\includegraphics[width=\textwidth]{images/archipelago_overview_a.pdf}}
 
 	\spc
 
 	Key features:
-	\begin{itemize}
-		\item Software-defined
-		\item Distributed
-		\item Modular
-		\item Copy-On-Write
-		\item Storage agnostic
-	\end{itemize}
-
+		1) Software-defined
+		2) Distributed
+		) Modular
+		Copy-On-Write
+		Storage agnostic
 
 	\note{Η λύση που χρησιμοποιήσαμε είναι το Archipelago}
 	\note{
