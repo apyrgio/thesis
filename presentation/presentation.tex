@@ -1,19 +1,30 @@
 \documentclass{beamer}
-\usepackage[utf8]{inputenc}
 \usepackage{pgfpages}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\usepackage{xunicode}
+\usepackage{xltxtra}
 
 \usepackage{beamertheme_atilla/beamerthemeAtilla}
+
+\defaultfontfeatures{Mapping=tex-text}
+%\setromanfont{Linux Libertine O}
+\setsansfont{FreeSans}
+
+% Hack to allow XeTeX to produce wide pdf
 \renewcommand\pgfsetupphysicalpagesizes{%
 	\pdfpagewidth\pgfphysicalwidth\pdfpageheight\pgfphysicalheight%
 }
 
-
 \setbeameroption{show notes}
 \setbeameroption{show notes on second screen=left}
 
-\author{Alex Pyrgiotis}
-\title{Diploma Thesis}
-\institute{National Technical University of Athens}
+\author{Αλέξιος Πυργιώτης}
+\title{Σχεδίαση και Υλοποίηση Μηχανισμού Κρυφής Μνήμης για
+	Κατανεμημένο Σύστημα Αποθήκευσης σε Περιβάλλον
+	Υπολογιστικού Νέφους}
+\institute{Εθνικό Μετσόβιο Πολυτεχνείο}
 \date{\today}
 
 
