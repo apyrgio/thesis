@@ -3,8 +3,13 @@
 \usepackage{pgfpages}
 
 \usepackage{beamertheme_atilla/beamerthemeAtilla}
+\renewcommand\pgfsetupphysicalpagesizes{%
+	\pdfpagewidth\pgfphysicalwidth\pdfpageheight\pgfphysicalheight%
+}
+
+
 \setbeameroption{show notes}
-%\setbeameroption{show notes on second screen=left}
+\setbeameroption{show notes on second screen=left}
 
 \author{Alex Pyrgiotis}
 \title{Diploma Thesis}
