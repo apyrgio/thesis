@@ -18,29 +18,30 @@
 \end{frame}
 
 \begin{frame}{Cached design}
-	operations image
-
-	component image
+	\makebox[\textwidth]{
+		\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
+		\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
+	}
 \end{frame}
 
 \begin{frame}{Xcache design}
-	show with red the xcache design
+	\centering\includegraphics<1>[height=0.6\textheight]{images/xcache-design.pdf}
+	\includegraphics<2>[width=\textwidth]{images/xcache-entry.pdf}
 
-	go to xcache picture
-
-	Show what xcache does
+	Xcache is responsible for: 1) entry indexing, 2) entry eviction, 3) 
+	concurrency control, 4) notification via event hooks
 \end{frame}
 
 \begin{frame}{Xworkq design}
-	show the xworkq design
+	\centering\includegraphics<1>[width=\textwidth]{images/xworkq-design.pdf}
 
-	what xworkq does
+	Xworkq is responsible for concurrency control
 \end{frame}
 
 \begin{frame}{Xwaitq design}
-	show xwaitq design
+	\centering\includegraphics<1>[width=\textwidth]{images/xwaitq-design.pdf}
 
-	what xwaitq does
+	Xwaitq is responsible for deferred execution
 \end{frame}
 
 \begin{frame}{Bucket pool}
