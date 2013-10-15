@@ -1,0 +1,84 @@
+\section{Cached design}
+
+\begin{frame}{Requirements}
+
+	Design goals for cached:
+	\begin{itemize}
+		\item Create something close to the Archipelago logic
+		\item Measure the best possible performance we can get
+	\end{itemize}
+	\dspc
+	Stricter requirements for cached:
+	\begin{itemize}
+		\item Nativity
+		\item Pluggability
+		\item In-memory
+		\item Low indexing overhead
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Cached design}
+	\makebox[\textwidth]{
+		\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
+		\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
+	}
+\end{frame}
+
+\begin{frame}{Xcache design}
+	\centering\includegraphics<1>[height=0.6\textheight]{images/xcache-design.pdf}
+	\includegraphics<2>[width=\textwidth]{images/xcache-entry.pdf}
+
+	Xcache is responsible for: 1) entry indexing, 2) entry eviction, 3) 
+	concurrency control, 4) notification via event hooks
+\end{frame}
+
+\begin{frame}{Xworkq design}
+	\centering\includegraphics<1>[width=\textwidth]{images/xworkq-design.pdf}
+
+	Xworkq is responsible for concurrency control
+\end{frame}
+
+\begin{frame}{Xwaitq design}
+	\centering\includegraphics<1>[width=\textwidth]{images/xwaitq-design.pdf}
+
+	Xwaitq is responsible for deferred execution
+\end{frame}
+
+\begin{frame}{Bucket pool}
+	When an object is indexed, it does not have immediate access to 4MB 
+	size of data because:
+	\begin{itemize}
+		\item RAM is limited
+		\item Leads to small number of entries
+	\end{itemize}
+
+	Ideally, we want to:
+	\begin{itemize}
+		\item Decouple the objects from their data
+		\item Cache unlimited objects but put a limit on their data
+	\end{itemize}
+
+	Solution:
+	\begin{itemize}
+		\item Preallocated data space
+		\item Every object request a bucket (typically 4KB)		
+		\item When an object is evicted, its buckets are 
+			reclaimed
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Other important cached tasks}
+
+	Several other key-tasks are:
+	\begin{itemize}
+		\item Book-keeping
+		\item Cache write policy
+		\item Asynchronous task execution
+		\item Data propagation
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Cached flow}
+	\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
+	\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
+\end{frame}
