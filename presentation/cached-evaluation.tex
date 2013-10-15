@@ -1,0 +1,190 @@
+\section{Cached evaluation}
+
+\begin{frame}{Benchmark methodology}
+We have conducted exhaustive benchmarks.\\
+They are separated in three categories:
+
+\begin{itemize}
+	\item Comparison between cached and sosd
+		\begin{itemize}
+			\item Peak behavior
+			\item Sustained behavior
+		\end{itemize}
+	\item Internal comparison of cached
+		\begin{itemize}
+			\item Multithreading overhead
+			\item Indexing mechanism overhead
+		\end{itemize}
+	\item Evaluation of VM/Archipelago
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Cached/sosd comparison - peak behavior}
+	\begin{columns}[t]
+		\begin{column}{.5\textwidth}
+			Write bandwidth
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/bw-write-comp-lie.pdf}
+			}
+			Constants:
+			\begin{itemize}
+				\item cached has 4 threads
+				\item workload size less than cache size
+			\end{itemize}
+		\end{column}
+		\begin{column}{.5\textwidth}
+			Read bandwidth
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/bw-read-comp-lie.pdf}
+			}
+			Variables:
+			\begin{itemize}
+				\item block size [4KB - 64KB]
+				\item parallel requests [4 - 16]
+			\end{itemize}
+		\end{column}
+	\end{columns}
+
+\end{frame}
+
+\begin{frame}{Cached/sosd comparison - peak behavior}
+	\begin{columns}[t]
+		\begin{column}{.5\textwidth}
+			Write latency
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/lat-write-comp-lie.pdf}
+			}
+			Constants:
+			\begin{itemize}
+				\item cached has 4 threads
+				\item workload size less than cache size
+			\end{itemize}
+		\end{column}
+		\begin{column}{.5\textwidth}
+			Read latency
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/lat-read-comp-lie.pdf}
+			}
+			Variables:
+			\begin{itemize}
+				\item block size [4KB - 64KB]
+				\item parallel requests [4 - 16]
+			\end{itemize}
+		\end{column}
+	\end{columns}
+
+\end{frame}
+
+\begin{frame}{Cached/sosd comparison - sustained behavior}
+	\begin{columns}[t]
+		\begin{column}{.5\textwidth}
+			Write bandwidth
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/bw-write-comp-truth.pdf}
+			}
+			Constants:
+			\begin{itemize}
+				\item cached has 4 threads
+				\item workload twice the cache size
+				\item block size is 4KB
+				\item Parallel requests are 16
+			\end{itemize}
+		\end{column}
+		\begin{column}{.5\textwidth}
+			Read bandwidth
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/lat-write-comp-truth.pdf}
+			}
+			Variables:
+			\begin{itemize}
+				\item cache write policy
+			\end{itemize}
+		\end{column}
+	\end{columns}
+
+\end{frame}
+
+\begin{frame}{Cached internals - multithreading}
+	\begin{columns}[t]
+		\begin{column}{.5\textwidth}
+			Write bandwidth
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/bw-write-threads.pdf}
+			}
+			Constants:
+			\begin{itemize}
+				\item workload less than the cache size
+				\item block size is 4KB
+			\end{itemize}
+		\end{column}
+		\begin{column}{.5\textwidth}
+			Write latency
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/lat-write-threads.pdf}
+			}
+			Variables:
+			\begin{itemize}
+				\item cached threads [1 - 16]
+				\item parallel requests [1 - 16]
+			\end{itemize}
+		\end{column}
+	\end{columns}
+
+\end{frame}
+
+
+\begin{frame}{Cached internals - indexing}
+	Latency of cold cache vs. warm cache
+	\makebox[\textwidth]{
+		\includegraphics[width=0.45\textwidth]{images/cold1.pdf}
+	}
+	\begin{columns}[t]
+		\begin{column}{.5\textwidth}
+			Constants:
+			\begin{itemize}
+				\item workload less than the cache size
+				\item block size is 4KB
+				\item no threads or parallel requests 
+			\end{itemize}
+		\end{column}
+		\begin{column}{.5\textwidth}
+			Variables:
+			\begin{itemize}
+				\item number of objects [128k - 1G]
+			\end{itemize}
+		\end{column}
+	\end{columns}
+
+\end{frame}
+
+\begin{frame}{VM/Archipelago evaluation}
+	\begin{columns}[t]
+		\begin{column}{.5\textwidth}
+			Write bandwidth
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/bw-vm.pdf}
+			}
+			Constants:
+			\begin{itemize}
+				\item block size is 4KB
+				\item parallel requests are 16
+				\item cached has 4 threads
+			\end{itemize}
+		\end{column}
+		\begin{column}{.5\textwidth}
+			Write latency
+			\makebox[\textwidth]{
+				\includegraphics[width=\columnwidth]{images/lat-vm.pdf}
+			}
+			Variables:
+			\begin{itemize}
+				\item cache write policy
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+
+
+
