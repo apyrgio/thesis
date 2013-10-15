@@ -38,6 +38,14 @@
 \newcommand\spc{\hfill \\}
 \newcommand\dspc{\spc\spc}
 
+\AtBeginSection[]
+{
+	\begin{frame}
+		\frametitle{Table of Contents}
+		\tableofcontents[currentsection]
+	\end{frame}
+}
+
 % PRESENTATION SETTING ========================================================
 
 \author{Αλέξιος Πυργιώτης}
@@ -52,5 +60,6 @@
 \include{intro}
 \include{req}
 \include{solutions}
+\include{cached}
 \end{document}
 
