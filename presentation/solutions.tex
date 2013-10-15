@@ -1,33 +1,69 @@
 \section{Caching}
 
-\begin{frame}
+\begin{frame}{Intro}
 
-	No doubt we must do caching
-	Caching is ...
-	similar to the memory hierarchy model, ...
+	Solution: Caching\\
+	\spc
+	Caching is:
+	\begin{itemize}
+		\item We have a slow medium
+		\item Add a fast medium in a data path
+		\item Transparently store the data that are intended for the 
+			slower medium.
+		\item Profit: later accesses to the same data are faster
+	\end{itemize}
+	\dspc
+	Sounds familiar?
 \end{frame}
 
-\begin{frame}{Block solutions}
+\begin{frame}
+	\makebox[\textwidth]{\includegraphics[width=0.8\textwidth]{images/mem-hier.pdf}}
+	
+	That's because every PC is built that way.
+\end{frame}
 
+\begin{frame}
+	Is there anything to help us?
+	\dspc
+	We are not the first to have speed issues
+	\dspc
+	Facebook, Twitter, Dropbox, every one has hit and surpassed their 
+	limits.
+	\dspc
+	There are solutions separated in two categories:
+	\begin{itemize}
+		\item Block store
+		\item Key-value store
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Block-store caching solutions}
+
+	Most notable examples:
 	\begin{itemize}
 		\item Bcache
-		\item ...
+		\item Flashcache
+		\item EnhanceIO
 	\end{itemize}
-
 	\dspc
-	Pros: ...\\
-	Cons: ...\\
+	Typically scale-up solutions.
+	\dspc
+	Pros: Simple, scale-up\\
+	Cons: Unaware of CoW, kernel solutions
 \end{frame}
 
-\begin{frame}{Object solutions}
+\begin{frame}{Key-value caching solutions}
+	Most notable examples:
 	\begin{itemize}
 		\item Memcached
 		\item Couchbase
 	\end{itemize}
-
 	\dspc
-	Pros: ...\\
-	Cons: ...\\
+	Typically scale-out solutions
+	\dspc
+	Pros: Distributed with no SPOF, can utilize unneeded RAM\\
+	Cons: Memcached has no persistence, Couchbase cannot use RADOS as its 
+	backend, more suitable for databases
 \end{frame}
 
 \begin{frame}{Page-cache}
@@ -35,17 +71,17 @@
 	What if we used the page-cache?
 
 	\dspc
-	Pros: ...\\
-	Cons: ...\\
+	Pros: Easy to activate, tested, very fast\\
+	Cons: Unaware of CoW, no control over it, practically kernel solution\\
 
 \end{frame}
 
-\begin{frame}{Conclusion}
+\begin{frame}{Conclusions}
 
 	\begin{itemize}
-		\item Cannot use those reliably with with Archipelago, may use 
-			them later.
-		\item Have to create our own solution
+		\item Most solutions far from Archipelago's logic
+		\item Block store might be good for the storage backend
+		\item Must implement our own solution
 	\end{itemize}
 \end{frame}
 	
