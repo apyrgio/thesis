@@ -89,26 +89,28 @@
 
 \begin{frame}{RADOS}
 
-	Self replicating
-	self managing
+	The object store component of Ceph filesystem.\\
+	\spc
+	Key features:
+	\begin{itemize}
+		\item Replication
+		\item Fault tolerance
+		\item Self-management
+		\item Scalability
+	\end{itemize}
 
-	\todo
-
-	\note{Το RADOS έχει τα εξής πολύ θετικά:
-		\begin{itemize}
-			\item Self-replication
-		\end{itemize}
-	}
-
-	\pause
-
-	Speed issues.\\
-	\spc Page-cache: > 90MB/s, < 1ms\\
-	Rados: < 7MB/s, ~ 10ms
 
 	\pause
 
-	Thesis goal, make this faster.
+	\spc
+	Speed issues:\\
+	VM with page-cache: > 90MB/s, < 1ms\\
+	VM without page-cache: < 7MB/s, ~ 10ms
+
+	\pause
+
+	\spc
+	Thesis goal: make this faster.
 
 \end{frame}
 
