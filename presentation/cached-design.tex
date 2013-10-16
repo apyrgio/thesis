@@ -7,6 +7,18 @@
 		\item Create something close to the Archipelago logic
 		\item Measure the best possible performance we can get
 	\end{itemize}
+
+	\note{Επιλέξαμε λοιπόν να δημιουργήσαμε τη δική μας λύση. Την ονομάσαμε 
+		cached από το cache daemon}
+	\note{Ορίσαμε τους εξής γενικούς στόχους:
+		\begin{itemize}
+			\item Δημιουργία ενός peer κοντά στη λογική του 
+				Archipelago
+			\item Η υλοποίηση να είναι όσο το δυνατόν πιο γρήγορη 
+				για να δουμε αν μια Αρχιπελαγική λύση μας 
+				βοηθάει
+		\end{itemize}
+	}
 	\dspc
 	Stricter requirements for cached:
 	\begin{itemize}
@@ -15,33 +27,75 @@
 		\item In-memory
 		\item Low indexing overhead
 	\end{itemize}
+	\note{Ακόμα, θέσαμε κάποιες πιο αυστηρές απαιτήσεις για την υλοποίηση 
+		μας: 1)να είναι peer του Archipelago, 2) να μπορεί να 
+		ενεργοποιείται και να απενεργοποιείται σε ένα σύστημα που 
+		τρέχει,3)να χρησιμοποιεί τη RAM, 4)ο indexing μηχανισμός να 
+		είναι γρήγορος}
 \end{frame}
 
 \begin{frame}{Cached design}
-	\makebox[\textwidth]{
-		\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
-		\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
-	}
+	\note{Εδώ βλέπουμε το design του cached. Ο cached μπαίνει ανάμεσα στον 
+		vmlc και στον blocker και cach-άρει ότι άιτημα για αντικείμενα 
+		πάει στο storage}
+	\note{Οι εργασίες του cached χωρίζονται σε 5 κατηγορίες:}
+	\note[item]{Στην διαχείριση των αιτημάτων από και προς vlmc, blocker}
+	\note[item]{Στο indexing (εύρεση και καταχώρηση) των αντικειμένων}
+	\note[item]{Στην ασύγχρονη ή κατά όρους εκτέλεση εργασιών}
+	\note[item]{Στην ασφαλή μετάδοση των cachαρισμένων δεδομένων στο 
+		storage}
+	\note[item]{Καθώς επίσης και στην ασφαλή επεξεργασία των cachαρισμένων 
+		δεδομένων}
+	\note[item]{\click}
+	\centering\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
+	\centering\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
+	\note{item}{Και εδώ βλέπουμε τα διακριτά κομμάτια που υλοιποιούν τα 
+		παραπάνω και τα οποία θα συζητήσουμε ευθύς αμέσως}
 \end{frame}
 
 \begin{frame}{Xcache design}
 	\centering\includegraphics<1>[height=0.6\textheight]{images/xcache-design.pdf}
-	\includegraphics<2>[width=\textwidth]{images/xcache-entry.pdf}
+	\centering\includegraphics<2>[width=\textwidth]{images/xcache-entry.pdf}
 
 	Xcache is responsible for: 1) entry indexing, 2) entry eviction, 3) 
-	concurrency control, 4) notification via event hooks
-\end{frame}
+	concurrency control
+
+	\note[item]{Αυτό είναι το xcache, που είναι υπεύθυνο για την
+		\begin{itemize}
+			\item Eύρεση και καταχώριση των αντικειμένων
+			\item Έξωση αντικειμένων από την cache με τη χρήση LRU
+			\item Χειρισμό πολλαπλών threads
+		\end{itemize}
+	}
+	\note[item]{Εχουμε ένα hash table <αυτό> που κρατάει τα ονόματα των 
+		αντικειμένων. Ο αποθηκευτικός τους χώρος είναι preallocated και 
+		είναι <αυτό>. Σε αυτό το χώρο, η αναφορά γίνεται με δείκτες. Ο 
+		ελεύθερος χώρος είναι στη στοιβα αυτή. Τέλος, όταν ένα 
+		αντικείμενο φύγει, μένει σε αυτό το hash table μεχρι να το 
+		ξαναζητήσουν ή να το διωχτεί}
+	\note[item]{\click}
+	\note[item]{Κάθε item έχει ένα reference counter για να ξέρουμε πόσοι 
+		το χρησιμοποιούν, όνομα, lru}
+	\end{frame}
 
 \begin{frame}{Xworkq design}
 	\centering\includegraphics<1>[width=\textwidth]{images/xworkq-design.pdf}
 
 	Xworkq is responsible for concurrency control
-\end{frame}
+	\note[item]{xworkq υπεύθυνο για την ασφαλή επεξεργασία των δεδομένων 
+		ενός αντικείμενου.}
+	\note[item]{Το spinning είναι αργό, όλοι τοποθετούν μια δουλειά, ένας 
+		την εκτελεί.}
+	\end{frame}
 
 \begin{frame}{Xwaitq design}
 	\centering\includegraphics<1>[width=\textwidth]{images/xwaitq-design.pdf}
 
 	Xwaitq is responsible for deferred execution
+	\note[item]{xwaitq υπεύθυνο για την κατά συνθήκη εκτελεση εργασιών}
+	\note[item]{Αν π.χ. μας τελειώσει ο χώρος, δεν μπορούμε να περιμένουμε 
+		σύγχρονα. To thread μπορεί να τοποθετήσει μια δουλειά και μετά 
+		να εκτελέσει κάτι άλλο}
 \end{frame}
 
 \begin{frame}{Bucket pool}
@@ -51,12 +105,19 @@
 		\item RAM is limited
 		\item Leads to small number of entries
 	\end{itemize}
-
+	\note[item]{Το ότι κάνουμε index ένα object δε σημαίνει ότι κατ'ευθείαν 
+		μπορούμε να γράψουμε σε αυτό}
+	\note[item]{Δεν υπάρχει τόση RAM και ακόμα και ως αποτέλεσμα, θα 
+		cachάραμε μικρό αριθμό από objects}
 	Ideally, we want to:
 	\begin{itemize}
 		\item Decouple the objects from their data
 		\item Cache unlimited objects but put a limit on their data
 	\end{itemize}
+	\note[item]{Ιδανικά θέλουμε να διαχωρίσουμε την καταχώρη/όνομα του 
+		αντικειμένου από τα δεδομένα του. Δυνητικά θα μπορούμε να 
+		καταχωρούμε πάρα πολλά αντικείμενα αλλά θα έχουμε μικρότερο 
+		χώρο}
 
 	Solution:
 	\begin{itemize}
@@ -65,6 +126,8 @@
 		\item When an object is evicted, its buckets are 
 			reclaimed
 	\end{itemize}
+	\note[item]{Preallocated χώρος, όλοι παίρνουν indexes από αυτό (Θυμίζει 
+		xcache}
 \end{frame}
 
 \begin{frame}{Other important cached tasks}
@@ -76,9 +139,38 @@
 		\item Asynchronous task execution
 		\item Data propagation
 	\end{itemize}
+	\note{Το cached είναι επίσης επιφορτισμένο και με άλλες δουλειές όπως:
+		\begin{itemize}
+			\item Κρατάει στατιστικά (πόσα entries είναι dirty, 
+				πόσα buckets έχει κάνει allocate ένα entry
+			\item Εφαρμόζει writeback/writethrough πολιτική
+			\item Φρόντίζει ώστε οι εργασίες να μπορούν να γίνουν 
+				ασύγχρονα
+			\item Και φυσικά φροντίζει τα δεδομένα να γράφονται 
+				σωστά στο storage
+		\end{itemize}
+	}
 \end{frame}
 
 \begin{frame}{Cached flow}
 	\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
 	\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
+
+	\note[item]{Εδώ παίζεις με τα slides}
+	\note[item]{Θα παρουσιάσουμε πολύ γρήγορα τη ροή ενός αιτήματος στον 
+		cached}
+	\note[item]{Έρχεται request, το κάνουμε index, μπαίνουμε στη workq και 
+		πειράζουμε τα δεδομένα του και ανάλογα το cache policy το 
+		γράφουμε πίσω στον blocker αλλιώς τελειώσαμε}
+	\note[item]{Optional σεναρια:
+		\begin{itemize}
+			\item Αν γίνει ένα eviction, πρέπει να γράψουμε τα 
+				δεδομένα του πίσω με ασφάλεια. Επειδή το 
+				αντικείμενο μπορει να καταχωρηθεί, να μπει και 
+				να ξαναβγεί, πρέπει να είμαστε προσεκτικοί
+			\item Αν ξεμείνουμε από πόρους (χώρο στο hash table, 
+				buckets κτλ, πρέπει να συνεχίσουμε μονο όταν 
+				μπορούμε
+		\end{itemize}
+	}
 \end{frame}
