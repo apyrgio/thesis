@@ -39,8 +39,8 @@
 	\dspc
 	There are solutions separated in two categories:
 	\begin{itemize}
-		\item Block store
-		\item Key-value store
+		\item Block-based caching
+		\item Object-based caching
 	\end{itemize}
 	\note[item]{Τώρα που ξέρουμε τη λύση, υπάρχει κάτι που μπορούμε να 
 		κάνουμε;}
@@ -54,7 +54,7 @@
 	}
 \end{frame}
 
-\begin{frame}{Block-store caching solutions}
+\begin{frame}{Block-based caching solutions}
 
 	Most notable examples:
 	\begin{itemize}
@@ -68,19 +68,21 @@
 	Pros: Simple, scale-up\\
 	Cons: Unaware of CoW, kernel solutions
 
-	\note[item]{Πρώτη κατηγορία που εξετάσαμε έχει αρκετά ενδιαφέρουσες 
-		λύσεις.}
 	\note[item]{Δε θα επεκταθούμε γιατί έχουν κάποια βασικά κοινά:
 		\begin{itemize}
 			\item Kernel modules
-			\item expose εικονικά block devices
+			\item expose εικονικά block devices που δείχνουν σε 
+				γρήγορα μέσα
+			\item Καθαρά caching μηχανισμοί με policies
 		\end{itemize}
 	}
-	\note[item]{Εξήγησε που μπαίνουν (xsegbd)}
-
+	\note[item]{Εξήγησε που μπαίνουν (xsegbd). ΠΗΓΑΙΝΕ στο archipelago}
+	\note[item]{Παρότι είναι αρκετά απλοί, δε γνωρίζουν την CoW πολιτική 
+		άρα χάνουν χώρο και είναι στον kernel (που δε θέλουμε)
+	}
 \end{frame}
 
-\begin{frame}{Key-value caching solutions}
+\begin{frame}{Object-based caching solutions}
 	Most notable examples:
 	\begin{itemize}
 		\item Memcached
@@ -92,15 +94,28 @@
 	Pros: Distributed with no SPOF, can utilize unneeded RAM\\
 	Cons: Memcached has no persistence, Couchbase cannot use RADOS as its 
 	backend, more suitable for databases
+	\note{Τα πράγματα γίνονται πιο ενδιαφέροντα εδώ:
+		\begin{itemize}
+			\item Κατανεμημένα συστήμα χωρίς ενιαίο σημείο 
+				αποτυχίας (SPOF), μπορούν να τρέχουν εκτός host 
+				οπότε δεν το επιβαρύνουν
+			\item Memcached δε διατηρεί τα δεδομένα, couchbase δεν 
+				μπορεί να μιλήσει με rados
+		\end{itemize}
+	}
 \end{frame}
 
-\begin{frame}{Page-cache}
+\begin{frame}{Page-cache?}
 
 	What if we used the page-cache?
-
+	\note{Αν χρησιμοποιούσαμε την page-cache}
+	\dspc
+	\dspc
 	\dspc
 	Pros: Easy to activate, tested, very fast\\
 	Cons: Unaware of CoW, no control over it, practically kernel solution\\
+	\note{Εύκολη λύση, σταθερή και γρήγορη. Όμως, δεν καταλαβαίνει από COW, 
+		είναι προσκολλημένη σε ένα block device}
 
 \end{frame}
 
@@ -108,8 +123,12 @@
 
 	\begin{itemize}
 		\item Most solutions far from Archipelago's logic
-		\item Block store might be good for the storage backend
+		\item Others not suited for storage and more suited for 
+			databases
+		\item Block-based caching might be good for the storage backend
 		\item Must implement our own solution
 	\end{itemize}
+
+	\note{\todo}
 \end{frame}
 	
