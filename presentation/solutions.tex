@@ -14,27 +14,44 @@
 	\end{itemize}
 	\dspc
 	Sounds familiar?
+
+	\note[item]{Η κλασσική λύση σε τέτοια προβλήματα είναι η χρήση ενός 
+		γρηγορότερου αποθηκευτικού μέσου για caching.}
+	\note[item]{Για όσους δεν ξέρουν τι σημαίνει caching, θα το εξηγήσουμε 
+		συνοπτικά: έχεις ροή, αργό μέσο, βάζεις ένα γρήγορο, speedup}
+	\note[item]{Προφανώς αυτό το concept είναι γνωστό. Από που;}
 \end{frame}
 
 \begin{frame}
 	\makebox[\textwidth]{\includegraphics[width=0.8\textwidth]{images/mem-hier.pdf}}
 	
 	That's because every PC is built that way.
+
+	\note[item]{Από το ιεραρχικό μοντέλο του υπολογιστή: cpu cache vs ram, ram 
+		vs disk}
 \end{frame}
 
 \begin{frame}
 	Is there anything to help us?
 	\dspc
-	We are not the first to have speed issues
-	\dspc
-	Facebook, Twitter, Dropbox, every one has hit and surpassed their 
-	limits.
+	FACT: We are not the first to have speed issues\\
+	Facebook, Twitter, Dropbox, every one has hit and surpassed their limits.
 	\dspc
 	There are solutions separated in two categories:
 	\begin{itemize}
 		\item Block store
 		\item Key-value store
 	\end{itemize}
+	\note[item]{Τώρα που ξέρουμε τη λύση, υπάρχει κάτι που μπορούμε να 
+		κάνουμε;}
+	\note[item]{Υπάρχει κάτι έτοιμο; ΝΑΙ}
+	\note[item]{Δυο κατηγορίες:
+		\begin{itemize}
+			\item βλέπουν τα δεδομένα σαν blocks ενός δίσκου
+			\item βλέπουν τα δεδομένα σαν κομμάτια αντικειμένων
+		\end{itemize}
+		Διαφορά: \todo
+	}
 \end{frame}
 
 \begin{frame}{Block-store caching solutions}
@@ -50,6 +67,17 @@
 	\dspc
 	Pros: Simple, scale-up\\
 	Cons: Unaware of CoW, kernel solutions
+
+	\note[item]{Πρώτη κατηγορία που εξετάσαμε έχει αρκετά ενδιαφέρουσες 
+		λύσεις.}
+	\note[item]{Δε θα επεκταθούμε γιατί έχουν κάποια βασικά κοινά:
+		\begin{itemize}
+			\item Kernel modules
+			\item expose εικονικά block devices
+		\end{itemize}
+	}
+	\note[item]{Εξήγησε που μπαίνουν (xsegbd)}
+
 \end{frame}
 
 \begin{frame}{Key-value caching solutions}
