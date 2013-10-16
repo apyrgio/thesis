@@ -100,11 +100,12 @@
 	backend, more suitable for databases
 	\note{Τα πράγματα γίνονται πιο ενδιαφέροντα εδώ:
 		\begin{itemize}
-			\item Κατανεμημένα συστήμα χωρίς ενιαίο σημείο 
-				αποτυχίας (SPOF), μπορούν να τρέχουν εκτός host οπότε δεν το 
-				επιβαρύνουν, είναι user-space λύσεις
-			\item Memcached δε διατηρεί τα δεδομένα, couchbase δεν μπορεί να 
-				μιλήσει με RADOS \end{itemize}
+			\item Κατανεμημένα συστήματα χωρίς ενιαίο σημείο αποτυχίας (SPOF), 
+				μπορούν να τρέχουν εκτός host οπότε δεν το επιβαρύνουν, είναι 
+				user-space λύσεις
+			\item Memcached δε διατηρεί με ασφάλεια τα αντικείμενα που 
+				cachάρει, couchbase δεν μπορεί να μιλήσει με RADOS 
+		\end{itemize}
 	}
 \end{frame}
 

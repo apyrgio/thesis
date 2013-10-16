@@ -12,8 +12,7 @@
 		cached από το cache daemon}
 	\note{Ορίσαμε τους εξής γενικούς στόχους:
 		\begin{itemize}
-			\item Δημιουργία ενός peer κοντά στη λογική του 
-				Archipelago
+			\item Να είναι κοντά στη λογική του Archipelago
 			\item Η υλοποίηση να είναι όσο το δυνατόν πιο γρήγορη 
 				για να δουμε αν μια Αρχιπελαγική λύση μας 
 				βοηθάει
@@ -28,28 +27,35 @@
 		\item Low indexing overhead
 	\end{itemize}
 	\note{Ακόμα, θέσαμε κάποιες πιο αυστηρές απαιτήσεις για την υλοποίηση 
-		μας: 1)να είναι peer του Archipelago, 2) να μπορεί να 
-		ενεργοποιείται και να απενεργοποιείται σε ένα σύστημα που 
-		τρέχει,3)να χρησιμοποιεί τη RAM, 4)ο indexing μηχανισμός να 
-		είναι γρήγορος}
+		μας: 1)να είναι peer του Archipelago, 2) να μπορεί να ενεργοποιείται 
+		και να απενεργοποιείται σε ένα σύστημα που είναι εν λειτουργία, 3)να 
+		χρησιμοποιεί τη RAM, 4)ο indexing μηχανισμός να είναι γρήγορος}
 \end{frame}
 
 \begin{frame}{Cached design}
-	\note{Εδώ βλέπουμε το design του cached. Ο cached μπαίνει ανάμεσα στον 
-		vmlc και στον blocker και cach-άρει ότι άιτημα για αντικείμενα 
-		πάει στο storage}
+	\note{Εδώ βλέπουμε το design του cached. Ο cached μπαίνει ανάμεσα στον vlmc 
+		και στον blocker και cach-άρει ότι άιτημα για αντικείμενα πάει στο 
+		storage}
 	\note{Οι εργασίες του cached χωρίζονται σε 5 κατηγορίες:}
 	\note[item]{Στην διαχείριση των αιτημάτων από και προς vlmc, blocker}
 	\note[item]{Στο indexing (εύρεση και καταχώρηση) των αντικειμένων}
-	\note[item]{Στην ασύγχρονη ή κατά όρους εκτέλεση εργασιών}
+	\note[item]{Στην υπο συνθήκες εκτέλεση εργασιών}
 	\note[item]{Στην ασφαλή μετάδοση των cachαρισμένων δεδομένων στο 
 		storage}
 	\note[item]{Καθώς επίσης και στην ασφαλή επεξεργασία των cachαρισμένων 
 		δεδομένων}
 	\note[item]{\click}
-	\centering\includegraphics<1>[height=0.8\textheight]{images/cached-design2.pdf}
-	\centering\includegraphics<2>[height=0.8\textheight]{images/cached-design-comp2.pdf}
-	\note[item]{Και εδώ βλέπουμε τα διακριτά κομμάτια που υλοιποιούν τα 
+
+	\begin{columns}[T]
+		\begin{column}{0.65\textwidth}
+			\includegraphics<1>[width=\columnwidth]{images/cached-design2.pdf}
+			\includegraphics<2>[width=\columnwidth]{images/cached-design-comp2.pdf}
+		\end{column}
+		\begin{column}{0.35\textwidth}
+			\includegraphics[width=\columnwidth]{images/new_sxima_numbered.pdf}
+		\end{column}
+	\end{columns}
+	\note[item]{Και εδώ βλέπουμε τα διακριτά κομμάτια κώδικα που υλοιποιούν τα 
 		παραπάνω και τα οποία θα συζητήσουμε ευθύς αμέσως}
 \end{frame}
 
@@ -62,17 +68,20 @@
 
 	\note[item]{Αυτό είναι το xcache, που είναι υπεύθυνο για την
 		\begin{itemize}
-			\item Eύρεση και καταχώριση των αντικειμένων
-			\item Έξωση αντικειμένων από την cache με τη χρήση LRU
+			\item Indexing των αντικειμένων
+			\item Eviction αντικειμένων από την cache με τη χρήση LRU
 			\item Χειρισμό πολλαπλών threads
 		\end{itemize}
 	}
-	\note[item]{Εχουμε ένα hash table <αυτό> που κρατάει τα ονόματα των 
-		αντικειμένων. Ο αποθηκευτικός τους χώρος είναι preallocated και 
-		είναι <αυτό>. Σε αυτό το χώρο, η αναφορά γίνεται με δείκτες. Ο 
-		ελεύθερος χώρος είναι στη στοιβα αυτή. Τέλος, όταν ένα 
-		αντικείμενο φύγει, μένει σε αυτό το hash table μεχρι να το 
-		ξαναζητήσουν ή να το διωχτεί}
+	\note[item]{Έχουμε δυο hash table, το καθένα με το δικό του lock, ένα χώρο 
+		που αποθηκεύονται τα entries και μόνο (όχι τα δεδομένα, προσοχή) και 
+		μια στοίβα όπου κρατιούνται indexes των ελεύθερων entries.}
+	\note[item]{To ένα hash table <αυτό> που κρατάει τα ονόματα των cached 
+		αντικειμένων.}
+	\note[item]{Ο αποθηκευτικός τους χώρος είναι preallocated και είναι <αυτό>.  
+		Σε αυτό το χώρο, η αναφορά γίνεται με δείκτες. Ο ελεύθερος χώρος είναι 
+		στη στοιβα αυτή.  Τέλος, όταν ένα αντικείμενο φύγει, μένει σε αυτό το 
+		hash table μεχρι να το ξαναζητήσουν ή να το διωχτεί}
 	\note[item]{\click}
 	\note[item]{Κάθε item έχει ένα reference counter για να ξέρουμε πόσοι 
 		το χρησιμοποιούν, όνομα, lru}

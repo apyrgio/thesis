@@ -29,6 +29,9 @@
 		\item Policy enforcement?
 		\item Storage agnosticity?
 	\end{itemize}
+
+	\note{Δηλαδή εφαρμογή δικών μας πολιτικών, χρήση οποιουδήποτε τύπου 
+		storage}
 \end{frame}
 
 \begin{frame}{Our solution}
@@ -47,7 +50,10 @@
 		5) Storage agnostic
 
 	\note{Η λύση που χρησιμοποιήσαμε είναι το Archipelago}
-	\note{
+	\note[item]{Πιο συγκεκριμένα, το Αρχιπέλαγο τρέχει στον host κόμβο. Είναι 
+		ΑΚRIBΩΣ κάτω από τον σκληρό δίσκο του VM, το /dev/vda1. Τα δεδομένα 
+		είναι στο storage}
+	\note[item]{
 		\begin{itemize}
 			\item Software-defined: με το software ΟΡΙΖΕΙΣ το storage (εφαρμογή 
 				policy, χρήση διαφορετικού storage για κάθε volume)
@@ -60,10 +66,6 @@
 			\item μπορούμε χρησιμοποιήσουμε ότι storage θέλουμε
 		\end{itemize}
 	}
-	\note[item]{Πιο συγκεκριμένα, το Αρχιπέλαγο τρέχει στον host κόμβο. Είναι 
-		ΑΚRIBΩΣ κάτω από τον σκληρό δίσκο του VM, το /dev/vda1. Τα δεδομένα 
-		είναι στο storage}
-
 \end{frame}
 
 \begin{frame}{Archipelago Architecture (single node)}
