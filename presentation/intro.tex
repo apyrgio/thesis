@@ -2,18 +2,20 @@
 \titlepage
 	\note[item]{Καλημέρα σας, ονομάζομαι Αλέξιος Πυργιώτης\\
 		Θα σας παρουσιάσω τη διπλωματική μου με τίτλο:..}
-	\note[item]{Ακούγεται κάπως περίεργο στα ελληνικά...\\
-	αυτό που πραγματεύται είναι την δημιουργία ενός caching μηχανισμού για 
-	το Archipelago, ένα distibuted, storage layer}
-	\note[item]{Συγκεκριμένα, στην παρουσίαση αυτή θα μιλήσουμε για τον 
-		cached, δηλαδή τον caching μηχανισμό μας και αντικείμενο της 
-		διπλωματικης, αλλά και για το synapsed, ένα συμπληρωματικό 
-		εργαλείο που στόχος του είναι να δώσει στον cached δικτυακές 
-		δυνατότητες}
-	\note[item]{Σημείωση: Για οικονομία του λόγου, δε θα προβώ σε εξήγηση 
-		βασικών όρων όπως VMs, storage. Παρ'όλα αυτά όμως, αν κάποια 
-		από αυτές τις έννοιες είναι άγνωστες ή για όποια απορία κατά τη 
-		διάρκεια της παρουσίασης, μπορείτε να με διακόψετε και να 
+	\note[item]{Συγκεκριμένα, στο πρώτο σκέλος της παρουσίασης θα μιλήσουμε για 
+		το Archipelago, ένα distributed storage layer και το RADOS, ένα storage 
+		backend του Αρχιπέλαγο.}
+	\note[item]{Στο δεύτερο σκέλος, θα μιλήσουμε για την προσφορά της 
+		διπλωματικής μας και συγκεκριμένα δυο επεκτάσεις:
+		\begin{itemize}
+			\item τον cached, δηλαδή τον caching μηχανισμό μας και κύριο 
+				αντικείμενο της διπλωματικης
+			\item το synapsed, ένα συμπληρωματικό εργαλείο που στόχος του είναι 
+				να δώσει στον cached δικτυακές δυνατότητες
+		\end{itemize}
+	}
+	\note[item]{Aν κάποια έννοια σας είναι άγνωστη ή για όποια απορία κατά τη 
+		διάρκεια της παρουσίασης, μπορείτε ελεύθερα να με διακόψετε και να 
 		ρωτήσετε.}
 	
 \end{frame}
@@ -28,19 +30,17 @@
 				αφορούν το background της εργασίας μας.  
 				Αναφέρουμε τι είναι το Synnefo και τι είναι η 
 				υπηρεσια ~okeanos
-			\item Έπειτα, μιλαμε για τον τρόπο που διαχειριζόμαστε 
-				το storage και κατ'επέκταση για το archipelago 
-				και τον στόχο της διπλωματικής.
+			\item Έπειτα, μιλαμε για το archipelago, το RADOS και τελικά τον 
+				στόχο της διπλωματικής.
 			\item Στη συνέχεια μιλάμε για το τι είναι caching και 
 				αναφέρουμε κάποιες σύγχρονες λύσεις για 
 				caching.
-			\item Τα επόμενα δυο κεφάλαια έχουν να κάνουν με τον 
-				cached, και συγκεκριμένα με την παρουσίαση της 
-				σχεδίασής του και της απόδοσής του
-			\item Αντίστοιχα παρουσιάζουμε το synapsed, τη σχεδίαση 
-				και υλοποίησή του
-			\item Τέλος, συνοψίζουμε όσα ειπώθηκαν παραπάνω και 
-				μιλάμε για μελλοντικές εργασίες
+			\item Τα επόμενα δυο κεφάλαια παρουσιάζουν τη σχεδίαση και απόδοση 
+				του cached.
+			\item Αντίστοιχα παρουσιάζουμε το synapsed, τη σχεδίαση και την
+				υλοποίησή του
+			\item Τέλος, συνοψίζουμε όσα ειπώθηκαν παραπάνω και μιλάμε για 
+				μελλοντικές πιθανές μελοντικές εργασίες
 		\end{itemize}
 	}
 
@@ -48,70 +48,35 @@
 
 \section{Introduction}
 
-\begin{frame}{Synnefo}
+\begin{frame}{Thesis background}
 	\note{Ας ξεκινήσουμε με την παρούσα κατάσταση.\\
 	Το software που τα ξεκίνησε όλα είναι το Synnefo}
 
-	\includegraphics{images/synnefo-logo.png}
+	\includegraphics[height=0.075\textheight]{images/synnefo-logo.png}
 
 	Open source, production-ready, cloud software.\\
 	Designed since 2010 by GRNET.
 	\note{\dspc..by GRNET -> Και φυσικά τα παιδιά που βλεπετε εδώ}
-	
-	\spc
-	Synnefo, as most cloud software, has the following services:
-	\begin{itemize}
-		\item Compute Service
-		\item Network Service
-		\item Storage Service
-		\item Image Service
-		\item Identity Service
-	\end{itemize}
-
-	\note{\dspc
-		\begin{itemize}
-			\item Compute service, είναι η υπηρεσία η οποία 
-				προμηθεύει τους χρήστες με VMs και επιτρέπει το 
-				χειρισμό τους
-			\item Network service, είναι η υπηρεσία η οποία δίνει 
-				τη δυνατότητα στους χρήστες να δημιουργήσουν 
-				ιδιωτικά δίκτυα και να συνδέσουν τα VMs τους σε 
-				αυτά.
-			\item Storage service, που παρέχει αποθηκευτικό χώρο 
-				στους χρήστες.
-			 \item Image Service, υπεύθυνο για το deployment ενός 
-				 VM από ένα image.  Επίσης, κάνει και 
-				 παραμετροποιήσεις (παράδειγμα ssh κλειδιά)
-		\end{itemize}
-	}
-\end{frame}
-
-\begin{frame}{okeanos}
-
-	\includegraphics{images/okeanos-logo.png}
+	\dspc
+	\dspc
+	\includegraphics[height=0.075\textheight]{images/okeanos-logo.png}
 
 	\begin{itemize}
 		\item IaaS service
 		\item Targeted at the Greek Academic and Research Community
 		\item Designed by GRNET
 		\item In production since 2011
-	\pause
-		\item ...and of course powered by Synnefo.
 	\end{itemize}
 
 	\note{
 		\begin{itemize}
+			\item Φτιαγμένο επίσης από την ΕΔΕΤ
 			\item IaaS είναι πρακτικά η παροχή εικονικής υποδομής 
 				σε χρήστες (δηλαδή πάρε υπολογιστή (VM), 
 				δίκτυα, αρχεία κτλ)
 			\item Δωρεάν για τους Ακαδημαϊκους σκοπούς, ήδη 
 				γίνονται εργαστήρια στο EMP και απ' αυτό το 
 				εξάμηνο σε άλλες σχολές
-			\item \click
-			\item Και φυσικά παίζει πάνω σε Synnefo...
 		\end{itemize}
 	}
-				
 \end{frame}
-
-
