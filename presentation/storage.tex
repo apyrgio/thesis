@@ -1,22 +1,23 @@
-\section{Request handling}
+\section{VM Volume storage}
 
-\begin{frame}[t]{What is request handling?}
+\begin{frame}[t]{Intro}
 
-	\note{Τι είναι η διαχείριση των αιτημάτων ενός VM?\\
-		Είναι η εφαρμογή πολιτικών και επεξεργασία των αιτημάτων σε όλη 
-		την πορεία τους μέχρι το να φτάσουν στο storage.\dspc
-		Δηλαδή έχουμε ένα εικονικό μηχάνημα <κλικ>\\
-		... το storage μας <κλικ>\\
-		και πρέπει με κάποιο τρόπο τα δεδομένα του μηχανήματος να 
-		φτάσουν σε εμάς <κλικ>\\
-
-		Ένας απλός τρόπος θα ήταν να τα συνδέσουμε. Άλλωστε όταν τρέχει 
-		VM, ο hypervisor κοιτάει block device. Θα μπορούσε να ήταν 
-		κομμάτι του storage
-		Είναι αυτό αρκετό; <κλικ>\\
-		Όχι, χρειαζόμαστε επίσης \fixme
-	}
-
+	\note[item]{Σε μεγάλες εγκαταστάσεις, ξεφεύγουμε από το κλασσικό 
+		μοντέλο του PC μας (το μηχάνημα έχει το σκληρό του δίσκο).  
+		Συγκεκριμένα σε μια cloud υποδομή έχουμε:}
+	\note[item]{\click}
+	\note[item]{To VM που τρέχει σε ένα host server}
+	\note[item]{\click}
+	\note[item]{Και τους storage servers}
+	\note[item]{\click}
+	\note[item]{Το ερώτημα είναι λοιπόν, πως το VM θα αποθηκεύει τα 
+		δεδομένα του;\\
+		Υπάρχουν διάφορες επιλογές όπως το DRBD, το RBD που 
+		χρησιμοποιούνται ευρέως και γεφυρώνουν τον αποθηκευτικό χώρο 
+		του VM με το χώρο όπου λειτουργεί.}
+	\note[item]{Τι γίνεται όμως στην περίπτωση που θέλουμε *και* τα εξής;}
+	\note[item]{\click}
+	\note[item]{Εξήγησε τους όρους}
 
 	\begin{columns}[t]
 		\begin{column}{.5\textwidth}
@@ -48,9 +49,9 @@
 	Key features:
 		1) Software-defined
 		2) Distributed
-		) Modular
-		Copy-On-Write
-		Storage agnostic
+		3) Modular
+		4) Copy-On-Write
+		5) Storage agnostic
 
 	\note{Η λύση που χρησιμοποιήσαμε είναι το Archipelago}
 	\note{
@@ -63,7 +64,7 @@
 			\item αποτελείται από διακριτά κομμάτια
 			\item κάνει CoW (εξήγησε ότι τα images είναι λίγα, τα
 				VMs πολλά, όπως όταν ένα process κάνει fork)
-			\item μπορούμε χρησιμοποιήσουμε ότι θέλουμε
+			\item μπορούμε χρησιμοποιήσουμε ότι storage θέλουμε
 		\end{itemize}
 	}
 
@@ -80,7 +81,12 @@
 		στείλει στον δίσκο που το έχουμε πει. (xsegbd)}
 	\note[item]{Ο xsegbd στέλνει τo αίτημα στο userspace κομμάτι του 
 		Αρχιπελάγους το οποίο αποφαίνεται για τα αντικείμενα τα οποία 
-		αντιστοιχούν στο αίτημα}
+		αντιστοιχούν στο αίτημα. Συνοπτικά πως γίνεται αυτό:
+		\begin{itemize}
+			\item Ο xsegbd στέλνει το αίτημα στο vmlmc
+			\item Ο vlmc συμβουλεύεται τα mappings του
+		\end{itemize}
+	}
 	\note[item]{μετά τα ζητάει από το storage μέσω των blockers}
 \end{frame}
 
@@ -96,14 +102,27 @@
 		\item Scalability
 	\end{itemize}
 
+	\note{Αν και είμαστε storage agnostic, χρησιμοποιούμε ένα σημαντικό 
+		storage backend, το RADOS, που μας δίνει τα εξής:
+		\begin{itemize}
+			\item Αντίγραφα ασφαλείας των δεδομένων
+			\item Ανοχή στο χάσιμο αποθηκευτικών κόμβων
+			\item Load balancing και αυτοδιαχείριση
+			\item και τέλος ειναι επεκτάσιμο
+		\end{itemize}
+		\spc\click
+	}
 
 	\pause
 
 	\spc
 	Speed issues:\\
 	VM with page-cache: > 90MB/s, < 1ms\\
-	VM without page-cache: < 7MB/s, ~ 10ms
+	VM without page-cache: < 7MB/s, \mytilde10ms
 
+	\note{Αυτό το περίπλοκο σύστημα όμως δεν είναι αρκετά ταχύ.  
+		Παράδειγμα...
+		\spc\click}
 	\pause
 
 	\spc
