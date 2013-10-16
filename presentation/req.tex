@@ -75,16 +75,13 @@
 		  \makebox[\textwidth]{\includegraphics[width=0.9\paperwidth]{images/new_sxima_numbered.pdf}}
 	\end{center}
 
-	\note{
-		\begin{itemize}
-			\item To VM στέλνει αίτημα στο δίσκο του, ο δίσκος 
-				είναι εικονικός, θα το δει ο hypervisor 
-				(εξήγησε τι είναι ο hypervisor) και θα το 
-				στείλει στον δίσκο που το έχουμε πει. (xsegbd)
-			\item 2) \fixme 
-		\end{itemize}
-	}
-			
+	\note[item]{To VM στέλνει αίτημα στο δίσκο του, ο δίσκος είναι εικονικός, 
+		θα το δει ο hypervisor (εξήγησε τι είναι ο hypervisor) και θα το 
+		στείλει στον δίσκο που το έχουμε πει. (xsegbd)}
+	\note[item]{Ο xsegbd στέλνει τo αίτημα στο userspace κομμάτι του 
+		Αρχιπελάγους το οποίο αποφαίνεται για τα αντικείμενα τα οποία 
+		αντιστοιχούν στο αίτημα}
+	\note[item]{μετά τα ζητάει από το storage μέσω των blockers}
 \end{frame}
 
 \begin{frame}{RADOS}
