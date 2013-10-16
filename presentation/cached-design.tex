@@ -70,21 +70,25 @@
 		\begin{itemize}
 			\item Indexing των αντικειμένων
 			\item Eviction αντικειμένων από την cache με τη χρήση LRU
-			\item Χειρισμό πολλαπλών threads
+			\item Χειρισμό προσβάσεων από πολλαπλά threads
 		\end{itemize}
 	}
 	\note[item]{Έχουμε δυο hash table, το καθένα με το δικό του lock, ένα χώρο 
-		που αποθηκεύονται τα entries και μόνο (όχι τα δεδομένα, προσοχή) και 
-		μια στοίβα όπου κρατιούνται indexes των ελεύθερων entries.}
+		που αποθηκεύονται οι εγγραφές των αντικειμένων και μόνο (όχι τα 
+		δεδομένα, προσοχή) και μια στοίβα όπου κρατιούνται indexes των 
+		ελεύθερων entries, προστατευόμενη από ένα lock.}
 	\note[item]{To ένα hash table <αυτό> που κρατάει τα ονόματα των cached 
 		αντικειμένων.}
+	\note[item]{To άλλο hash table κρατάει τα ονόματα των evicted αντικειμένων 
+		έως ότου ελευθερωθούν ή ξαναγίνουν cached.}
 	\note[item]{Ο αποθηκευτικός τους χώρος είναι preallocated και είναι <αυτό>.  
-		Σε αυτό το χώρο, η αναφορά γίνεται με δείκτες. Ο ελεύθερος χώρος είναι 
-		στη στοιβα αυτή.  Τέλος, όταν ένα αντικείμενο φύγει, μένει σε αυτό το 
-		hash table μεχρι να το ξαναζητήσουν ή να το διωχτεί}
+		Σε αυτό το χώρο, η αναφορά γίνεται με δείκτες.}
+	\note[item]{Τα ελεύθερα entries είναι στη στοίβα αυτή.}
 	\note[item]{\click}
-	\note[item]{Κάθε item έχει ένα reference counter για να ξέρουμε πόσοι 
-		το χρησιμοποιούν, όνομα, lru}
+	\note[item]{Κάθε item έχει ένα reference counter για να ξέρουμε πόσοι το 
+		χρησιμοποιούν, όνομα, και δείκτες για την lru}
+	\note[item]{Συγκεκριμένα, στο παράδειγμα αυτό, το entry αυτό είναι το 
+		τελευταίο LRU, αυτό είναι το MRU κτλ. χέρι στον πίνακα}
 	\end{frame}
 
 \begin{frame}{Xworkq design}
@@ -93,50 +97,53 @@
 	Xworkq is responsible for concurrency control
 	\note[item]{xworkq υπεύθυνο για την ασφαλή επεξεργασία των δεδομένων 
 		ενός αντικείμενου.}
-	\note[item]{Το spinning είναι αργό, όλοι τοποθετούν μια δουλειά, ένας 
-		την εκτελεί.}
+	\note[item]{Δεν μπορεί πάνω από ένας να πειράζει τα data ενός thread. Το 
+		spinning είναι αργό, όλοι τοποθετούν μια δουλειά σε μια ΟΥΡΑ, ένας την 
+		εκτελεί.  Έτσι, ένα thread εκτελεί μια δουλειά και τα υπόλοιπα είναι 
+		ελεύθερα να κάνουν κάτι πιο χρήσιμο}
 	\end{frame}
 
 \begin{frame}{Xwaitq design}
 	\centering\includegraphics<1>[width=\textwidth]{images/xwaitq-design.pdf}
 
 	Xwaitq is responsible for deferred execution
-	\note[item]{xwaitq υπεύθυνο για την κατά συνθήκη εκτελεση εργασιών}
+	\note[item]{xwaitq υπεύθυνο για την υπό συνθήκη εκτελεση εργασιών}
 	\note[item]{Αν π.χ. μας τελειώσει ο χώρος, δεν μπορούμε να περιμένουμε 
 		σύγχρονα. To thread μπορεί να τοποθετήσει μια δουλειά και μετά 
 		να εκτελέσει κάτι άλλο}
 \end{frame}
 
 \begin{frame}{Bucket pool}
-	When an object is indexed, it does not have immediate access to 4MB 
-	size of data because:
+	Cached divides an object (commonly 4MB) to buckets (commonly 4KB).
+	When an object is indexed however, it does not have immediate access to all 
+	of its buckets because:
 	\begin{itemize}
 		\item RAM is limited
-		\item Leads to small number of entries
+		\item Most objects would probably be half-written
 	\end{itemize}
-	\note[item]{Το ότι κάνουμε index ένα object δε σημαίνει ότι κατ'ευθείαν 
-		μπορούμε να γράψουμε σε αυτό}
-	\note[item]{Δεν υπάρχει τόση RAM και ακόμα και ως αποτέλεσμα, θα 
-		cachάραμε μικρό αριθμό από objects}
+	\note[item]{Σπάμε τα objects (τυπικά έχουν 4MB) σε buckets (τυπικά των 
+		4KΒ).  Άρα κάθε object έχει 1024.}
+		\note[item]{Το ότι κάνουμε index ένα object δε σημαίνει ότι αυτομάτως 
+			έχει και τα 1024 buckets}
+	\note[item]{Δεν υπάρχει τόση RAM και άλλωστε πολλά objects μπορεί να είναι 
+		μισό-γραμμένα}
 	Ideally, we want to:
 	\begin{itemize}
 		\item Decouple the objects from their data
 		\item Cache unlimited objects but put a limit on their data
 	\end{itemize}
-	\note[item]{Ιδανικά θέλουμε να διαχωρίσουμε την καταχώρη/όνομα του 
-		αντικειμένου από τα δεδομένα του. Δυνητικά θα μπορούμε να 
-		καταχωρούμε πάρα πολλά αντικείμενα αλλά θα έχουμε μικρότερο 
-		χώρο}
+	\note[item]{Ιδανικά θέλουμε να διαχωρίσουμε την καταχώρηση/όνομα του 
+		αντικειμένου από τα δεδομένα του. Δυνητικά θα μπορούμε να καταχωρούμε 
+		πάρα πολλά αντικείμενα αλλά θα έχουμε μικρότερο cache size}
 
 	Solution:
 	\begin{itemize}
-		\item Preallocated data space
-		\item Every object request a bucket (typically 4KB)		
-		\item When an object is evicted, its buckets are 
-			reclaimed
+		\item Preallocated data space (=cache size) separated in buckets
+		\item Every object requests a range of buckets for a request
+		\item When an object is evicted, its buckets are reclaimed
 	\end{itemize}
 	\note[item]{Preallocated χώρος, όλοι παίρνουν indexes από αυτό (Θυμίζει 
-		xcache}
+		xcache, ΠΕΣ για WAITQ}
 \end{frame}
 
 \begin{frame}{Other important cached tasks}
