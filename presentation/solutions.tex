@@ -18,7 +18,10 @@
 	\note[item]{Η κλασσική λύση σε τέτοια προβλήματα είναι η χρήση ενός 
 		γρηγορότερου αποθηκευτικού μέσου για caching.}
 	\note[item]{Για όσους δεν ξέρουν τι σημαίνει caching, θα το εξηγήσουμε 
-		συνοπτικά: έχεις ροή, αργό μέσο, βάζεις ένα γρήγορο, speedup}
+		συνοπτικά: έχεις ροή δεδομένων, καταλήγουν σε αργό μέσο, βάζεις μπροστά 
+		ένα μικρό αλλά γρήγορο μέσο, οι επόμενες προσβάσεις στη μνήμη θα είναι 
+		πιο γρήγορες}
+	\note[item]{Γιατί δε βάζεις μόνο γρήγορο, γιατί είναι ακριβά}
 	\note[item]{Προφανώς αυτό το concept είναι γνωστό. Από που;}
 \end{frame}
 
@@ -27,8 +30,7 @@
 	
 	That's because every PC is built that way.
 
-	\note[item]{Από το ιεραρχικό μοντέλο του υπολογιστή: cpu cache vs ram, ram 
-		vs disk}
+	\note[item]{Τρέχα}
 \end{frame}
 
 \begin{frame}
@@ -66,14 +68,15 @@
 	Typically scale-up solutions.
 	\dspc
 	Pros: Simple, scale-up\\
-	Cons: Unaware of CoW, kernel solutions
+	Cons: Unaware of CoW, kernel-space solutions, redundancy issues
 
 	\note[item]{Δε θα επεκταθούμε γιατί έχουν κάποια βασικά κοινά:
 		\begin{itemize}
 			\item Kernel modules
 			\item expose εικονικά block devices που δείχνουν σε 
 				γρήγορα μέσα
-			\item Καθαρά caching μηχανισμοί με policies
+			\item Καθαρά caching μηχανισμοί που παίζουν με writeback, 
+				writethrough κτλ.
 		\end{itemize}
 	}
 	\note[item]{Εξήγησε που μπαίνουν (xsegbd). ΠΗΓΑΙΝΕ στο archipelago}
@@ -91,32 +94,18 @@
 	\dspc
 	Typically scale-out solutions
 	\dspc
-	Pros: Distributed with no SPOF, can utilize unneeded RAM\\
+	Pros: Distributed with no SPOF, can utilize unneeded RAM, user-space 
+	solutions\\
 	Cons: Memcached has no persistence, Couchbase cannot use RADOS as its 
 	backend, more suitable for databases
 	\note{Τα πράγματα γίνονται πιο ενδιαφέροντα εδώ:
 		\begin{itemize}
 			\item Κατανεμημένα συστήμα χωρίς ενιαίο σημείο 
-				αποτυχίας (SPOF), μπορούν να τρέχουν εκτός host 
-				οπότε δεν το επιβαρύνουν
-			\item Memcached δε διατηρεί τα δεδομένα, couchbase δεν 
-				μπορεί να μιλήσει με rados
-		\end{itemize}
+				αποτυχίας (SPOF), μπορούν να τρέχουν εκτός host οπότε δεν το 
+				επιβαρύνουν, είναι user-space λύσεις
+			\item Memcached δε διατηρεί τα δεδομένα, couchbase δεν μπορεί να 
+				μιλήσει με RADOS \end{itemize}
 	}
-\end{frame}
-
-\begin{frame}{Page-cache?}
-
-	What if we used the page-cache?
-	\note{Αν χρησιμοποιούσαμε την page-cache}
-	\dspc
-	\dspc
-	\dspc
-	Pros: Easy to activate, tested, very fast\\
-	Cons: Unaware of CoW, no control over it, practically kernel solution\\
-	\note{Εύκολη λύση, σταθερή και γρήγορη. Όμως, δεν καταλαβαίνει από COW, 
-		είναι προσκολλημένη σε ένα block device}
-
 \end{frame}
 
 \begin{frame}{Conclusions}
@@ -129,6 +118,9 @@
 		\item Must implement our own solution
 	\end{itemize}
 
-	\note{\todo}
+	\note{Οι λύσεις αυτές είναι μακριά από τη λογική και το I/O pipeline του 
+		αρχιπελάγους. Είναι άσχετα συστήματα που πρέπει να επέμβουμε σε αυτά 
+		για να κάνουμε αυτά που θέλουμε. Άρα πρέπει να κάνουμε τη δική μας 
+		λύση}
 \end{frame}
 	
