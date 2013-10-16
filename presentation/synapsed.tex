@@ -6,14 +6,20 @@
 		\item There is high lock contention
 		\item The amount of RAM is important
 	\end{itemize}
+	\note[item]{Από τα προηγούμενα συμπεράσματα, μπορούμε να εξάγουμε ότι 
+		έχουμε τα εξής limitations ανεξαρτήτως latency Αρχιπελάγους: 
+		lock contention και έλλειψη από RAM}
 	\dspc
 	If cached remains at the host, it will:
 	\begin{itemize}
 		\item Compete for CPU time
 		\item Use a fraction of the host's RAM
 	\end{itemize}
+	\note[item]{Αν ο cached τρέχει στον host όπου τρέχουν και τα VMs, θα 
+		έχουμε λιγότερη cpu -> περισσότερο contention και λιγότερη ram}
 	\dspc
 	Idea: what if cached ran on storage nodes?
+	\note[item]{Αν έτρεχε στους αποθηκευτικούς κόμβους;}
 \end{frame}
 
 \begin{frame}
@@ -22,6 +28,7 @@
 		\item Access to more RAM
 		\item Major step towards a distributed cache
 	\end{itemize}
+	\note[item]{Αν έτρεχε εκεί θα \todo}
 	\dspc
 	On the other hand, the cons would be:
 	\begin{itemize}
@@ -44,6 +51,19 @@
 	\end{itemize}
 	\dspc
 	Replication should be trivial to implement, but it is currently missing.
+
+	\note[item]{Το synapsed σχεδιάστηκε για τα εξής:
+		\begin{itemize}
+			\item Σύνδεση δυο Αρχιπέλαγο peers πάνω από network
+			\item Κατάλληλη προώθηση I/O αιτημάτων
+			\item Χρήση του tcp πρωτοκόλλου
+			\item Χρήση του signaling μηχανισμού του Αρχιπελάγους
+			\item Χρήση μεθόδων zero-copy
+		\end{itemize}
+	}
+	\note[item]{H δημιουργία αντιγράφων μπορεί να προστεθεί εύκολα στα 
+		παραπάνω, αλλά εμείς δεν φτάσαμε ώς εκει}
+
 \end{frame}
 
 \begin{frame}{Benchmark preamble}
@@ -57,6 +77,11 @@
 	\dspc
 	Note, synapsed is proof-of-concept and not performance-tuned. Also, the 
 	tested configuration uses a 1Gbit connection.
+	\note[item]{O κύριως στόχος του synapsed είναι να προσφέρει τη 
+		δυνατότητα ή ελαστικότηατα αν το θέλετε, του να τρέχει ο cached 
+		ή κομματι του Archipelago σε άλλο κόμβο. Ας δούμε όμως την 
+		επίδοσή του
+	}
 \end{frame}
 
 \begin{frame}{Synapsed results}
@@ -86,5 +111,12 @@
 			\end{itemize}
 		\end{column}
 	\end{columns}
+	\note{Σημεία προσοχής, πρακτικά υπάρχει πολύ μικρή διαφορά με το 
+		διάγραμα της σελίδας 32. Απλά μπάινει μικρότερο του 1ms latency 
+		που για το cached-vast φυσικά κάνει μεγάλη διαφορά.\dspc
+		Κατά τα άλλα, το latency αυτό είναι αμελητέο σε σχέση με το 
+		τρέχων latency, ενώ αν υπήρχε 10 ή 40Gbit δίκτυο, θα ήταν ακόμα 
+		καλύτερα τα πράγματα.
+	}
 \end{frame}
 

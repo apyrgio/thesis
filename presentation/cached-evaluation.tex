@@ -5,7 +5,7 @@ We have conducted exhaustive benchmarks.\\
 They are separated in three categories:
 
 \begin{itemize}
-	\item Comparison between cached and sosd
+	\item Comparison between cached and RADOS
 		\begin{itemize}
 			\item Peak behavior
 			\item Sustained behavior
@@ -17,6 +17,16 @@ They are separated in three categories:
 		\end{itemize}
 	\item Evaluation of VM/Archipelago
 \end{itemize}
+
+\note{Οι μετρήσεις μας είναι εκτενείς και χωρίζονται σε τρεις κατηγορίες:
+	\begin{itemize}
+		\item Σύγκριση performance του cached και rados για workloads 
+			μικρότερα και μεγαλύτερα του cache size
+		\item Αξιολόγηση εσωτερικών κομματιών του cached 
+			(multithreading, overhead του indexing μηχανισμου
+		\item Μετρήσεις του Αρχιπελαγο για ένα πραγματικό VM
+	\end{itemize}
+}
 
 \end{frame}
 
@@ -46,6 +56,13 @@ They are separated in three categories:
 		\end{column}
 	\end{columns}
 
+	\note[item]{Σημεία προσοχής:Για μικρά writes είμαστε έως 100x 
+		γρηγορότεροι ενώ για μεγάλα έως 200x. }
+	\note[item]{O cached μετά τα 16ΚΒ δεν κάνει scale - χτυπάμε το 
+		bandwidth της RAM}
+	\note[item]{Έχουμε lock contention, δε θα έπρεπε να αυξάνεται η 
+		ταχύτητα για μεγάλα blocks και δεν αυξάνεται η ταχύτητα με 
+		parallel requests}
 \end{frame}
 
 \begin{frame}{Cached/sosd comparison - peak behavior}
@@ -74,6 +91,8 @@ They are separated in three categories:
 		\end{column}
 	\end{columns}
 
+	\note[item]{Αντίστοιχα, για μικρά reads είμαστε 50x γρηγορότεροι ενώ 
+		για μεγάλα έως 75x}
 \end{frame}
 
 \begin{frame}{Cached/sosd comparison - sustained behavior}
@@ -104,6 +123,12 @@ They are separated in three categories:
 		\end{column}
 	\end{columns}
 
+	\note[item]{unlimited: έχουμε περισσότερα buckets απ' ότι objects}
+	\note[item]{Σημεία προσοχής: Writethrough όσο και το Rados ενώ στα 
+		reads έχουμε παρατηρήσει καλύτερη ταχύτητα}
+	\note[item]{Το performance πέφτει λόγω έλλειψης buckets, μεγαλώνει λόγω 
+		coalesces}
+
 \end{frame}
 
 \begin{frame}{Cached internals - multithreading}
@@ -132,6 +157,9 @@ They are separated in three categories:
 		\end{column}
 	\end{columns}
 
+	\note[item]{Μέχρι 2 είμαστε καλά γενικά. Αν έχουμε πολλά parallel 
+		requests, τότε φτάνουμε μέχρι και 5}
+	\note[item]{Σαφή ένδειξη lock contention}
 \end{frame}
 
 
@@ -156,7 +184,8 @@ They are separated in three categories:
 			\end{itemize}
 		\end{column}
 	\end{columns}
-
+	\note[item]{Σταθερό indexing overhead. Αν πέσει ερώτηση πες 2Μ hash 
+		table, το λειτουργικό δε δίνει αμέσως μνήμη}
 \end{frame}
 
 \begin{frame}{VM/Archipelago evaluation}
@@ -185,6 +214,27 @@ They are separated in three categories:
 			\end{itemize}
 		\end{column}
 	\end{columns}
+	\note{Σημεία προσοχής:
+		\begin{itemize}
+			\item page-cache: πολύ γρήγορη. Το 1ms latency λογικά 
+				μπαίνει λόγω του paravirtualized storage, 
+				filesystem, elevators
+			\item sosd: είναι σίγουρα άσχημο αλλά σε αυτά τα test 
+				έχει συν 7ms latency για τα writes και 3ms 
+				latency για τα reads. Αυτό έιναι πολύ 
+				μεγαλύτερο του 1ms του VM άρα κάτι παίζει με 
+				Αρχιπέλαγο
+			\item cached-vast: 4x γρηγορότερη από sosd αλλά έχει 
+				3ms latency που δεν είχε πριν, δηλαδή το 
+				archipelago βάζει 2ms
+			\item cached-unlimited: 2.5x γρηγορότερο και ξεπέρασε 
+				πάλι τον sosd στο τέλος
+			\item cached-limited: 4x γρηγορότερο, λογικά τα flushes 
+				είναι πολλα και μικρά και κρύβονται πίσω από το 
+				latency του Archipelago
+			\item writethrough δεν είδαμε κάποια διαφορά
+		\end{itemize}
+	}
 \end{frame}
 
 
