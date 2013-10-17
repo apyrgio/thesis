@@ -10,7 +10,7 @@
 	time.
 	\dspc
 	Note, synapsed is proof-of-concept and not performance-tuned. Also, the 
-	tested configuration uses a 1Gbit connection.
+	tested configuration uses a 1Gbit/s connection.
 	\note[item]{O κύριως στόχος του synapsed είναι να προσφέρει τη 
 		δυνατότητα ή ελαστικότηατα αν το θέλετε, του να τρέχει ο cached 
 		ή κομματι του Archipelago σε άλλο κόμβο. Ας δούμε όμως την 
@@ -45,9 +45,10 @@
 			\end{itemize}
 		\end{column}
 	\end{columns}
-	\note{Σημεία προσοχής, πρακτικά υπάρχει πολύ μικρή διαφορά με το 
-		διάγραμα της σελίδας 32. Απλά μπάινει μικρότερο του 1ms latency 
-		που για το cached-vast φυσικά κάνει μεγάλη διαφορά.\dspc
+	\note{Σημεία προσοχής, πρακτικά υπάρχει πολύ μικρή διαφορά με το διάγραμα 
+		της σελίδας 32, απλά είναι CAPPED από το δίκτυο. Απλά μπάινει μικρότερο 
+		του 1ms latency που για το cached-vast φυσικά κάνει μεγάλη 
+		διαφορά.\dspc
 		Κατά τα άλλα, το latency αυτό είναι αμελητέο σε σχέση με το 
 		τρέχων latency, ενώ αν υπήρχε 10 ή 40Gbit δίκτυο, θα ήταν ακόμα 
 		καλύτερα τα πράγματα.
