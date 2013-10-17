@@ -114,7 +114,8 @@
 \end{frame}
 
 \begin{frame}{Bucket pool}
-	Cached divides an object (commonly 4MB) to buckets (commonly 4KB).
+	Cached divides an object (commonly 4MB) to buckets (commonly 4KB) which are 
+	always fully written.
 	When an object is indexed however, it does not have immediate access to all 
 	of its buckets because:
 	\begin{itemize}
