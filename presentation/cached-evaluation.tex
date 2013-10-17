@@ -5,27 +5,34 @@ We have conducted exhaustive benchmarks.\\
 They are separated in three categories:
 
 \begin{itemize}
-	\item Comparison between cached and RADOS
+	\item Comparison between cached over RADOS and RADOS solely
 		\begin{itemize}
 			\item Peak behavior
 			\item Sustained behavior
 		\end{itemize}
-	\item Internal comparison of cached
+	\item Internal measurement of cached
 		\begin{itemize}
-			\item Multithreading overhead
 			\item Indexing mechanism overhead
 		\end{itemize}
 	\item Evaluation of VM/Archipelago
 \end{itemize}
+\spc
+Note: sosd refers to the blocker driver of Archipelago
 
 \note{Οι μετρήσεις μας είναι εκτενείς και χωρίζονται σε τρεις κατηγορίες:
 	\begin{itemize}
 		\item Σύγκριση performance του cached και rados για workloads 
 			μικρότερα και μεγαλύτερα του cache size
-		\item Αξιολόγηση εσωτερικών κομματιών του cached 
-			(multithreading, overhead του indexing μηχανισμου
-		\item Μετρήσεις του Αρχιπελαγο για ένα πραγματικό VM
+		\item Αξιολόγηση εσωτερικών κομματιών του cached (συγκεκριμένα overhead 
+			του indexing μηχανισμού
+		\item Μετρήσεις του Αρχιπελάγους για ένα πραγματικό VM
 	\end{itemize}
+
+	Στις επόμενες μετρήσεις, όπου sosd εννοούμε rados. Επίσης, όλα είναι random 
+	i/o
+
+	Σημείωση, τρίτη κατηγορία είναι πολύ σημαντική. Καταφέραμε να σηκώσουμε 
+	πραγματικό VM με cached. Αυτό είναι το highlight της διπλωματικής
 }
 
 \end{frame}
@@ -56,6 +63,9 @@ They are separated in three categories:
 		\end{column}
 	\end{columns}
 
+	\note[item]{Ας περιγράψουμε το benchmark μας. Στείλαμε καρφωτά στους peers 
+		requests των...}
+	\note[item]{Το iodepth είναι ο αριθμός των παράλληλων requests}
 	\note[item]{Σημεία προσοχής:Για μικρά writes είμαστε έως 100x 
 		γρηγορότεροι ενώ για μεγάλα έως 200x. }
 	\note[item]{O cached μετά τα 16ΚΒ δεν κάνει scale - χτυπάμε το 
@@ -63,6 +73,8 @@ They are separated in three categories:
 	\note[item]{Έχουμε lock contention, δε θα έπρεπε να αυξάνεται η 
 		ταχύτητα για μεγάλα blocks και δεν αυξάνεται η ταχύτητα με 
 		parallel requests}
+	\note[item]{Lock contention είναι ότι δεν κάνουμε scale με πολλά threads 
+		για μικρά block sizes}
 \end{frame}
 
 \begin{frame}{Cached/sosd comparison - peak behavior}
@@ -131,38 +143,6 @@ They are separated in three categories:
 
 \end{frame}
 
-\begin{frame}{Cached internals - multithreading}
-	\begin{columns}[t]
-		\begin{column}{.5\textwidth}
-			Write bandwidth
-			\makebox[\textwidth]{
-				\includegraphics[width=\columnwidth]{images/bw-write-threads.pdf}
-			}
-			Constants:
-			\begin{itemize}
-				\item workload less than the cache size
-				\item block size is 4KB
-			\end{itemize}
-		\end{column}
-		\begin{column}{.5\textwidth}
-			Write latency
-			\makebox[\textwidth]{
-				\includegraphics[width=\columnwidth]{images/lat-write-threads.pdf}
-			}
-			Variables:
-			\begin{itemize}
-				\item cached threads [1 - 16]
-				\item parallel requests [1 - 16]
-			\end{itemize}
-		\end{column}
-	\end{columns}
-
-	\note[item]{Μέχρι 2 είμαστε καλά γενικά. Αν έχουμε πολλά parallel 
-		requests, τότε φτάνουμε μέχρι και 5}
-	\note[item]{Σαφή ένδειξη lock contention}
-\end{frame}
-
-
 \begin{frame}{Cached internals - indexing}
 	Latency of cold cache vs. warm cache
 	\makebox[\textwidth]{
@@ -180,10 +160,13 @@ They are separated in three categories:
 		\begin{column}{.5\textwidth}
 			Variables:
 			\begin{itemize}
-				\item number of objects [128k - 1G]
+				\item number of objects [128k - 1M]
 			\end{itemize}
 		\end{column}
 	\end{columns}
+	\note[item]{Το σενάριο είναι το εξής. Εισάγουμε ένα αριθμό από objects.  
+		Κάνουν lookup και insert. Μετά, τα κάνουμε lookup. Αυτό το κάνουμε για 
+		128κ ... Μετράμε latency}
 	\note[item]{Σταθερό indexing overhead. Αν πέσει ερώτηση πες 2Μ hash 
 		table, το λειτουργικό δε δίνει αμέσως μνήμη}
 \end{frame}
@@ -214,6 +197,7 @@ They are separated in three categories:
 			\end{itemize}
 		\end{column}
 	\end{columns}
+	\note{Benchmark μέσα από το VM, με filesystem, elevators, κτλ. με το fio}
 	\note{Σημεία προσοχής:
 		\begin{itemize}
 			\item page-cache: πολύ γρήγορη. Το 1ms latency λογικά 
