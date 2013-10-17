@@ -46,8 +46,7 @@
 		\item Connect two Archipelago peers over network
 		\item Forward read/write XSEG requests
 		\item Use the TCP protocol
-		\item Integrate with the Archipelago signaling mechanism
-		\item Use zero-copy methods
+		\item Use vectored I/O, no intermediate copy
 	\end{itemize}
 	\dspc
 	Replication should be trivial to implement, but it is currently missing.
@@ -57,8 +56,8 @@
 			\item Σύνδεση δυο Αρχιπέλαγο peers πάνω από network
 			\item Κατάλληλη προώθηση I/O αιτημάτων
 			\item Χρήση του tcp πρωτοκόλλου
-			\item Χρήση του signaling μηχανισμού του Αρχιπελάγους
-			\item Χρήση μεθόδων zero-copy
+			\item Χρήση μεθόδων διανυσματικού I/O χωρίς περιττά allocation 
+				μνήμης
 		\end{itemize}
 	}
 	\note[item]{H δημιουργία αντιγράφων μπορεί να προστεθεί εύκολα στα 
