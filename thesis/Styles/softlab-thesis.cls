@@ -1313,18 +1313,6 @@
     \@author, \\[6pt]
     Αθήνα, \@date@defense
   \end{flushright}
-  \footacknowledgement{%
-    Η εργασία αυτή είναι επίσης διαθέσιμη ως Τεχνική Αναφορά
-    \@TRnumber, Εθνικό Μετσόβιο Πολυτεχνείο, Σχολή Ηλεκτρολόγων
-    Μηχανικών και Μηχανικών Υπολογιστών, Τομέας Τεχνολογίας
-    Πληροφορικής και Υπολογιστών, Εργαστήριο Τεχνολογίας
-    Λογισμικού, \@date.
-    \\[6pt]
-    \begin{tabular}{@{}ll@{}}
-    URL: & \texttt{http://www.softlab.ntua.gr/techrep/} \\
-    FTP: & \texttt{ftp://ftp.softlab.ntua.gr/pub/techrep/}
-    \end{tabular}
-  }
   \newpage%
   \endgroup%
 }
@@ -1339,18 +1327,6 @@
     \@authoren, \\[6pt]
     Athens, \@date@defenseen
   \end{flushright}
-  \footacknowledgement{%
-    This thesis is also available as Technical Report \@TRnumber,
-    National Technical University of Athens,
-    School of Electrical and Computer Engineering,
-    Department of Computer Science,
-    Software Engineering Laboratory, \@dateen.
-    \\[6pt]
-    \begin{tabular}{@{}ll@{}}
-    URL: & \texttt{http://www.softlab.ntua.gr/techrep/} \\
-    FTP: & \texttt{ftp://ftp.softlab.ntua.gr/pub/techrep/}
-    \end{tabular}
-  }
   \newpage%
   \endgroup%
 }
