@@ -663,7 +663,7 @@ diagrams to make comparisons between them more evident. We will proceed with
 commenting on the performance results of each tested Archipelago configuration 
 and we will invoke the previous synthetic benchmarks where necessary.
 
-\subsubsection{page-cache}
+\subsubsection{Page-cache}
 
 Our measurements clearly indicate that the page cache outperforms every 
 Archipelago configuration. It also sets the mark for the upper speed limit that 
@@ -677,7 +677,7 @@ difference of < 1ms to the overhead of the paravirtualized storage, as well as
 the overhead of the VM operations (e.g. the filesystem, scheduler and kernel 
 operations).
 
-\subsubsection{sosd}
+\subsubsection{Sosd}
 
 The results for sosd are lower than the expected results. In fact, sosd has an 
 additional latency of about 7ms for writes and 3ms for reads, which cannot be 
@@ -687,7 +687,7 @@ operations, there is also the latency of Archipelago, specifically of xsegbd,
 vlmcd and mapperd that has a performance penalty which is in the order of 
 milliseconds.
 
-\subsubsection{cached-vast}
+\subsubsection{Cached-vast}
 
 The comparison between sosd and this scenario shows that the performance 
 speedup is approximately 4x for writes and 2x for reads. This is a very 
@@ -702,7 +702,7 @@ results and the results of the page-cache scenario; in both scenarios, data is
 cached in DRAM, which means that the main latency difference between them is 
 the latency of Archipelago, which is approximately 2ms.
 
-\subsubsection{cached-unlimited}
+\subsubsection{Cached-unlimited}
 
 The results of this scenario were expected, given the results of the previous 
 scenario (cached-vast) and the synthetic benchmarks of Figures 
@@ -727,7 +727,7 @@ Finally, we observe that the read performance is the same as sosd's but, as we
 have already explained, this happens due to background flushes that take place 
 during the read operation, so the results are bound to be skewed.
 
-\subsubsection{cached-limited}
+\subsubsection{Cached-limited}
 
 The revelation of our benchmarks has been this scenario, which is just as fast
 as cached-vast for sustained writes. This is completely different from the 
@@ -736,7 +736,7 @@ results we observed in Figures \ref{fig:lat-write-comp-truth.pdf} and
 masks the background flushes that take place, which is  probably due to the 
 fact that evictions are more frequent but less batched.
 
-\subsubsection{cached-writethrough}
+\subsubsection{Cached-writethrough}
 
 This scenario had predictable results. The write speed in writethrough mode was 
 the same as the write speed of sosd whereas the read speed was a bit better, 

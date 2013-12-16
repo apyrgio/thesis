@@ -40,9 +40,9 @@ some stricter requirements that our solution must have. These requirements are:
 		This also means that we will temporarily hand-wave the issue of 
 		data volatility and we will concern ourselves with it if cached 
 		has promising results.
-	\item \textbf{Low indexing overhead} For performance reasons and since 
-		we already cache data in memory, the overhead of the indexing 
-		mechanism should be as small as possible.
+	\item \textbf{Low indexing overhead:} For performance reasons and since we 
+		already cache data in memory, the overhead of the indexing mechanism 
+		should be as small as possible.
 \end{enumerate}
 
 The following two chapters are the main bulk of this thesis as they present the 
@@ -243,9 +243,9 @@ an xtype. The reasons why we have chosen to use a hash table are:
 		Thus, the insert, lookup and delete operations should occur 
 		averagely in constant time.
 	\item We don't need to do substring matches (which is an advantage of 
-		tries)
+		tries).
 	\item We don't need to traverse the entries sequentially (which is an 
-		advantage of B-trees)
+		advantage of B-trees).
 \end{enumerate}
 
 The hash table that is used is heavily based on dictobject\cite{dictobject},
@@ -790,16 +790,16 @@ track their states are:
 \item \textbf{Buckets:} Each bucket has two different states that must be 
 	tracked. The first is its allocation state:
 	\begin{enumerate}[i)]
-		\item free, meaning that the bucket is not allocated
-		\item claimed, meaning that the bucket is allocated
+		\item free, meaning that the bucket is not allocated.
+		\item claimed, meaning that the bucket is allocated.
 	\end{enumerate}
 	The second is its data state:
 	\begin{enumerate}[i)]
-		\item invalid, meaning that it currently holds no data
+		\item invalid, meaning that it currently holds no data.
 		\item valid, meaning that it has data that are in sync with the
 			storage backend.
-		\item loading, meaning that a read request that includes this 
-			bucket has been sent to the blocker
+		\item loading, meaning that a read request that includes this bucket 
+			has been sent to the blocker.
 		\item writing, meaning that the bucket contents are being 
 			written/flushed to the blocker.
 		\item dirty, meaning that its data are newer than the data of 
@@ -809,20 +809,19 @@ track their states are:
 	indication of the object's status, yet not a complete one. The statuses 
 	we keep for the objects are:
 	\begin{enumerate}[i)]
-		\item ready, meaning that it is ready to accept data
-		\item invalidated, meaning that it is not ready to accept data
-		\item flushing, meaning that it is currently flushing dirty 
-			data to the blocker
-		\item failed, meaning that a request has failed for this object 
-			and we must stop using it
+		\item ready, meaning that it is ready to accept data.
+		\item invalidated, meaning that it is not ready to accept data.
+		\item flushing, meaning that it is currently flushing dirty data to the 
+			blocker.
+		\item failed, meaning that a request has failed for this object and we 
+			must stop using it.
 	\end{enumerate}
 \item \textbf{Cache-IOs:} Cache-IOs also have states. They are the following:
 	\begin{enumerate}[i)]
-		\item reading, meaning that the task wants to read data
-		\item writing, meaning that the task wants to write data
-		\item served, meaning that the task has been served the data it 
-			needed
-		\item failed, meaning that the task has failed
+		\item reading, meaning that the task wants to read data.
+		\item writing, meaning that the task wants to write data.
+		\item served, meaning that the task has been served the data it needed.
+		\item failed, meaning that the task has failed.
 	\end{enumerate}
 \end{enumerate}
 
